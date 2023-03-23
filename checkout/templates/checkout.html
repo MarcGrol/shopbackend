@@ -1,0 +1,113 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          media="screen">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"></script>
+
+    <!-- Adyen CSS from TEST environment (change to live for production)-->
+    <link rel="stylesheet"
+          href="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/5.35.0/adyen.css"
+          crossorigin="anonymous">
+    <script src="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/5.35.0/adyen.js"
+            crossorigin="anonymous"></script>
+
+
+</head>
+<body>
+
+
+<div class="container">
+    <h1>Checkout</h1>
+    <div class="row">
+        <div class="payment-container">
+            <div id="payment" class="payment"></div>
+        </div>
+    </div>
+</div>
+
+<script type="application/javascript">
+    // Used to finalize a checkout call in case of redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId'); // Unique identifier for the payment session
+    const redirectResult = urlParams.get('redirectResult');
+
+    // Some payment methods use redirects. This is where we finalize the operation
+    async function finalizeCheckout() {
+        console.log("Finalize checkout:");
+        try {
+            const checkout = await createAdyenCheckout({id: sessionId});
+            checkout.submitDetails({details: {redirectResult}});
+            console.log("finalizeCheckout succeeded");
+        } catch (error) {
+            console.error("finalizeCheckout:"+error);
+            alert("Error occurred. Look at console for details");
+        }
+    }
+
+    async function startCheckout() {
+        console.log("Start checkout:");
+        try {
+            const checkout = await createAdyenCheckout();
+            checkout.create('dropin').mount(document.getElementById("payment"));
+            console.log("startCheckout succeeded");
+        } catch (error) {
+            console.error("startCheckout:"+error);
+            alert("Error occurred. Look at console for details");
+        }
+    }
+
+    async function createAdyenCheckout(){
+        const configuration = {
+            environment: "{{.Environment}}",
+            clientKey: "{{.ClientKey}}",
+            showPayButton: true,
+            analytics: {
+                enabled: true
+            },
+            paymentMethodsResponse: {{.PaymentMethodsResponse}},
+            paymentMethods: {{.PaymentMethodsResponse.PaymentMethods}},
+            paymentMethodsConfiguration:{{.PaymentMethodsResponse}},
+            session: {{.Session}},
+            onPaymentCompleted: (result, component) => {
+                console.log("onPaymentCompleted: checkout completed:"+JSON.stringify(result));
+                handleServerResponse(result);
+            },
+            onError: (error, component) => {
+                console.log("onError: checkout error:"+JSON.stringify(error));
+                handleServerResponse(error);
+            }
+        };
+
+        return new AdyenCheckout(configuration);
+    }
+
+    function handleServerResponse(result) {
+        console.log("result-code:"+result.resultCode);
+        switch (result.resultCode) {
+            case "Authorised":
+                window.location.href = "/checkout/{{.BasketUID}}/status/success";
+                break;
+            case "Pending":
+            case "Received":
+                window.location.href = "/checkout/{{.BasketUID}}/status/pending";
+                break;
+            case "Refused":
+                console.log("Redirecting to status-page")
+                window.location.href = "/checkout/{{.BasketUID}}/status/failed";
+                break;
+            default:
+                window.location.href = "/checkout/{{.BasketUID}}/status/error";
+                break;
+        }
+    }
+
+    if( sessionId ) {
+        finalizeCheckout()
+    } else {
+        startCheckout();
+    }
+</script>
+
+</body>
+</html>
