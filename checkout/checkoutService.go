@@ -334,7 +334,7 @@ func parseRequest(r *http.Request) (*checkout.CreateCheckoutSessionRequest, stri
 		//RedirectToIssuerMethod:   "",
 		Reference:          basketUID,
 		RiskData:           nil,
-		ReturnUrl:          fmt.Sprintf("%s://%s/checkout/%s", r.URL.Scheme, r.Host, basketUID),
+		ReturnUrl:          fmt.Sprintf("%s/checkout/%s",  myhttp.HostnameWithScheme(r), basketUID),
 		ShopperEmail:       shopperEmail,
 		ShopperIP:          "",
 		ShopperInteraction: "",
