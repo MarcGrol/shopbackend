@@ -4,11 +4,12 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/shop/store"
 	"html/template"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/MarcGrol/shopbackend/shop/store"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -150,7 +151,7 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 		eventCode := mux.Vars(r)["eventCode"]
 		status := mux.Vars(r)["status"]
 
-		log.Printf("Checkout status update for basket %s (%s) -> %s", basketUID, status)
+		log.Printf("Checkout status update for basket %s (%s) -> %s", basketUID, eventCode, status)
 
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {

@@ -14,17 +14,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/checkout/store"
-	"github.com/MarcGrol/shopbackend/myhttpclient"
-
 	"github.com/gorilla/mux"
 
+	"github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/myerrors"
+	"github.com/MarcGrol/shopbackend/myhttp"
+	"github.com/MarcGrol/shopbackend/myhttpclient"
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/adyen/adyen-go-api-library/v6/src/common"
-
-	"github.com/MarcGrol/shopbackend/myerrors"
-	"github.com/MarcGrol/shopbackend/myhttp"
 )
 
 const (
