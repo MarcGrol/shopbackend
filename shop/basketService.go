@@ -70,7 +70,7 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		c := context.Background()
 
 		uid := func() string { u, _ := uuid.NewUUID(); return u.String() }()
-		returnURL := fmt.Sprintf("%s://%s/basket/%s/checkout/completed", r.URL.Scheme, r.Host, uid)
+		returnURL := fmt.Sprintf("%s/basket/%s/checkout/completed", myhttp.HostnameWithScheme(r), uid)
 
 		err := s.basketStore.Put(c, uid, createBasket(uid, returnURL))
 		if err != nil {
@@ -79,7 +79,7 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		}
 
 		// Back to the bucket list
-		http.Redirect(w, r, fmt.Sprintf("%s://%s/basket", r.URL.Scheme, r.Host), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("%s/basket", myhttp.HostnameWithScheme(r)), http.StatusSeeOther)
 	}
 }
 
