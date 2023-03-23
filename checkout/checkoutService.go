@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"html/template"
 	"log"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
@@ -333,7 +334,7 @@ func parseRequest(r *http.Request) (*checkout.CreateCheckoutSessionRequest, stri
 		//RedirectToIssuerMethod:   "",
 		Reference:          basketUID,
 		RiskData:           nil,
-		ReturnUrl:          fmt.Sprintf("http://%s/checkout/%s", r.Host, basketUID),
+		ReturnUrl:          fmt.Sprintf("%s://%s/checkout/%s", r.URL.Scheme, r.Host, basketUID),
 		ShopperEmail:       shopperEmail,
 		ShopperIP:          "",
 		ShopperInteraction: "",

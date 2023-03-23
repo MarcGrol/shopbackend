@@ -70,7 +70,7 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		c := context.Background()
 
 		uid := func() string { u, _ := uuid.NewUUID(); return u.String() }()
-		returnURL := fmt.Sprintf("http://%s/basket/%s/checkout/completed", r.Host, uid)
+		returnURL := fmt.Sprintf("%s://%s/basket/%s/checkout/completed", r.URL.Scheme, r.Host, uid)
 
 		err := s.basketStore.Put(c, uid, createBasket(uid, returnURL))
 		if err != nil {
@@ -79,7 +79,7 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		}
 
 		// Back to the bucket list
-		http.Redirect(w, r, fmt.Sprintf("http://%s/basket", r.Host), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("%s://%s/basket", r.URL.Scheme, r.Host), http.StatusSeeOther)
 	}
 }
 
@@ -173,7 +173,7 @@ func getCurrentShop() Shop {
 		Country:         "NL",
 		Currency:        "EUR",
 		MerchantAccount: "MarcGrolConsultancyECOM",
-		Hostname:        "http://localhost:8082", // "https://www.marcgrolconsultancy.nl/",
+		Hostname:        "https://www.marcgrolconsultancy.nl/", // "http://localhost:8082",
 	}
 }
 
