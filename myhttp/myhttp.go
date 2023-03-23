@@ -2,6 +2,7 @@ package myhttp
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -20,6 +21,8 @@ func WriteError(w http.ResponseWriter, errorCode int, err error) {
 	})
 }
 
+type EmptyResponse struct{}
+
 func Write(w http.ResponseWriter, httpStatus int, resp interface{}) {
 	w.WriteHeader(httpStatus)
 	encoder := json.NewEncoder(w)
@@ -31,4 +34,12 @@ func Write(w http.ResponseWriter, httpStatus int, resp interface{}) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+}
+
+func HostnameWithScheme(r *http.Request) string {
+	scheme := "https"
+	if r.TLS == nil {
+		scheme = "http"
+	}
+	return fmt.Sprintf("%s://%s", scheme, r.Host)
 }

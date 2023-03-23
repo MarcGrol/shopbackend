@@ -11,7 +11,11 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/myhttpclient"
 
 	"github.com/gorilla/mux"
 
@@ -24,8 +28,10 @@ import (
 )
 
 const (
-	apiKeyVarname    = "ADYEN_API_KEY"
-	clientKeyVarname = "ADYEN_CLIENT_KEY"
+	merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"
+	apiKeyVarname          = "ADYEN_API_KEY"
+	clientKeyVarname       = "ADYEN_CLIENT_KEY"
+	environmentVarname     = "ADYEN_ENVIRONMENT"
 )
 
 //go:embed templates
@@ -39,16 +45,29 @@ func init() {
 }
 
 type service struct {
-	clientKey     string
-	apiClient     *adyen.APIClient
-	checkoutStore CheckoutStore
+	environment     string
+	merchantAccount string
+	clientKey       string
+	apiClient       *adyen.APIClient
+	checkoutStore   store.CheckoutStore
+	httpClient      myhttpclient.HTTPSender
 }
 
 type Starter interface {
 	PrepareForCheckoutPage(basketUID string, req checkout.CreateCheckoutSessionRequest) (string, error)
 }
 
-func NewService(checkoutStore CheckoutStore) (*service, error) {
+func NewService(checkoutStore store.CheckoutStore, httpClient myhttpclient.HTTPSender) (*service, error) {
+	merchantAccount := os.Getenv(merchantAccountVarname)
+	if merchantAccount == "" {
+		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", merchantAccountVarname))
+	}
+
+	environment := os.Getenv(environmentVarname)
+	if environment == "" {
+		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", environmentVarname))
+	}
+
 	apiKey := os.Getenv(apiKeyVarname)
 	if apiKey == "" {
 		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", apiKeyVarname))
@@ -60,13 +79,16 @@ func NewService(checkoutStore CheckoutStore) (*service, error) {
 	}
 
 	return &service{
-		clientKey: clientKey,
+		merchantAccount: merchantAccount,
+		environment:     environment,
+		clientKey:       clientKey,
 		apiClient: adyen.NewClient(&common.Config{
 			ApiKey:      apiKey,
-			Environment: common.TestEnv,
+			Environment: common.Environment(strings.ToUpper(environment)),
 			//Debug:       true,
 		}),
 		checkoutStore: checkoutStore,
+		httpClient:    httpClient,
 	}, nil
 }
 
@@ -75,7 +97,7 @@ func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/checkout/{basketUID}", s.finalizeCheckoutPage()).Methods("GET")
 	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.statusCallback()).Methods("GET")
 
-	// TODO listen for incoming webhooks to update the basket and convert it into an order
+	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 
 }
 
@@ -84,14 +106,10 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 		c := context.Background()
 
 		// parse request and convert into CreateCheckoutSessionRequest
-		sessionRequest, basketUID, returnURL, err := parseRequest(r)
+		sessionRequest, basketUID, returnURL, err := parseRequest(r, s.merchantAccount)
 		if err != nil {
 			myhttp.WriteError(w, 1, myerrors.NewInvalidInputError(fmt.Errorf("Error parsing request: %s", err)))
 			return
-		}
-		{
-			data, _ := json.MarshalIndent(sessionRequest, "", "\t")
-			log.Printf("startCheckoutPage: %+v", string(data))
 		}
 
 		// store checkout-context
@@ -108,7 +126,7 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 			return
 		}
 
-		checkoutContext := CheckoutContext{
+		checkoutContext := store.CheckoutContext{
 			BasketUID:         basketUID,
 			OriginalReturnURL: returnURL,
 			SessionRequest:    *sessionRequest,
@@ -123,14 +141,14 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 			return
 		}
 
-		pageInfo := CheckoutPageInfo{
+		pageInfo := store.CheckoutPageInfo{
 			BasketUID:              basketUID,
 			PaymentMethodsResponse: checkoutContext.PaymentMethods,
 			ClientKey:              s.clientKey,
-			MerchantAccount:        checkoutContext.SessionRequest.MerchantAccount,
+			MerchantAccount:        s.merchantAccount,
 			CountryCode:            checkoutContext.SessionRequest.CountryCode,
 			ShopperLocale:          checkoutContext.SessionRequest.ShopperLocale,
-			Environment:            string(common.TestEnv),
+			Environment:            s.environment,
 			ShopperEmail:           checkoutContext.SessionRequest.ShopperEmail,
 			Session:                checkoutContext.SessionResponse,
 		}
@@ -162,14 +180,14 @@ func (s service) finalizeCheckoutPage() http.HandlerFunc {
 
 		log.Printf("Resume checkout for basket %s", basketUID)
 
-		pageInfo := CheckoutPageInfo{
+		pageInfo := store.CheckoutPageInfo{
 			BasketUID:              basketUID,
 			PaymentMethodsResponse: checkoutContext.PaymentMethods,
 			ClientKey:              s.clientKey,
-			MerchantAccount:        checkoutContext.SessionRequest.MerchantAccount,
+			MerchantAccount:        s.merchantAccount,
 			CountryCode:            checkoutContext.SessionRequest.CountryCode,
 			ShopperLocale:          checkoutContext.SessionRequest.ShopperLocale,
-			Environment:            string(common.TestEnv),
+			Environment:            s.environment,
 			ShopperEmail:           checkoutContext.SessionRequest.ShopperEmail,
 			Session:                checkoutContext.SessionResponse,
 		}
@@ -217,13 +235,67 @@ func (s service) statusCallback() http.HandlerFunc {
 		params.Set("status", status)
 		u.RawQuery = params.Encode()
 		adjustedReturnURL := u.String()
-		log.Printf("Redirecting to %s", adjustedReturnURL)
 
 		http.Redirect(w, r, adjustedReturnURL, http.StatusSeeOther)
 	}
 }
 
-func parseRequest(r *http.Request) (*checkout.CreateCheckoutSessionRequest, string, string, error) {
+func (s service) webhookNotification() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := context.Background()
+
+		event := store.WebhookNotification{}
+		err := json.NewDecoder(r.Body).Decode(&event)
+		if err != nil {
+			myhttp.WriteError(w, 1, fmt.Errorf("Error parsing webhook notification event:%s", err))
+			return
+		}
+		log.Printf("Webhook notification event received: %+v", event)
+
+		for _, item := range event.NotificationItems {
+			err := s.processNotificationItem(c, item, myhttp.HostnameWithScheme(r))
+			if err != nil {
+				myhttp.WriteError(w, 1, fmt.Errorf("Error handling item: %s", err))
+				return
+			}
+		}
+
+		myhttp.Write(w, http.StatusOK, "[accepted]")
+	}
+}
+
+func (s service) processNotificationItem(c context.Context, item store.NotificationItem, targetHostname string) error {
+	basketUID := item.NotificationRequestItem.MerchantReference
+	checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
+	if err != nil {
+		return myerrors.NewInternalError(err)
+	}
+	if !found {
+		return myerrors.NewNotFoundError(fmt.Errorf("Checkout with uid %s not found", basketUID))
+	}
+	checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
+	checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
+	checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
+
+	err = s.checkoutStore.Put(c, basketUID, checkoutContext)
+	if err != nil {
+		return myerrors.NewInternalError(err)
+	}
+
+	// Inform basket service
+	targetUrl := fmt.Sprintf("%s/basket/%s/status/%s/%s", targetHostname, item.NotificationRequestItem.MerchantReference, item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success)
+	httpStatus, _, err := s.httpClient.Send(c, "PUT", targetUrl, []byte("{}"))
+	if err != nil {
+		return myerrors.NewInternalError(fmt.Errorf("Error forwarding notification to basket: %s", err))
+	}
+	if httpStatus < 200 || httpStatus >= 300 {
+		return myerrors.NewInternalError(fmt.Errorf("Error forwarding notification to basket: %d", httpStatus))
+	}
+
+	return nil
+}
+
+func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateCheckoutSessionRequest, string, string, error) {
 	basketUID := mux.Vars(r)["basketUID"]
 	if basketUID == "" {
 		return nil, "", "", myerrors.NewInvalidInputError(fmt.Errorf("basketUID:%s, err"))
@@ -235,33 +307,29 @@ func parseRequest(r *http.Request) (*checkout.CreateCheckoutSessionRequest, stri
 	}
 
 	returnURL := r.Form.Get("returnUrl")
+	countryCode := r.Form.Get("countryCode")
+	currency := r.Form.Get("currency")
 	amount, err := strconv.Atoi(r.Form.Get("amount"))
 	if err != nil {
-		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("amount:%s, err"))
+		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("amount:%s", err))
 	}
-	currency := r.Form.Get("currency")
-
-	addressCity := r.Form.Get("address.city")
-	addressCountry := r.Form.Get("address.country")
-	addressHouseNumber := r.Form.Get("address.houseNumber")
-	addressPostalCode := r.Form.Get("address.postalCode")
-	addressStateOrProvince := r.Form.Get("address.state")
-	addressStreet := r.Form.Get("address.street")
-
+	addressCity := r.Form.Get("shopper.address.city")
+	addressCountry := r.Form.Get("shopper.address.country")
+	addressHouseNumber := r.Form.Get("shopper.address.houseNumber")
+	addressPostalCode := r.Form.Get("shopper.address.postalCode")
+	addressStateOrProvince := r.Form.Get("shopper.address.state")
+	addressStreet := r.Form.Get("shopper.address.street")
+	shopperEmail := r.Form.Get("shopper.email")
 	companyHomepage := r.Form.Get("company.homepage")
 	companyName := r.Form.Get("company.name")
-	//shopName := r.Form.Get("shop.name") // Thios one causes problems
-
-	countryCode := r.Form.Get("countryCode")
-	merchantAccount := r.Form.Get("merchantAccount")
-	shopperEmail := r.Form.Get("shopper.email")
+	//shopName := r.Form.Get("shop.name") // TODO: Understand why this field causes /session to fail
 
 	shopperDateOfBirth := func() *time.Time {
 		dob := r.Form.Get("shopper.dateOfBirth")
 		if dob == "" {
 			return nil
 		}
-		t, err := time.Parse(time.DateOnly, r.Form.Get("shopper.dateOfBirth"))
+		t, err := time.Parse("2006-01-02", r.Form.Get("shopper.dateOfBirth"))
 		if err != nil {
 			return nil
 		}
@@ -334,7 +402,7 @@ func parseRequest(r *http.Request) (*checkout.CreateCheckoutSessionRequest, stri
 		//RedirectToIssuerMethod:   "",
 		Reference:          basketUID,
 		RiskData:           nil,
-		ReturnUrl:          fmt.Sprintf("%s://%s/checkout/%s", r.URL.Scheme, r.Host, basketUID),
+		ReturnUrl:          fmt.Sprintf("%s/checkout/%s", myhttp.HostnameWithScheme(r), basketUID),
 		ShopperEmail:       shopperEmail,
 		ShopperIP:          "",
 		ShopperInteraction: "",

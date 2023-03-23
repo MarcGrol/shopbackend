@@ -7,9 +7,9 @@
 
     <!-- Adyen CSS from TEST environment (change to live for production)-->
     <link rel="stylesheet"
-          href="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/5.35.0/adyen.css"
+          href="https://checkoutshopper-{{.Environment}}.adyen.com/checkoutshopper/sdk/5.35.0/adyen.css"
           crossorigin="anonymous">
-    <script src="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/5.35.0/adyen.js"
+    <script src="https://checkoutshopper-{{.Environment}}.adyen.com/checkoutshopper/sdk/5.35.0/adyen.js"
             crossorigin="anonymous"></script>
 
 
@@ -20,10 +20,38 @@
 <div class="container">
     <h1>Checkout</h1>
     <div class="row">
-        <div class="payment-container">
-            <div id="payment" class="payment"></div>
+        <div id="payment" class="payment">
+
+
+            <table class="table">
+                <tbody>
+                <tr>
+                    <td>UID</td>
+                    <td>{{.BasketUID}}</td>
+                </tr>
+                <tr>
+                    <td>Amount</td>
+                    <td>{{.Amount}}</td>
+                </tr>
+                </tbody>
+            </table>
         </div>
     </div>
+    <div class="row">
+        <p>
+            Use "4111 1111 4555 1142" or "4917 6100 0000 0000" to test Mastercard
+        </p>
+    <div class="payment-container">
+
+        </div>
+
+    </div>
+
+
+    <footer class="container-fluid">
+        <p>Footer Text</p>
+    </footer>
+
 </div>
 
 <script type="application/javascript">
@@ -83,7 +111,6 @@
     }
 
     function handleServerResponse(result) {
-        console.log("result-code:"+result.resultCode);
         switch (result.resultCode) {
             case "Authorised":
                 window.location.href = "/checkout/{{.BasketUID}}/status/success";
@@ -93,7 +120,6 @@
                 window.location.href = "/checkout/{{.BasketUID}}/status/pending";
                 break;
             case "Refused":
-                console.log("Redirecting to status-page")
                 window.location.href = "/checkout/{{.BasketUID}}/status/failed";
                 break;
             default:

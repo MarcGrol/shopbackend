@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/myhttpclient"
+	store2 "github.com/MarcGrol/shopbackend/shop/store"
 	"log"
 	"net/http"
 	"os"
@@ -18,14 +21,15 @@ func main() {
 
 	router := mux.NewRouter()
 
-	checkoutStore := checkout.NewCheckoutStore()
-	checkoutService, err := checkout.NewService(checkoutStore)
+	checkoutStore := store.NewCheckoutStore()
+	httpClient := myhttpclient.New()
+	checkoutService, err := checkout.NewService(checkoutStore, httpClient)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}
 	checkoutService.RegisterEndpoints(c, router)
 
-	basketStore := shop.NewBasketStore()
+	basketStore := store2.NewInMemoryBasketStore()
 	basketService := shop.NewService(basketStore)
 	basketService.RegisterEndpoints(c, router)
 

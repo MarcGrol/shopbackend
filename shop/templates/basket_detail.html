@@ -9,8 +9,8 @@
 <div class="container">
     <h1>Basket</h1>
     <div class="row">
-        <form action="/" method="GET">
-            <button type="submit" class="btn btn-secundary">Back to baskets</button>
+        <form action="/basket" method="GET">
+            <button type="submit" class="btn btn-secundary">Back to basket overview</button>
         </form>
         <table class="table">
             <tbody>
@@ -32,34 +32,35 @@
             </tr>
             <tr>
                 <td>Status</td>
-                <td>{{.PaymentStatus}}</td>
+                <td>{{.InitialPaymentStatus}} -> {{.FinalPaymentStatus}}</td>
             </tr>
             </tbody>
         </table>
+        {{if .IsNotPaid}}
         <form action="/checkout/{{.UID}}" method="POST">
             <input type="hidden" name="returnUrl" value="{{.ReturnURL}}"/>
             <input type="hidden" name="amount" value="{{.TotalPrice}}"/>
             <input type="hidden" name="currency" value="{{.Currency}}"/>
-            <input type="hidden" name="address.city" value="{{.Shopper.Address.City}}"/>
-            <input type="hidden" name="address.country" value="{{.Shopper.Address.Country}}"/>
-            <input type="hidden" name="address.houseNumber" value="{{.Shopper.Address.HouseNumberOrName}}"/>
-            <input type="hidden" name="address.postalCode" value="{{.Shopper.Address.PostalCode}}"/>
-            <input type="hidden" name="address.state" value="{{.Shopper.Address.StateOrProvince}}"/>
-            <input type="hidden" name="address.street" value="{{.Shopper.Address.Street}}"/>
+            <input type="hidden" name="countryCode" value="{{.Shop.Country}}"/>
             <input type="hidden" name="company.homepage" value="{{.Shop.Hostname}}"/>
             <input type="hidden" name="company.name" value="{{.Shop.Name}}"/>
             <input type="hidden" name="shop.name" value="{{.Shop.Name}}"/>
-            <input type="hidden" name="countryCode" value="{{.Shop.Country}}"/>
-            <input type="hidden" name="merchantAccount" value="{{.Shop.MerchantAccount}}"/>
             <input type="hidden" name="shopper.email" value="{{.Shopper.EmailAddress}}"/>
-           <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
             <input type="hidden" name="shopper.locale" value="{{.Shopper.Locale}}"/>
             <input type="hidden" name="shopper.firstName" value="{{.Shopper.FirstName}}"/>
             <input type="hidden" name="shopper.lastName" value="{{.Shopper.LastName}}"/>
             <input type="hidden" name="shopper.uid" value="{{.Shopper.UID}}"/>
             <input type="hidden" name="shopper.phone" value="{{.Shopper.PhoneNumber}}"/>
+            <input type="hidden" name="shopper.address.city" value="{{.Shopper.Address.City}}"/>
+            <input type="hidden" name="shopper.address.country" value="{{.Shopper.Address.Country}}"/>
+            <input type="hidden" name="shopper.address.houseNumber" value="{{.Shopper.Address.HouseNumberOrName}}"/>
+            <input type="hidden" name="shopper.address.postalCode" value="{{.Shopper.Address.PostalCode}}"/>
+            <input type="hidden" name="shopper.address.state" value="{{.Shopper.Address.StateOrProvince}}"/>
+            <input type="hidden" name="shopper.address.street" value="{{.Shopper.Address.Street}}"/>
+            <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
             <button type="submit" class="btn btn-primary">Checkout</button>
         </form>
+        {{end}}
 
     </div>
 </div>
