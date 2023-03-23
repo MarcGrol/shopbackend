@@ -2,6 +2,7 @@ package myhttp
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -32,3 +33,13 @@ func Write(w http.ResponseWriter, httpStatus int, resp interface{}) {
 		return
 	}
 }
+
+
+func HostnameWithScheme(r *http.Request) string {
+	scheme := "https"
+	if r.TLS == nil {
+		scheme = "http"
+	}
+	return fmt.Sprintf("%s://%s", scheme, r.Host)
+}
+
