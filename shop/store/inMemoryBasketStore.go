@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
@@ -53,5 +54,9 @@ func (ps *inMemoryPaymentStore) List(c context.Context) ([]shopmodel.Basket, err
 	for _, b := range ps.baskets {
 		baskets = append(baskets, b)
 	}
+
+	sort.Slice(baskets, func(i, j int) bool {
+		return baskets[i].CreatedAt.After(baskets[j].CreatedAt)
+	})
 	return baskets, nil
 }

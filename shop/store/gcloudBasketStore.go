@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"os"
+	"sort"
 
 	"github.com/MarcGrol/shopbackend/mystore"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
@@ -47,5 +48,11 @@ func (s *gcloudPaymentStore) List(ctx context.Context) ([]shopmodel.Basket, erro
 	if err != nil {
 		return baskets, err
 	}
+
+	// sort
+	sort.Slice(baskets, func(i, j int) bool {
+		return baskets[i].CreatedAt.After(baskets[j].CreatedAt)
+	})
+
 	return baskets, nil
 }

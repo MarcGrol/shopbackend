@@ -18,6 +18,7 @@
 <table class="table">
     <thead>
     <tr>
+        <th scope="col">Created at</th>
         <th scope="col">BasketUID</th>
         <th scope="col">TotalPrice</th>
         <th scope="col">Initial status</th>
@@ -27,6 +28,7 @@
     <tbody>
         {{range .}}
         <tr>
+            <td>{{.Timestamp}}</td>
             <td><a href="/basket/{{.UID}}">{{.UID}}</a></td>
             <td>{{.GetPriceInCurrency}}</td>
             <td>{{.InitialPaymentStatus}}</td>

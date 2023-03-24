@@ -48,6 +48,10 @@ type Basket struct {
 	ReturnURL            string
 }
 
+func (b Basket) Timestamp() string {
+	return b.CreatedAt.Format("2006-01-02 15:04:05")
+}
+
 func (b Basket) GetPriceInCurrency() string {
 	return fmt.Sprintf("%s %.2f", b.Currency, float32(b.TotalPrice/100.00))
 }
