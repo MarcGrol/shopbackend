@@ -11,6 +11,7 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	checkoutstore "github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/shop"
 	"github.com/MarcGrol/shopbackend/shop/myqueue"
 	basketstore "github.com/MarcGrol/shopbackend/shop/store"
@@ -33,7 +34,7 @@ func main() {
 	}
 	defer checkoutStoreCleanup()
 
-	checkoutService, err := checkout.NewService(checkoutStore, queue)
+	checkoutService, err := checkout.NewService(checkoutStore, queue, mylog.New("checkout"))
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}
@@ -45,7 +46,7 @@ func main() {
 	}
 	defer basketstoreCleanup()
 
-	basketService := shop.NewService(basketStore)
+	basketService := shop.NewService(basketStore, mylog.New("basket"))
 	basketService.RegisterEndpoints(c, router)
 
 	startWebServerBlocking(router)

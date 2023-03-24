@@ -36,7 +36,7 @@ func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 	_, err := q.client.CreateTask(c, &taskspb.CreateTaskRequest{
 		Parent: composeQueueName(),
 		Task: &taskspb.Task{
-			Name: taskUID, // de-duplicate
+			// Name: taskUID, // do not de-duplicate
 			MessageType: &taskspb.Task_AppEngineHttpRequest{
 				AppEngineHttpRequest: &taskspb.AppEngineHttpRequest{
 					HttpMethod:  taskspb.HttpMethod_PUT,
@@ -76,7 +76,7 @@ func (q *gcloudTaskQueue) IsLastAttempt(c context.Context, taskUID string) (int3
 		return numRetries, maxRetries
 	}
 
-	if queue.RetryConfig != nil {
+	if queue.Ret	ryConfig != nil {
 		maxRetries = queue.RetryConfig.MaxAttempts
 	}
 

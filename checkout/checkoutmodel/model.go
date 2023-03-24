@@ -48,6 +48,10 @@ type WebhookNotification struct {
 	NotificationItems []NotificationItem `json:"notificationItems"`
 }
 
+type WebhookNotificationResponse struct {
+	Status string `json:"status"`
+}
+
 type NotificationItem struct {
 	NotificationRequestItem NotificationRequestItem `json:"NotificationRequestItem"`
 }

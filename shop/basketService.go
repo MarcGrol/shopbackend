@@ -5,27 +5,30 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	"github.com/MarcGrol/shopbackend/mycontext"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
+	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 	"github.com/MarcGrol/shopbackend/shop/store"
 )
 
 type service struct {
 	basketStore store.BasketStorer
+	logger      mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(store store.BasketStorer) *service {
+func NewService(store store.BasketStorer, logger mylog.Logger) *service {
 	return &service{
 		basketStore: store,
+		logger:      logger,
 	}
 }
 
@@ -58,18 +61,21 @@ func init() {
 
 func (s service) basketListPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c := context.Background()
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		s.logger.Log(c, "", mylog.SeverityInfo, "Fetch all baskets")
 
 		baskets, err := s.basketStore.List(c)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketListPageTemplate.Execute(w, baskets)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -77,15 +83,18 @@ func (s service) basketListPage() http.HandlerFunc {
 
 func (s service) createNewBasketPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c := context.Background()
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		uid := func() string { u, _ := uuid.NewUUID(); return u.String() }()
 		returnURL := fmt.Sprintf("%s/basket/%s/checkout/completed", myhttp.HostnameWithScheme(r), uid)
 
+		s.logger.Log(c, uid, mylog.SeverityInfo, "Creating new basket with uid %s", uid)
+
 		basket := createBasket(uid, returnURL)
 		err := s.basketStore.Put(c, uid, &basket)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 
@@ -96,23 +105,27 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 
 func (s service) basketDetailsPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c := context.Background()
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
+
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Fetch details of basket uid %s", basketUID)
+
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
+			errorWriter.WriteError(c, w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketDetailPageTemplate.Execute(w, basket)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -120,29 +133,30 @@ func (s service) basketDetailsPage() http.HandlerFunc {
 
 func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c := context.Background()
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		status := r.URL.Query().Get("status")
 
-		log.Printf("Checkout completed for basket %s -> %s", basketUID, status)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Checkout completed for basket %s -> %s", basketUID, status)
 
 		// TODO Use a transaction here
 
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
+			errorWriter.WriteError(c, w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
 			return
 		}
 
 		basket.InitialPaymentStatus = status
 		err = s.basketStore.Put(c, basketUID, &basket)
 		if err != nil {
-			myhttp.WriteError(w, 2, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 2, myerrors.NewInternalError(err))
 			return
 		}
 
@@ -153,23 +167,24 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 
 func (s service) checkoutStatusUpdate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c := context.Background()
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		eventCode := mux.Vars(r)["eventCode"]
 		status := mux.Vars(r)["status"]
 
-		log.Printf("Checkout status update for basket %s (%s) -> %s", basketUID, eventCode, status)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Checkout status update for basket %s (%s) -> %s", basketUID, eventCode, status)
 
 		// TODO use a transaction
 
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
+			errorWriter.WriteError(c, w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
 			return
 		}
 
@@ -177,10 +192,10 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 		basket.FinalPaymentStatus = status
 		err = s.basketStore.Put(c, basketUID, &basket)
 		if err != nil {
-			myhttp.WriteError(w, 2, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 2, myerrors.NewInternalError(err))
 			return
 		}
-		myhttp.Write(w, http.StatusOK, myhttp.EmptyResponse{})
+		errorWriter.Write(c, w, http.StatusOK, myhttp.EmptyResponse{})
 	}
 }
 
