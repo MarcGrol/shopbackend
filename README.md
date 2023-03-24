@@ -2,20 +2,22 @@
 
 Little example app that demonstrates how Adyen drop-in checkout works
 
+## Play around with the app
+
+https://app.marcgrolconsultancy.nl/
+
 ## Deploy on Google Appengine
 
+    # login in to gcloud to start using the cli
     gcloud auth login 
-    gcloud config set project marcsexperiment
+    gcloud config set project <your-project-name>   
+    
+    # Prepare a task-queue
     gcloud tasks queues create default --max-attempts=10 --max-concurrent-dispatches=5
     
     cp app.yaml.template app.yaml
     # adjust app.yaml
-    gcloud app deploy app.yaml --version v1 --quiet
-
-## Test the userinterface
-
-https://app.marcgrolconsultancy.nl/
-
+    gcloud app deploy app.yaml --version version1 --quiet
 
 ## Overview of architecture
 
