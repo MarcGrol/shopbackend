@@ -216,7 +216,7 @@ func (s service) statusRedirectCallback() http.HandlerFunc {
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
 
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Checkout completed for %s -> %s", basketUID, status)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for ccheckout for %s -> %s", basketUID, status)
 
 		// TODO use a transaction here
 
@@ -287,7 +287,7 @@ func (s service) webhookNotification() http.HandlerFunc {
 func (s service) processNotificationItem(c context.Context, item checkoutmodel.NotificationItem) error {
 	basketUID := item.NotificationRequestItem.MerchantReference
 
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook notification event received: %+v", item)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook status update event received: %+v", item)
 
 	// TODO use a transaction here
 

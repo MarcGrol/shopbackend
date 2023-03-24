@@ -139,7 +139,7 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 		basketUID := mux.Vars(r)["basketUID"]
 		status := r.URL.Query().Get("status")
 
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Checkout completed for basket %s -> %s", basketUID, status)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
 
 		// TODO Use a transaction here
 
