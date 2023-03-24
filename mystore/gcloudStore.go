@@ -3,7 +3,6 @@ package mystore
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"cloud.google.com/go/datastore"
@@ -15,7 +14,6 @@ type gcloudDataStore struct {
 
 func NewStore(c context.Context) (DataStorer, func(), error) {
 	projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	log.Printf("Using project-id: %s", projectId)
 	client, err := datastore.NewClient(c, projectId)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error creating datastore-client: %s", err)

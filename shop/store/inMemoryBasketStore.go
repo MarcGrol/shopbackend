@@ -13,11 +13,11 @@ type inMemoryPaymentStore struct {
 
 func init() {
 	if os.Getenv("GOOGLE_CLOUD_PROJECT") == "" {
-		New = NewInMemoryBasketStore
+		New = newInMemoryBasketStore
 	}
 }
 
-func NewInMemoryBasketStore(c context.Context) (BasketStorer, func(), error) {
+func newInMemoryBasketStore(c context.Context) (BasketStorer, func(), error) {
 	return &inMemoryPaymentStore{
 		baskets: map[string]Basket{},
 	}, func() {}, nil

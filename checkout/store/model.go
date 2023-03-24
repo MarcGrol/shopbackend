@@ -7,31 +7,40 @@ import (
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 
+func NewCheckoutContext() CheckoutContext {
+	return CheckoutContext{
+		WebhookStatus:  "unknown",
+		WebhookSuccess: "unknown",
+	}
+}
+
 type CheckoutContext struct {
 	BasketUID         string
 	OriginalReturnURL string
-	SessionResponse   checkout.CreateCheckoutSessionResponse
-	PaymentMethods    checkout.PaymentMethodsResponse
+	ID                string
+	SessionData       string `datastore:",noindex"`
 	Status            string
-	WebhookStatus     string
 	PaymentMethod     string
+	WebhookStatus     string
 	WebhookSuccess    string
 }
 
 type CheckoutPageInfo struct {
 	BasketUID              string
+	Amount                 Amount
 	PaymentMethodsResponse checkout.PaymentMethodsResponse
+	ID                     string
+	SessionData            string
 	ClientKey              string
 	MerchantAccount        string
 	CountryCode            string
 	ShopperLocale          string
 	Environment            string
 	ShopperEmail           string
-	Session                checkout.CreateCheckoutSessionResponse
 }
 
-func (ci CheckoutPageInfo) Amount() string {
-	return fmt.Sprintf("%.2f %s", float32(ci.Session.Amount.Value)/100.0, ci.Session.Amount.Currency)
+func (ci CheckoutPageInfo) AmountFormatted() string {
+	return fmt.Sprintf("%.2f %s", float32(ci.Amount.Value)/100.0, ci.Amount.Currency)
 }
 
 type WebhookNotification struct {
@@ -62,6 +71,10 @@ type AdditionalData struct {
 }
 
 type Amount struct {
-	Currency string `json:"currency"`
-	Value    int    `json:"value"`
+	Currency string
+	Value    int64
+}
+
+func (a Amount) String() string {
+	return fmt.Sprintf("%s %.2f", a.Currency, float32(a.Value/100.00))
 }

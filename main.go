@@ -11,8 +11,8 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	checkoutstore "github.com/MarcGrol/shopbackend/checkout/store"
-	"github.com/MarcGrol/shopbackend/myhttpclient"
 	"github.com/MarcGrol/shopbackend/shop"
+	"github.com/MarcGrol/shopbackend/shop/myqueue"
 	basketstore "github.com/MarcGrol/shopbackend/shop/store"
 )
 
@@ -21,14 +21,19 @@ func main() {
 
 	router := mux.NewRouter()
 
+	queue, queueCleanup, err := myqueue.New(c)
+	if err != nil {
+		log.Fatalf("Error creating queue: %s", err)
+	}
+	defer queueCleanup()
+
 	checkoutStore, checkoutStoreCleanup, err := checkoutstore.New(c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
 	defer checkoutStoreCleanup()
 
-	httpClient := myhttpclient.New()
-	checkoutService, err := checkout.NewService(checkoutStore, httpClient)
+	checkoutService, err := checkout.NewService(checkoutStore, queue)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}

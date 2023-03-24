@@ -34,7 +34,7 @@ func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/basket", s.createNewBasketPage()).Methods("POST")
 	router.HandleFunc("/basket/{basketUID}", s.basketDetailsPage()).Methods("GET")
 
-	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutCompletedCallback()).Methods("GET")
+	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutCompletedRedirectCallback()).Methods("GET")
 	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutStatusUpdate()).Methods("PUT")
 }
 
@@ -112,7 +112,7 @@ func (s service) basketDetailsPage() http.HandlerFunc {
 	}
 }
 
-func (s service) checkoutCompletedCallback() http.HandlerFunc {
+func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := context.Background()
 

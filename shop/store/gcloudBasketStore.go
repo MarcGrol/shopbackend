@@ -13,11 +13,11 @@ type gcloudPaymentStore struct {
 
 func init() {
 	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
-		New = NewGcloudBasketStore
+		New = newGcloudBasketStore
 	}
 }
 
-func NewGcloudBasketStore(c context.Context) (BasketStorer, func(), error) {
+func newGcloudBasketStore(c context.Context) (BasketStorer, func(), error) {
 	store, cleanup, err := mystore.NewStore(c)
 	if err != nil {
 		return nil, func() {}, err

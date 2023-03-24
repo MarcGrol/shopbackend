@@ -19,7 +19,7 @@ import (
 	"github.com/MarcGrol/shopbackend/checkout/store"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
-	"github.com/MarcGrol/shopbackend/myhttpclient"
+	"github.com/MarcGrol/shopbackend/shop/myqueue"
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/adyen/adyen-go-api-library/v6/src/common"
@@ -48,14 +48,14 @@ type service struct {
 	clientKey       string
 	apiClient       *adyen.APIClient
 	checkoutStore   store.CheckoutStorer
-	httpClient      myhttpclient.HTTPSender
+	queue           myqueue.TaskQueuer
 }
 
 type Starter interface {
 	PrepareForCheckoutPage(basketUID string, req checkout.CreateCheckoutSessionRequest) (string, error)
 }
 
-func NewService(checkoutStore store.CheckoutStorer, httpClient myhttpclient.HTTPSender) (*service, error) {
+func NewService(checkoutStore store.CheckoutStorer, queue myqueue.TaskQueuer) (*service, error) {
 	merchantAccount := os.Getenv(merchantAccountVarname)
 	if merchantAccount == "" {
 		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", merchantAccountVarname))
@@ -86,7 +86,7 @@ func NewService(checkoutStore store.CheckoutStorer, httpClient myhttpclient.HTTP
 			//Debug:       true,
 		}),
 		checkoutStore: checkoutStore,
-		httpClient:    httpClient,
+		queue:         queue,
 	}, nil
 }
 
@@ -96,7 +96,6 @@ func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.statusCallback()).Methods("GET")
 
 	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
-
 }
 
 func (s service) startCheckoutPage() http.HandlerFunc {
@@ -127,8 +126,8 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 		checkoutContext := store.CheckoutContext{
 			BasketUID:         basketUID,
 			OriginalReturnURL: returnURL,
-			SessionResponse:   checkoutSessionResp,
-			PaymentMethods:    paymentMethodsResp,
+			ID:                checkoutSessionResp.Id,
+			SessionData:       checkoutSessionResp.SessionData,
 			Status:            "",
 		}
 
@@ -139,15 +138,20 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 		}
 
 		pageInfo := store.CheckoutPageInfo{
-			BasketUID:              basketUID,
-			PaymentMethodsResponse: checkoutContext.PaymentMethods,
+			BasketUID: basketUID,
+			Amount: store.Amount{
+				Currency: sessionRequest.Amount.Currency,
+				Value:    sessionRequest.Amount.Value,
+			},
+			PaymentMethodsResponse: paymentMethodsResp,
 			ClientKey:              s.clientKey,
 			MerchantAccount:        s.merchantAccount,
-			CountryCode:            checkoutContext.SessionResponse.CountryCode,
-			ShopperLocale:          checkoutContext.SessionResponse.ShopperLocale,
+			CountryCode:            sessionRequest.CountryCode,
+			ShopperLocale:          sessionRequest.ShopperLocale,
 			Environment:            s.environment,
-			ShopperEmail:           checkoutContext.SessionResponse.ShopperEmail,
-			Session:                checkoutContext.SessionResponse,
+			ShopperEmail:           sessionRequest.ShopperEmail,
+			ID:                     checkoutSessionResp.Id,
+			SessionData:            checkoutSessionResp.SessionData,
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -178,15 +182,12 @@ func (s service) finalizeCheckoutPage() http.HandlerFunc {
 		log.Printf("Resume checkout for basket %s", basketUID)
 
 		pageInfo := store.CheckoutPageInfo{
-			BasketUID:              basketUID,
-			PaymentMethodsResponse: checkoutContext.PaymentMethods,
-			ClientKey:              s.clientKey,
-			MerchantAccount:        s.merchantAccount,
-			CountryCode:            checkoutContext.SessionResponse.CountryCode,
-			ShopperLocale:          checkoutContext.SessionResponse.ShopperLocale,
-			Environment:            s.environment,
-			ShopperEmail:           checkoutContext.SessionResponse.ShopperEmail,
-			Session:                checkoutContext.SessionResponse,
+			BasketUID:       basketUID,
+			ClientKey:       s.clientKey,
+			MerchantAccount: s.merchantAccount,
+			Environment:     s.environment,
+			ID:              checkoutContext.ID,
+			SessionData:     checkoutContext.SessionData,
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -288,13 +289,14 @@ func (s service) processNotificationItem(c context.Context, item store.Notificat
 	}
 
 	// Inform basket service
-	targetUrl := fmt.Sprintf("%s/basket/%s/status/%s/%s", targetHostname, item.NotificationRequestItem.MerchantReference, item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success)
-	httpStatus, _, err := s.httpClient.Send(c, "PUT", targetUrl, []byte("{}"))
+	err = s.queue.Enqueue(c, myqueue.Task{
+		UID: basketUID,
+		WebhookURLPath: fmt.Sprintf("/api/basket/%s/status/%s/%s", basketUID,
+			item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success),
+		Payload: []byte{},
+	})
 	if err != nil {
-		return myerrors.NewInternalError(fmt.Errorf("Error forwarding notification to basket: %s", err))
-	}
-	if httpStatus < 200 || httpStatus >= 300 {
-		return myerrors.NewInternalError(fmt.Errorf("Error forwarding notification to basket: %d", httpStatus))
+		return myerrors.NewInternalError(fmt.Errorf("Error queueing notification to basket %s: %s", basketUID, err))
 	}
 
 	return nil
