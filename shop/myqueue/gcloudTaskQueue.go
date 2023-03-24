@@ -76,7 +76,7 @@ func (q *gcloudTaskQueue) IsLastAttempt(c context.Context, taskUID string) (int3
 		return numRetries, maxRetries
 	}
 
-	if queue.Ret	ryConfig != nil {
+	if queue.RetryConfig != nil {
 		maxRetries = queue.RetryConfig.MaxAttempts
 	}
 
