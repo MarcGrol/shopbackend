@@ -2,10 +2,6 @@
 
 all: gen fmt test install
 
-deps:
-	go get -u golang.org/x/tools/cmd/goimports
-	go get -u github.com/MarcGrol/yakshop
-
 clean:
 	go clean ./...
 
@@ -21,4 +17,4 @@ gen:
 fmt:
 	find . -name '*.go' -exec goimports -l -w {} \;
 
-.PHONY: all deps clean install test gen fmt
+.PHONY: all clean install test gen fmt
