@@ -174,7 +174,7 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 		eventCode := mux.Vars(r)["eventCode"]
 		status := mux.Vars(r)["status"]
 
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Checkout status update for basket %s (%s) -> %s", basketUID, eventCode, status)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %s", basketUID, eventCode, status)
 
 		// TODO use a transaction
 

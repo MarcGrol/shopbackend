@@ -22,7 +22,7 @@ func init() {
 func newGcloudQueue(c context.Context) (TaskQueuer, func(), error) {
 	cloudTaskClient, err := cloudtasks.NewClient(c)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error creating cloudtask-client: %s", err)
+		return nil, nil, fmt.Errorf("error creating cloudtask-client: %s", err)
 	}
 	return &gcloudTaskQueue{
 			client: cloudTaskClient,
@@ -47,7 +47,7 @@ func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("Error submitting task to queue: %s", err)
+		return fmt.Errorf("error submitting task to queue: %s", err)
 	}
 	return nil
 }
@@ -94,7 +94,7 @@ func (q *gcloudTaskQueue) getQueue(c context.Context, queueName string) (*tasksp
 		Name: composeQueueName(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error getting queue with name %s: %s", queueName, err)
+		return nil, fmt.Errorf("error getting queue with name %s: %s", queueName, err)
 	}
 	return queue, nil
 }
@@ -105,7 +105,7 @@ func (q *gcloudTaskQueue) getTask(c context.Context, taskUID string) (*taskspb.T
 		Name: composeTaskName(taskUID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error getting task with uid %s: %s", taskUID, err)
+		return nil, fmt.Errorf("error getting task with uid %s: %s", taskUID, err)
 	}
 	return task, nil
 }
