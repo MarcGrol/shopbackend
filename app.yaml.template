@@ -1,0 +1,16 @@
+runtime: go120
+service: default
+
+env_variables:
+  LOCATION_ID: "europe-west1"
+  QUEUE_NAME: "default"
+  ADYEN_ENVIRONMENT: "test"
+  ADYEN_MERCHANT_ACCOUNT: "..." # set your own value
+  ADYEN_API_KEY: "..."          # set your own value
+  ADYEN_CLIENT_KEY: "..."      # set your own value
+
+handlers:
+  - url: /.*
+    secure: always
+    script: auto
+
