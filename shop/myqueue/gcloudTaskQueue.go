@@ -3,7 +3,6 @@ package myqueue
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
@@ -34,7 +33,6 @@ func newGcloudQueue(c context.Context) (TaskQueuer, func(), error) {
 
 func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 	taskUID := composeTaskName(task.UID)
-	log.Printf("task-uid: %s", taskUID)
 	_, err := q.client.CreateTask(c, &taskspb.CreateTaskRequest{
 		Parent: composeQueueName(),
 		Task: &taskspb.Task{
@@ -69,24 +67,12 @@ func composeTaskName(taskUID string) string {
 	return fmt.Sprintf("%s/tasks/%s", composeQueueName(), taskUID)
 }
 
-func composeFullyQualifiedWebhookURL(webhookUID string) string {
-	projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-
-	// We are not publishing to a service within the appengine project.
-	// In this case we would have to use the following project structure
-	// "https://<service-name>-dot-<project-name>.appspot.com/url"
-
-	// we are using the default service
-	return fmt.Sprintf("https://%s.appspot.com/%s", projectId, webhookUID)
-}
-
 func (q *gcloudTaskQueue) IsLastAttempt(c context.Context, taskUID string) (int32, int32) {
 	var numRetries int32 = 0
 	var maxRetries int32 = -1
 
 	queue, err := q.getQueue(c, composeQueueName())
 	if err != nil {
-		log.Printf("%s", err)
 		return numRetries, maxRetries
 	}
 
@@ -96,7 +82,6 @@ func (q *gcloudTaskQueue) IsLastAttempt(c context.Context, taskUID string) (int3
 
 	task, err := q.getTask(c, taskUID)
 	if err != nil {
-		log.Printf("%s", err)
 		return numRetries, maxRetries
 	}
 
