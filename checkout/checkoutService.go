@@ -307,6 +307,8 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 	if err != nil {
 		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
 	}
+	
+	// This could be where a basket is being converted into an order
 
 	return nil
 }
