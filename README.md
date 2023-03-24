@@ -4,7 +4,8 @@ Little example app that demonstrates how Adyen drop-in checkout works
 
 ## Play around with the app
 
-https://app.marcgrolconsultancy.nl/
+https://marcsexperiment.ew.r.appspot.com/
+
 
 ## Deploy on Google Appengine
 
