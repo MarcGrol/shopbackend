@@ -1,4 +1,4 @@
-package store
+package checkoutmodel
 
 import (
 	"fmt"
@@ -26,17 +26,17 @@ type CheckoutContext struct {
 }
 
 type CheckoutPageInfo struct {
+	Environment            string
+	MerchantAccount        string
+	ClientKey              string
 	BasketUID              string
 	Amount                 Amount
+	CountryCode            string
+	ShopperLocale          string
+	ShopperEmail           string
 	PaymentMethodsResponse checkout.PaymentMethodsResponse
 	ID                     string
 	SessionData            string
-	ClientKey              string
-	MerchantAccount        string
-	CountryCode            string
-	ShopperLocale          string
-	Environment            string
-	ShopperEmail           string
 }
 
 func (ci CheckoutPageInfo) AmountFormatted() string {

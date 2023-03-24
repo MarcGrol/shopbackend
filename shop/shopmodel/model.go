@@ -1,4 +1,4 @@
-package store
+package shopmodel
 
 import (
 	"fmt"

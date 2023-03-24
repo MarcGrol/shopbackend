@@ -16,6 +16,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/checkout/store"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
@@ -55,25 +56,26 @@ type Starter interface {
 	PrepareForCheckoutPage(basketUID string, req checkout.CreateCheckoutSessionRequest) (string, error)
 }
 
+// Use dependency injection to isolate the infrastructure and easy testing
 func NewService(checkoutStore store.CheckoutStorer, queue myqueue.TaskQueuer) (*service, error) {
 	merchantAccount := os.Getenv(merchantAccountVarname)
 	if merchantAccount == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", merchantAccountVarname))
+		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", merchantAccountVarname))
 	}
 
 	environment := os.Getenv(environmentVarname)
 	if environment == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", environmentVarname))
+		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", environmentVarname))
 	}
 
 	apiKey := os.Getenv(apiKeyVarname)
 	if apiKey == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", apiKeyVarname))
+		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", apiKeyVarname))
 	}
 
 	clientKey := os.Getenv(clientKeyVarname)
 	if clientKey == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("Missing env-var %s", clientKeyVarname))
+		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", clientKeyVarname))
 	}
 
 	return &service{
@@ -91,78 +93,81 @@ func NewService(checkoutStore store.CheckoutStorer, queue myqueue.TaskQueuer) (*
 }
 
 func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
+	// Endpoints that compose the userinterface
 	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
 	router.HandleFunc("/checkout/{basketUID}", s.finalizeCheckoutPage()).Methods("GET")
-	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.statusCallback()).Methods("GET")
+	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.statusRedirectCallback()).Methods("GET")
 
+	// Webhook notification called by Adyen at a later time
 	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 }
 
+// startCheckoutPage starts a checkout session on the Adyen platform
 func (s service) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := context.Background()
 
-		// parse request and convert into CreateCheckoutSessionRequest
+		// Convert request-body into a CreateCheckoutSessionRequest
 		sessionRequest, basketUID, returnURL, err := parseRequest(r, s.merchantAccount)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInvalidInputError(fmt.Errorf("Error parsing request: %s", err)))
+			myhttp.WriteError(w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
 
-		// store checkout-context
+		log.Printf("Start checkout for basket %s", basketUID)
+
+		// Initiate a checkout session on the Adyen platform
 		checkoutSessionResp, _, err := s.apiClient.Checkout.Sessions(sessionRequest)
 		if err != nil {
-			myhttp.WriteError(w, 2, fmt.Errorf("Error creating payment session for checkout %s: %s", basketUID, err))
+			myhttp.WriteError(w, 2, fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
 			return
 		}
 
-		paymentMethodsRequest := checkoutToPaymentMethodsRequest(sessionRequest)
-		paymentMethodsResp, _, err := s.apiClient.Checkout.PaymentMethods(&paymentMethodsRequest)
+		// Ask the Adyen platform to return payment methods that are allowed for me
+		paymentMethodsResp, _, err := s.apiClient.Checkout.PaymentMethods(checkoutToPaymentMethodsRequest(sessionRequest))
 		if err != nil {
-			myhttp.WriteError(w, 3, fmt.Errorf("Error fetching payment methods for checkoutContext %s: %s", basketUID, err))
+			myhttp.WriteError(w, 3, fmt.Errorf("error fetching payment methods for checkoutContext %s: %s", basketUID, err))
 			return
 		}
 
-		checkoutContext := store.CheckoutContext{
+		// Store checkout context because we need it later again
+		err = s.checkoutStore.Put(c, basketUID, &checkoutmodel.CheckoutContext{
 			BasketUID:         basketUID,
 			OriginalReturnURL: returnURL,
 			ID:                checkoutSessionResp.Id,
 			SessionData:       checkoutSessionResp.SessionData,
-			Status:            "",
-		}
-
-		err = s.checkoutStore.Put(c, basketUID, &checkoutContext)
+		})
 		if err != nil {
-			myhttp.WriteError(w, 4, myerrors.NewInternalError(fmt.Errorf("Error storing checkout: %s", err)))
+			myhttp.WriteError(w, 4, myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err)))
 			return
 		}
 
-		pageInfo := store.CheckoutPageInfo{
-			BasketUID: basketUID,
-			Amount: store.Amount{
+		// Pass relevant data to the checkout page
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		err = checkoutPageTemplate.Execute(w, checkoutmodel.CheckoutPageInfo{
+			Environment:     s.environment,
+			ClientKey:       s.clientKey,
+			MerchantAccount: s.merchantAccount,
+			BasketUID:       basketUID,
+			Amount: checkoutmodel.Amount{
 				Currency: sessionRequest.Amount.Currency,
 				Value:    sessionRequest.Amount.Value,
 			},
-			PaymentMethodsResponse: paymentMethodsResp,
-			ClientKey:              s.clientKey,
-			MerchantAccount:        s.merchantAccount,
 			CountryCode:            sessionRequest.CountryCode,
 			ShopperLocale:          sessionRequest.ShopperLocale,
-			Environment:            s.environment,
 			ShopperEmail:           sessionRequest.ShopperEmail,
+			PaymentMethodsResponse: paymentMethodsResp,
 			ID:                     checkoutSessionResp.Id,
 			SessionData:            checkoutSessionResp.SessionData,
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		err = checkoutPageTemplate.Execute(w, pageInfo)
+		})
 		if err != nil {
-			myhttp.WriteError(w, 5, myerrors.NewInternalError(fmt.Errorf("Error executimng template: %s", err)))
+			myhttp.WriteError(w, 5, myerrors.NewInternalError(fmt.Errorf("error executimng template: %s", err)))
 			return
 		}
 	}
 }
 
+// finalizeCheckoutPage is called when the shopper has finished the checkout process
 func (s service) finalizeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := context.Background()
@@ -175,31 +180,30 @@ func (s service) finalizeCheckoutPage() http.HandlerFunc {
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 11, myerrors.NewNotFoundError(fmt.Errorf("Checkout with uid %s not found", basketUID)))
+			myhttp.WriteError(w, 11, myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID)))
 			return
 		}
 
 		log.Printf("Resume checkout for basket %s", basketUID)
 
-		pageInfo := store.CheckoutPageInfo{
-			BasketUID:       basketUID,
-			ClientKey:       s.clientKey,
-			MerchantAccount: s.merchantAccount,
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// Second time, less data is needed
+		err = checkoutPageTemplate.Execute(w, checkoutmodel.CheckoutPageInfo{
 			Environment:     s.environment,
+			MerchantAccount: s.merchantAccount,
+			ClientKey:       s.clientKey,
+			BasketUID:       basketUID,
 			ID:              checkoutContext.ID,
 			SessionData:     checkoutContext.SessionData,
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		err = checkoutPageTemplate.Execute(w, pageInfo)
+		})
 		if err != nil {
-			myhttp.WriteError(w, 12, myerrors.NewInternalError(fmt.Errorf("Error executimng template: %s", err)))
+			myhttp.WriteError(w, 12, myerrors.NewInternalError(fmt.Errorf("error executimng template: %s", err)))
 			return
 		}
 	}
 }
 
-func (s service) statusCallback() http.HandlerFunc {
+func (s service) statusRedirectCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := context.Background()
 
@@ -208,13 +212,15 @@ func (s service) statusCallback() http.HandlerFunc {
 
 		log.Printf("Checkout completed for %s -> %s", basketUID, status)
 
+		// TODO use a transaction here
+
 		checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
 		if err != nil {
-			myhttp.WriteError(w, 1, myerrors.NewInternalError(fmt.Errorf("Error fetching checkout with uid %s: %s", basketUID, err)))
+			myhttp.WriteError(w, 1, myerrors.NewInternalError(fmt.Errorf("error fetching checkout with uid %s: %s", basketUID, err)))
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("Checkout with uid %s not found", basketUID)))
+			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID)))
 			return
 		}
 
@@ -238,7 +244,7 @@ func (s service) statusCallback() http.HandlerFunc {
 func addStatusQueryParam(orgUrl string, status string) (string, error) {
 	u, err := url.Parse(orgUrl)
 	if err != nil {
-		return "", myerrors.NewInvalidInputError(fmt.Errorf("Error parsing return URL %s: %s", orgUrl, err))
+		return "", myerrors.NewInvalidInputError(fmt.Errorf("error parsing return URL %s: %s", orgUrl, err))
 	}
 	params := u.Query()
 	params.Set("status", status)
@@ -250,10 +256,10 @@ func (s service) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := context.Background()
 
-		event := store.WebhookNotification{}
+		event := checkoutmodel.WebhookNotification{}
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
-			myhttp.WriteError(w, 1, fmt.Errorf("Error parsing webhook notification event:%s", err))
+			myhttp.WriteError(w, 1, fmt.Errorf("error parsing webhook notification event:%s", err))
 			return
 		}
 		log.Printf("Webhook notification event received: %+v", event)
@@ -261,7 +267,7 @@ func (s service) webhookNotification() http.HandlerFunc {
 		for _, item := range event.NotificationItems {
 			err := s.processNotificationItem(c, item, myhttp.HostnameWithScheme(r))
 			if err != nil {
-				myhttp.WriteError(w, 1, fmt.Errorf("Error handling item: %s", err))
+				myhttp.WriteError(w, 1, fmt.Errorf("error handling item: %s", err))
 				return
 			}
 		}
@@ -270,14 +276,17 @@ func (s service) webhookNotification() http.HandlerFunc {
 	}
 }
 
-func (s service) processNotificationItem(c context.Context, item store.NotificationItem, targetHostname string) error {
+func (s service) processNotificationItem(c context.Context, item checkoutmodel.NotificationItem, targetHostname string) error {
 	basketUID := item.NotificationRequestItem.MerchantReference
+
+	// TODO use a transaction here
+
 	checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
 	if err != nil {
 		return myerrors.NewInternalError(err)
 	}
 	if !found {
-		return myerrors.NewNotFoundError(fmt.Errorf("Checkout with uid %s not found", basketUID))
+		return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
 	}
 	checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
 	checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
@@ -288,7 +297,7 @@ func (s service) processNotificationItem(c context.Context, item store.Notificat
 		return myerrors.NewInternalError(err)
 	}
 
-	// Inform basket service
+	// Asynchronously inform basket service
 	err = s.queue.Enqueue(c, myqueue.Task{
 		UID: basketUID,
 		WebhookURLPath: fmt.Sprintf("/api/basket/%s/status/%s/%s", basketUID,
@@ -296,7 +305,7 @@ func (s service) processNotificationItem(c context.Context, item store.Notificat
 		Payload: []byte{},
 	})
 	if err != nil {
-		return myerrors.NewInternalError(fmt.Errorf("Error queueing notification to basket %s: %s", basketUID, err))
+		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
 	}
 
 	return nil
@@ -305,7 +314,7 @@ func (s service) processNotificationItem(c context.Context, item store.Notificat
 func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateCheckoutSessionRequest, string, string, error) {
 	basketUID := mux.Vars(r)["basketUID"]
 	if basketUID == "" {
-		return nil, "", "", myerrors.NewInvalidInputError(fmt.Errorf("Missing basketUID:%s", basketUID))
+		return nil, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
 	}
 
 	err := r.ParseForm()
@@ -318,7 +327,7 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	currency := r.Form.Get("currency")
 	amount, err := strconv.Atoi(r.Form.Get("amount"))
 	if err != nil {
-		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("Invalid amount:%s", err))
+		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount:%s", err))
 	}
 	addressCity := r.Form.Get("shopper.address.city")
 	addressCountry := r.Form.Get("shopper.address.country")
@@ -329,7 +338,8 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	shopperEmail := r.Form.Get("shopper.email")
 	companyHomepage := r.Form.Get("company.homepage")
 	companyName := r.Form.Get("company.name")
-	//shopName := r.Form.Get("shop.name") // TODO: Understand why this field causes /session to fail
+	// TODO: Understand why this field causes /session to fail
+	//shopName := r.Form.Get("shop.name")
 
 	shopperDateOfBirth := func() *time.Time {
 		dob := r.Form.Get("shopper.dateOfBirth")
@@ -431,15 +441,15 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	}, basketUID, returnURL, nil
 }
 
-func checkoutToPaymentMethodsRequest(checkoutReq *checkout.CreateCheckoutSessionRequest) checkout.PaymentMethodsRequest {
-	return checkout.PaymentMethodsRequest{
-		CountryCode:   checkoutReq.CountryCode,
-		ShopperLocale: checkoutReq.ShopperLocale,
-		Channel:       "Web",
+func checkoutToPaymentMethodsRequest(checkoutReq *checkout.CreateCheckoutSessionRequest) *checkout.PaymentMethodsRequest {
+	return &checkout.PaymentMethodsRequest{
+		Channel:         "Web",
+		MerchantAccount: checkoutReq.MerchantAccount,
+		CountryCode:     checkoutReq.CountryCode,
+		ShopperLocale:   checkoutReq.ShopperLocale,
 		Amount: &checkout.Amount{
 			Currency: checkoutReq.Amount.Currency,
 			Value:    checkoutReq.Amount.Value,
 		},
-		MerchantAccount: checkoutReq.MerchantAccount,
 	}
 }

@@ -4,11 +4,13 @@ import (
 	"context"
 	"os"
 	"sync"
+
+	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
 type inMemoryPaymentStore struct {
 	sync.Mutex
-	baskets map[string]Basket
+	baskets map[string]shopmodel.Basket
 }
 
 func init() {
@@ -19,11 +21,11 @@ func init() {
 
 func newInMemoryBasketStore(c context.Context) (BasketStorer, func(), error) {
 	return &inMemoryPaymentStore{
-		baskets: map[string]Basket{},
+		baskets: map[string]shopmodel.Basket{},
 	}, func() {}, nil
 }
 
-func (ps *inMemoryPaymentStore) Put(ctx context.Context, basketUID string, basket *Basket) error {
+func (ps *inMemoryPaymentStore) Put(ctx context.Context, basketUID string, basket *shopmodel.Basket) error {
 	ps.Lock()
 	defer ps.Unlock()
 
@@ -34,7 +36,7 @@ func (ps *inMemoryPaymentStore) Put(ctx context.Context, basketUID string, baske
 	return nil
 }
 
-func (ps *inMemoryPaymentStore) Get(ctx context.Context, basketUID string) (Basket, bool, error) {
+func (ps *inMemoryPaymentStore) Get(ctx context.Context, basketUID string) (shopmodel.Basket, bool, error) {
 	ps.Lock()
 	defer ps.Unlock()
 
@@ -43,11 +45,11 @@ func (ps *inMemoryPaymentStore) Get(ctx context.Context, basketUID string) (Bask
 	return basket, found, nil
 }
 
-func (ps *inMemoryPaymentStore) List(c context.Context) ([]Basket, error) {
+func (ps *inMemoryPaymentStore) List(c context.Context) ([]shopmodel.Basket, error) {
 	ps.Lock()
 	defer ps.Unlock()
 
-	baskets := []Basket{}
+	baskets := []shopmodel.Basket{}
 	for _, b := range ps.baskets {
 		baskets = append(baskets, b)
 	}

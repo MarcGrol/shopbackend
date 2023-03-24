@@ -4,11 +4,13 @@ import (
 	"context"
 	"os"
 	"sync"
+
+	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 )
 
 type inMemoryCheckoutStore struct {
 	sync.Mutex
-	checkouts map[string]CheckoutContext
+	checkouts map[string]checkoutmodel.CheckoutContext
 }
 
 func init() {
@@ -19,27 +21,25 @@ func init() {
 
 func newInMemoryBasketStore(c context.Context) (CheckoutStorer, func(), error) {
 	return &inMemoryCheckoutStore{
-		checkouts: map[string]CheckoutContext{},
+		checkouts: map[string]checkoutmodel.CheckoutContext{},
 	}, func() {}, nil
 }
 
 func NewCheckoutStore() CheckoutStorer {
 	return &inMemoryCheckoutStore{
-		checkouts: map[string]CheckoutContext{},
+		checkouts: map[string]checkoutmodel.CheckoutContext{},
 	}
 }
-func (ps *inMemoryCheckoutStore) Put(ctx context.Context, checkoutUID string, checkout *CheckoutContext) error {
+func (ps *inMemoryCheckoutStore) Put(ctx context.Context, checkoutUID string, checkout *checkoutmodel.CheckoutContext) error {
 	ps.Lock()
 	defer ps.Unlock()
 
 	ps.checkouts[checkoutUID] = *checkout
 
-	//log.Printf("Stored checkout with uid %s", checkoutUID)
-
 	return nil
 }
 
-func (ps *inMemoryCheckoutStore) Get(ctx context.Context, checkoutUID string) (CheckoutContext, bool, error) {
+func (ps *inMemoryCheckoutStore) Get(ctx context.Context, checkoutUID string) (checkoutmodel.CheckoutContext, bool, error) {
 	ps.Lock()
 	defer ps.Unlock()
 

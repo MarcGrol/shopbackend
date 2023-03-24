@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/mystore"
 )
 
@@ -27,12 +28,12 @@ func NewGcloudCheckoutStore(c context.Context) (CheckoutStorer, func(), error) {
 	}, cleanup, nil
 }
 
-func (s *gcloudPaymentStore) Put(ctx context.Context, basketUID string, paymentData *CheckoutContext) error {
+func (s *gcloudPaymentStore) Put(ctx context.Context, basketUID string, paymentData *checkoutmodel.CheckoutContext) error {
 	return s.gcloudDatastoreClient.Put(ctx, "CheckoutContext", basketUID, paymentData)
 }
 
-func (s *gcloudPaymentStore) Get(ctx context.Context, basketUID string) (CheckoutContext, bool, error) {
-	checkout := CheckoutContext{}
+func (s *gcloudPaymentStore) Get(ctx context.Context, basketUID string) (checkoutmodel.CheckoutContext, bool, error) {
+	checkout := checkoutmodel.CheckoutContext{}
 	exists, err := s.gcloudDatastoreClient.Get(ctx, "CheckoutContext", basketUID, &checkout)
 	if err != nil {
 		return checkout, false, err
@@ -40,8 +41,8 @@ func (s *gcloudPaymentStore) Get(ctx context.Context, basketUID string) (Checkou
 	return checkout, exists, nil
 }
 
-func (s *gcloudPaymentStore) List(ctx context.Context) ([]CheckoutContext, error) {
-	checkouts := []CheckoutContext{}
+func (s *gcloudPaymentStore) List(ctx context.Context) ([]checkoutmodel.CheckoutContext, error) {
+	checkouts := []checkoutmodel.CheckoutContext{}
 	err := s.gcloudDatastoreClient.List(ctx, "CheckoutContext", &checkouts)
 	if err != nil {
 		return checkouts, err

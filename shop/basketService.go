@@ -14,6 +14,7 @@ import (
 
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
+	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 	"github.com/MarcGrol/shopbackend/shop/store"
 )
 
@@ -21,6 +22,7 @@ type service struct {
 	basketStore store.BasketStorer
 }
 
+// Use dependency injection to isolate the infrastructure and easy testing
 func NewService(store store.BasketStorer) *service {
 	return &service{
 		basketStore: store,
@@ -29,12 +31,16 @@ func NewService(store store.BasketStorer) *service {
 
 func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
 
+	// Endpoints that compose the userinterface
 	router.HandleFunc("/", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.createNewBasketPage()).Methods("POST")
 	router.HandleFunc("/basket/{basketUID}", s.basketDetailsPage()).Methods("GET")
 
+	// When checkout is completed, the user is redirected to this page
 	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutCompletedRedirectCallback()).Methods("GET")
+
+	// Checkout component will call this endpoint to update the status of the checkout
 	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutStatusUpdate()).Methods("PUT")
 }
 
@@ -99,7 +105,7 @@ func (s service) basketDetailsPage() http.HandlerFunc {
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("Basket with uid %s not found", basketUID)))
+			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
 			return
 		}
 
@@ -127,7 +133,7 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("Basket with uid %s not found", basketUID)))
+			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
 			return
 		}
 
@@ -153,13 +159,15 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 
 		log.Printf("Checkout status update for basket %s (%s) -> %s", basketUID, eventCode, status)
 
+		// TODO use a transaction
+
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {
 			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
 			return
 		}
 		if !found {
-			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("Basket with uid %s not found", basketUID)))
+			myhttp.WriteError(w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
 			return
 		}
 
@@ -174,15 +182,15 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 	}
 }
 
-func createBasket(orderRef string, returnURL string) store.Basket {
-	return store.Basket{
+func createBasket(orderRef string, returnURL string) shopmodel.Basket {
+	return shopmodel.Basket{
 		UID:        orderRef,
 		CreatedAt:  time.Now(),
 		Shop:       getCurrentShop(),
 		Shopper:    getCurrentShopper(),
 		TotalPrice: 51000,
 		Currency:   "EUR",
-		SelectedProducts: []store.SelectedProduct{
+		SelectedProducts: []shopmodel.SelectedProduct{
 			{
 				UID:         "product_tennis_racket",
 				Description: "Tennis racket",
@@ -203,8 +211,8 @@ func createBasket(orderRef string, returnURL string) store.Basket {
 	}
 }
 
-func getCurrentShop() store.Shop {
-	return store.Shop{
+func getCurrentShop() shopmodel.Shop {
+	return shopmodel.Shop{
 		UID:      "shop_evas_shop",
 		Name:     "Eva's shop",
 		Country:  "NL",
@@ -213,13 +221,13 @@ func getCurrentShop() store.Shop {
 	}
 }
 
-func getCurrentShopper() store.Shopper {
-	return store.Shopper{
+func getCurrentShopper() shopmodel.Shopper {
+	return shopmodel.Shopper{
 		UID:         "shopper_marc_grol",
 		FirstName:   "Marc",
 		LastName:    "Grol",
 		DateOfBirth: func() *time.Time { t := time.Date(1971, time.February, 27, 0, 0, 0, 0, time.UTC); return &t }(),
-		Address: store.Address{
+		Address: shopmodel.Address{
 			City:              "De Bilt",
 			Country:           "NL",
 			HouseNumberOrName: "79",
