@@ -224,6 +224,7 @@ func getCurrentShop() shopmodel.Shop {
 }
 
 func getCurrentShopper() shopmodel.Shopper {
+	uid, _ := uuid.NewRandom()
 	return shopmodel.Shopper{
 		UID:         "shopper_marc_grol",
 		FirstName:   "Marc",
@@ -239,7 +240,7 @@ func getCurrentShopper() shopmodel.Shopper {
 		},
 		Country:      "NL",
 		Locale:       "nl-NL",
-		EmailAddress: "marc.grol@gmail.com",
+		EmailAddress: fmt.Sprintf("marc.grol+%s@gmail.com", uid.String()),
 		PhoneNumber:  "+31648928856",
 	}
 }
