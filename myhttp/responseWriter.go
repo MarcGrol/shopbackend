@@ -3,7 +3,6 @@ package myhttp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -15,6 +14,7 @@ type errorResponse struct {
 	ErrorCode int
 	Message   string
 }
+type EmptyResponse struct{}
 
 func NewWriter(logger mylog.Logger) ResponseWriter {
 	return &responseWriter{
@@ -25,8 +25,6 @@ func NewWriter(logger mylog.Logger) ResponseWriter {
 type responseWriter struct {
 	logger mylog.Logger
 }
-
-type EmptyResponse struct{}
 
 func (rw responseWriter) WriteError(c context.Context, w http.ResponseWriter, errorCode int, err error) {
 	httpStatus := myerrors.GetHttpStatus(err)
@@ -53,12 +51,4 @@ func (rw responseWriter) write(w http.ResponseWriter, httpStatus int, resp inter
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-
-func HostnameWithScheme(r *http.Request) string {
-	scheme := "https"
-	if r.TLS == nil {
-		scheme = "http"
-	}
-	return fmt.Sprintf("%s://%s", scheme, r.Host)
 }

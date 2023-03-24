@@ -35,7 +35,7 @@ func (l structuredLogger) Log(ctx context.Context, traceLabel string, severity S
 		Labels:    map[string]string{"aggregate": traceLabel},
 		Trace:     ctx.Value("Cloud-Trace-Context").(string),
 		Severity:  string(severity),
-		Message:   fmt.Sprintf(format, a...),
+		Message:   l.componentName + ":" + fmt.Sprintf(format, a...),
 	}.String())
 }
 

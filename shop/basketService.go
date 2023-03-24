@@ -39,12 +39,10 @@ func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/basket", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.createNewBasketPage()).Methods("POST")
 	router.HandleFunc("/basket/{basketUID}", s.basketDetailsPage()).Methods("GET")
-
-	// When checkout is completed, the user is redirected to this page
 	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutCompletedRedirectCallback()).Methods("GET")
 
 	// Checkout component will call this endpoint to update the status of the checkout
-	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutStatusUpdate()).Methods("PUT")
+	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutStatusWebhookCallback()).Methods("PUT")
 }
 
 //go:embed templates
@@ -165,7 +163,7 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 	}
 }
 
-func (s service) checkoutStatusUpdate() http.HandlerFunc {
+func (s service) checkoutStatusWebhookCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -188,13 +186,18 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 			return
 		}
 
+		// Final codes matter!
 		basket.FinalPaymentEvent = eventCode
 		basket.FinalPaymentStatus = status
+
 		err = s.basketStore.Put(c, basketUID, &basket)
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, myerrors.NewInternalError(err))
 			return
 		}
+
+		// This could be the place where a basket is being converted into an order
+
 		errorWriter.Write(c, w, http.StatusOK, myhttp.EmptyResponse{})
 	}
 }
