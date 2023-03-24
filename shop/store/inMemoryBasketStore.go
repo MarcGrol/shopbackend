@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"os"
 	"sync"
 )
 
@@ -10,16 +11,23 @@ type inMemoryPaymentStore struct {
 	baskets map[string]Basket
 }
 
-func NewInMemoryBasketStore() BasketStore {
-	return &inMemoryPaymentStore{
-		baskets: map[string]Basket{},
+func init() {
+	if os.Getenv("GOOGLE_CLOUD_PROJECT") == "" {
+		New = NewInMemoryBasketStore
 	}
 }
-func (ps *inMemoryPaymentStore) Put(ctx context.Context, basketUID string, paymentData Basket) error {
+
+func NewInMemoryBasketStore(c context.Context) (BasketStorer, func(), error) {
+	return &inMemoryPaymentStore{
+		baskets: map[string]Basket{},
+	}, func() {}, nil
+}
+
+func (ps *inMemoryPaymentStore) Put(ctx context.Context, basketUID string, basket *Basket) error {
 	ps.Lock()
 	defer ps.Unlock()
 
-	ps.baskets[basketUID] = paymentData
+	ps.baskets[basketUID] = *basket
 
 	//log.Printf("Stored basket with uid %s", basketUID)
 

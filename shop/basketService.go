@@ -9,20 +9,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/shop/store"
-
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
+	"github.com/MarcGrol/shopbackend/shop/store"
 )
 
 type service struct {
-	basketStore store.BasketStore
+	basketStore store.BasketStorer
 }
 
-func NewService(store store.BasketStore) *service {
+func NewService(store store.BasketStorer) *service {
 	return &service{
 		basketStore: store,
 	}
@@ -77,7 +76,8 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		uid := func() string { u, _ := uuid.NewUUID(); return u.String() }()
 		returnURL := fmt.Sprintf("%s/basket/%s/checkout/completed", myhttp.HostnameWithScheme(r), uid)
 
-		err := s.basketStore.Put(c, uid, createBasket(uid, returnURL))
+		basket := createBasket(uid, returnURL)
+		err := s.basketStore.Put(c, uid, &basket)
 		if err != nil {
 			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
 			return
@@ -119,7 +119,7 @@ func (s service) checkoutCompletedCallback() http.HandlerFunc {
 		basketUID := mux.Vars(r)["basketUID"]
 		status := r.URL.Query().Get("status")
 
-		log.Printf("Checkout completed for basket %s (%s) -> %s", basketUID, status)
+		log.Printf("Checkout completed for basket %s -> %s", basketUID, status)
 
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {
@@ -132,7 +132,7 @@ func (s service) checkoutCompletedCallback() http.HandlerFunc {
 		}
 
 		basket.InitialPaymentStatus = status
-		err = s.basketStore.Put(c, basketUID, basket)
+		err = s.basketStore.Put(c, basketUID, &basket)
 		if err != nil {
 			myhttp.WriteError(w, 2, myerrors.NewInternalError(err))
 			return
@@ -163,8 +163,9 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 			return
 		}
 
-		basket.FinalPaymentStatus[eventCode] = status
-		err = s.basketStore.Put(c, basketUID, basket)
+		basket.FinalPaymentEvent = eventCode
+		basket.FinalPaymentStatus = status
+		err = s.basketStore.Put(c, basketUID, &basket)
 		if err != nil {
 			myhttp.WriteError(w, 2, myerrors.NewInternalError(err))
 			return
@@ -176,6 +177,7 @@ func (s service) checkoutStatusUpdate() http.HandlerFunc {
 func createBasket(orderRef string, returnURL string) store.Basket {
 	return store.Basket{
 		UID:        orderRef,
+		CreatedAt:  time.Now(),
 		Shop:       getCurrentShop(),
 		Shopper:    getCurrentShopper(),
 		TotalPrice: 51000,
@@ -198,7 +200,6 @@ func createBasket(orderRef string, returnURL string) store.Basket {
 		},
 		ReturnURL:            returnURL,
 		InitialPaymentStatus: "open",
-		FinalPaymentStatus:   map[string]string{},
 	}
 }
 

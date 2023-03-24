@@ -2,14 +2,14 @@ package store
 
 import (
 	"fmt"
-	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"time"
+
+	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 
 type CheckoutContext struct {
 	BasketUID         string
 	OriginalReturnURL string
-	SessionRequest    checkout.CreateCheckoutSessionRequest
 	SessionResponse   checkout.CreateCheckoutSessionResponse
 	PaymentMethods    checkout.PaymentMethodsResponse
 	Status            string

@@ -3,9 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/checkout/store"
-	"github.com/MarcGrol/shopbackend/myhttpclient"
-	store2 "github.com/MarcGrol/shopbackend/shop/store"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +10,10 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout"
+	checkoutstore "github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/myhttpclient"
 	"github.com/MarcGrol/shopbackend/shop"
+	basketstore "github.com/MarcGrol/shopbackend/shop/store"
 )
 
 func main() {
@@ -21,7 +21,12 @@ func main() {
 
 	router := mux.NewRouter()
 
-	checkoutStore := store.NewCheckoutStore()
+	checkoutStore, checkoutStoreCleanup, err := checkoutstore.New(c)
+	if err != nil {
+		log.Fatalf("Error creating checkout store: %s", err)
+	}
+	defer checkoutStoreCleanup()
+
 	httpClient := myhttpclient.New()
 	checkoutService, err := checkout.NewService(checkoutStore, httpClient)
 	if err != nil {
@@ -29,7 +34,12 @@ func main() {
 	}
 	checkoutService.RegisterEndpoints(c, router)
 
-	basketStore := store2.NewInMemoryBasketStore()
+	basketStore, basketstoreCleanup, err := basketstore.New(c)
+	if err != nil {
+		log.Fatalf("Error creating basket store: %s", err)
+	}
+	defer basketstoreCleanup()
+
 	basketService := shop.NewService(basketStore)
 	basketService.RegisterEndpoints(c, router)
 

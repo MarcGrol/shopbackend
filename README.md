@@ -4,7 +4,7 @@
 
     gcloud auth login 
     gcloud config set project marcsexperiment
-    gcloud app deploy app.yaml --version adyenshop
+    gcloud app deploy app.yaml --version v1 --quiet
 
 ## Test
 

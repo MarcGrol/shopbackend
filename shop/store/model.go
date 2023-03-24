@@ -36,13 +36,15 @@ type Address struct {
 
 type Basket struct {
 	UID                  string
+	CreatedAt            time.Time
 	Shop                 Shop
 	Shopper              Shopper
 	TotalPrice           int64
 	Currency             string
 	SelectedProducts     []SelectedProduct
 	InitialPaymentStatus string
-	FinalPaymentStatus   map[string]string
+	FinalPaymentEvent    string
+	FinalPaymentStatus   string
 	ReturnURL            string
 }
 
