@@ -1,4 +1,4 @@
-# shopbackend
+# Fake shop that interacts with paymnent system
 
 Little example app that demonstrates how Adyen drop-in checkout works
 
