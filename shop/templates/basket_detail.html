@@ -14,26 +14,30 @@
         </form>
         <table class="table">
             <tbody>
-            <tr>
-                <td>UID</td>
-                <td>{{.UID}}</td>
-            </tr>
-            <tr>
-                <td>Shop</td>
-                <td>{{.Shop.Name}}</td>
-            </tr>
-            <tr>
-                <td>Shopper</td>
-                <td>{{.Shopper.FirstName}} {{.Shopper.LastName}}</td>
-            </tr>
-            <tr>
-                <td>Price</td>
-                <td>{{.GetPriceInCurrency}}</td>
-            </tr>
-            <tr>
-                <td>Status</td>
-                <td>{{.InitialPaymentStatus}} -> {{.FinalPaymentEvent}}{{.FinalPaymentStatus}}</td>
-            </tr>
+                <tr>
+                    <td>UID</td>
+                    <td>{{.UID}}</td>
+                </tr>
+                <tr>
+                    <td>Shop</td>
+                    <td>{{.Shop.Name}}</td>
+                </tr>
+                <tr>
+                    <td>Shopper</td>
+                    <td>{{.Shopper.FirstName}} {{.Shopper.LastName}}</td>
+                </tr>
+                <tr>
+                    <td>Price</td>
+                    <td>{{.GetPriceInCurrency}}</td>
+                </tr>
+                <tr>
+                    <td>Initial status</td>
+                    <td>{{.InitialPaymentStatus}}</td>
+                </tr>
+                <tr>
+                    <td>Final status</td>
+                    <td>{{.FinalPaymentEvent}}={{.FinalPaymentStatus}}</td>
+                </tr>
             </tbody>
         </table>
         {{if .IsNotPaid}}

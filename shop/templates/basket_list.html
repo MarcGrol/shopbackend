@@ -15,26 +15,26 @@
     <form action="/basket" method="POST">
         <button type="submit" class="btn btn-primary">Create new basket</button>
     </form>
-    {{range .}}
 <table class="table">
     <thead>
     <tr>
         <th scope="col">BasketUID</th>
         <th scope="col">TotalPrice</th>
-        <th scope="col">Currency</th>
-        <th scope="col">Status</th>
+        <th scope="col">Initial status</th>
+        <th scope="col">Final status</th>
     </tr>
     </thead>
     <tbody>
-    <tr>
-        <td><a href="/basket/{{.UID}}">{{.UID}}</a></td>
-        <td>{{.TotalPrice}}</td>
-        <td>{{.Currency}}</td>
-        <td>{{.InitialPaymentStatus}} -> {{.FinalPaymentEvent}}={{.FinalPaymentStatus}}</td>
-    </tr>
-    </tbody>
+        {{range .}}
+        <tr>
+            <td><a href="/basket/{{.UID}}">{{.UID}}</a></td>
+            <td>{{.GetPriceInCurrency}}</td>
+            <td>{{.InitialPaymentStatus}}</td>
+            <td>{{.FinalPaymentEvent}}={{.FinalPaymentStatus}} </td>
+        </tr>
+    {{end}}
+</tbody>
 </table>
-{{end}}
 
     </div>
 </div>
