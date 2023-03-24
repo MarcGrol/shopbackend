@@ -127,6 +127,8 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 
 		log.Printf("Checkout completed for basket %s -> %s", basketUID, status)
 
+		// TODO Use a transaction here
+
 		basket, found, err := s.basketStore.Get(c, basketUID)
 		if err != nil {
 			myhttp.WriteError(w, 1, myerrors.NewInternalError(err))
