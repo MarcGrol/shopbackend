@@ -10,6 +10,8 @@
 
 https://app.marcgrolconsultancy.nl/
 
+## Architecture
 
+![alt text](./adyen_shop_architecture.png)
 
 
