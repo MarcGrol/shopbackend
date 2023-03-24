@@ -9,15 +9,17 @@ https://marcsexperiment.ew.r.appspot.com/
 
 ## Deploy on Google Appengine
 
-    # login in to gcloud to start using the cli
+    # Login in to gcloud to start using the cli
     gcloud auth login 
     gcloud config set project <your-project-name>   
     
     # Prepare a task-queue
     gcloud tasks queues create default --max-attempts=10 --max-concurrent-dispatches=5
     
-    cp app.yaml.template app.yaml
-    # adjust app.yaml
+    # Create your own app.yaml
+    cp app.yaml.template app.yaml # set env-vars to the right values
+    
+    # Perform the actual deployment
     gcloud app deploy app.yaml --version version1 --quiet
 
 ## Overview of architecture
