@@ -3,7 +3,6 @@ package mystore
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"cloud.google.com/go/datastore"
@@ -87,8 +86,6 @@ func (s *gcloudDataStore) Get(c context.Context, kind, uid string) (interface{},
 
 	objectToFetch, _ := s.typeCreator()
 
-	log.Printf("types: %T", objectToFetch)
-
 	if transaction != nil {
 		err := transaction.(*datastore.Transaction).Get(datastore.NameKey(kind, uid, nil), objectToFetch)
 		if err != nil {
@@ -112,8 +109,6 @@ func (s *gcloudDataStore) Get(c context.Context, kind, uid string) (interface{},
 
 func (s *gcloudDataStore) List(c context.Context, kind string) (interface{}, error) {
 	_, objectsToFetch := s.typeCreator()
-
-	log.Printf("types: %T", objectsToFetch)
 
 	// not transactional for now
 

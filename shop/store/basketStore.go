@@ -46,6 +46,7 @@ func (bs *basketStore) List(ctx context.Context) ([]shopmodel.Basket, error) {
 		return []shopmodel.Basket{}, err
 	}
 
+	// TODO Fix this ugly type conversion
 	typedResult := []shopmodel.Basket{}
 	_, ok := result.(*[]shopmodel.Basket)
 	if ok {
@@ -60,6 +61,7 @@ func (bs *basketStore) List(ctx context.Context) ([]shopmodel.Basket, error) {
 		}
 	}
 
+	// Sort by creation date descending
 	sort.Slice(typedResult, func(i, j int) bool {
 		return typedResult[i].CreatedAt.After(typedResult[j].CreatedAt)
 	})
