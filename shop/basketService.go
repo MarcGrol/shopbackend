@@ -139,22 +139,30 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
 
-		// TODO Use a transaction here
+		var basket *shopmodel.Basket
+		var found bool
+		var err error
+		err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
 
-		basket, found, err := s.basketStore.Get(c, basketUID)
-		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
-			return
-		}
-		if !found {
-			errorWriter.WriteError(c, w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
-			return
-		}
+			basket, found, err = s.basketStore.Get(c, basketUID)
+			if err != nil {
+				return myerrors.NewInternalError(err)
+			}
+			if !found {
+				return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID))
+			}
 
-		basket.InitialPaymentStatus = status
-		err = s.basketStore.Put(c, basketUID, &basket)
+			basket.InitialPaymentStatus = status
+
+			err = s.basketStore.Put(c, basketUID, basket)
+			if err != nil {
+				return myerrors.NewInternalError(err)
+			}
+
+			return nil
+		})
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, err)
 			return
 		}
 
@@ -174,25 +182,30 @@ func (s service) checkoutStatusWebhookCallback() http.HandlerFunc {
 
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %s", basketUID, eventCode, status)
 
-		// TODO use a transaction
+		var basket *shopmodel.Basket
+		var found bool
+		var err error
+		err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
+			basket, found, err = s.basketStore.Get(c, basketUID)
+			if err != nil {
+				return myerrors.NewInternalError(err)
+			}
+			if !found {
+				return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID))
+			}
 
-		basket, found, err := s.basketStore.Get(c, basketUID)
+			// Final codes matter!
+			basket.FinalPaymentEvent = eventCode
+			basket.FinalPaymentStatus = status
+
+			err = s.basketStore.Put(c, basketUID, basket)
+			if err != nil {
+				return myerrors.NewInternalError(err)
+			}
+			return nil
+		})
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
-			return
-		}
-		if !found {
-			errorWriter.WriteError(c, w, 1, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID)))
-			return
-		}
-
-		// Final codes matter!
-		basket.FinalPaymentEvent = eventCode
-		basket.FinalPaymentStatus = status
-
-		err = s.basketStore.Put(c, basketUID, &basket)
-		if err != nil {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
 			return
 		}
 

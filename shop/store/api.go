@@ -6,10 +6,9 @@ import (
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
-var New func(c context.Context) (BasketStorer, func(), error)
-
 type BasketStorer interface {
+	RunInTransaction(c context.Context, f func(context.Context) error) error
 	Put(ctx context.Context, basketUID string, basket *shopmodel.Basket) error
-	Get(ctx context.Context, basketUID string) (shopmodel.Basket, bool, error)
+	Get(ctx context.Context, basketUID string) (*shopmodel.Basket, bool, error)
 	List(ctx context.Context) ([]shopmodel.Basket, error)
 }

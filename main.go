@@ -12,8 +12,8 @@ import (
 	"github.com/MarcGrol/shopbackend/checkout"
 	checkoutstore "github.com/MarcGrol/shopbackend/checkout/store"
 	"github.com/MarcGrol/shopbackend/mylog"
+	"github.com/MarcGrol/shopbackend/myqueue"
 	"github.com/MarcGrol/shopbackend/shop"
-	"github.com/MarcGrol/shopbackend/shop/myqueue"
 	basketstore "github.com/MarcGrol/shopbackend/shop/store"
 )
 

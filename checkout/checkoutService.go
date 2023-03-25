@@ -21,7 +21,7 @@ import (
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
 	"github.com/MarcGrol/shopbackend/mylog"
-	"github.com/MarcGrol/shopbackend/shop/myqueue"
+	"github.com/MarcGrol/shopbackend/myqueue"
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/adyen/adyen-go-api-library/v6/src/common"
@@ -218,22 +218,29 @@ func (s service) statusRedirectCallback() http.HandlerFunc {
 
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for checkout for %s -> %s", basketUID, status)
 
-		// TODO use a transaction here
+		var checkoutContext *checkoutmodel.CheckoutContext
+		var found bool
+		var err error
+		err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 
-		checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
-		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(fmt.Errorf("error fetching checkout with uid %s: %s", basketUID, err)))
-			return
-		}
-		if !found {
-			errorWriter.WriteError(c, w, 1, myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID)))
-			return
-		}
+			checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
+			if err != nil {
+				return myerrors.NewInternalError(fmt.Errorf("error fetching checkout with uid %s: %s", basketUID, err))
+			}
+			if !found {
+				return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+			}
 
-		checkoutContext.Status = status
-		err = s.checkoutStore.Put(c, basketUID, &checkoutContext)
+			checkoutContext.Status = status
+
+			err = s.checkoutStore.Put(c, basketUID, checkoutContext)
+			if err != nil {
+				return myerrors.NewInternalError(err)
+			}
+			return nil
+		})
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 1, err)
 			return
 		}
 
@@ -293,22 +300,31 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received: %+v", item)
 
-	// TODO use a transaction here
+	var checkoutContext *checkoutmodel.CheckoutContext
+	var found bool
+	var err error
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 
-	checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
-	if err != nil {
-		return myerrors.NewInternalError(err)
-	}
-	if !found {
-		return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
-	}
-	checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
-	checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
-	checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
+		checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+		if !found {
+			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+		}
+		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
+		checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
+		checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
 
-	err = s.checkoutStore.Put(c, basketUID, &checkoutContext)
+		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return myerrors.NewInternalError(err)
+		return err
 	}
 
 	// Asynchronously inform basket service
