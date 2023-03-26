@@ -11,9 +11,9 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/mylog"
-	"github.com/MarcGrol/shopbackend/myqueue"
-	"github.com/MarcGrol/shopbackend/mystore"
+	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/myqueue"
+	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/shop"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )

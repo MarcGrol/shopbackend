@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+
 	"html/template"
 	"net/http"
 	"sort"
@@ -12,11 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
-	"github.com/MarcGrol/shopbackend/mycontext"
-	"github.com/MarcGrol/shopbackend/myerrors"
-	"github.com/MarcGrol/shopbackend/myhttp"
-	"github.com/MarcGrol/shopbackend/mylog"
-	"github.com/MarcGrol/shopbackend/mystore"
+	"github.com/MarcGrol/shopbackend/lib/mycontext"
+	"github.com/MarcGrol/shopbackend/lib/myerrors"
+	"github.com/MarcGrol/shopbackend/lib/myhttp"
+	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 

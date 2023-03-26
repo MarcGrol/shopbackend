@@ -24,6 +24,6 @@ https://marcsexperiment.ew.r.appspot.com/
 
 ## Overview of architecture
 
-![alt text](./adyen_shop_architecture.png)
+![alt text](./docs/adyen_shop_architecture.png)
 
 

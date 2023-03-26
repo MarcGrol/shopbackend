@@ -3,11 +3,10 @@ package mystore
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/lib/mycontext"
 	"net/http"
 
 	"github.com/gorilla/mux"
-
-	"github.com/MarcGrol/shopbackend/mycontext"
 )
 
 type Person struct {
