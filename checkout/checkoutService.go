@@ -16,7 +16,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mycontext"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
@@ -49,13 +49,13 @@ type service struct {
 	merchantAccount string
 	clientKey       string
 	apiClient       *adyen.APIClient
-	checkoutStore   store.CheckoutStorer
+	checkoutStore   experiment.Store[checkoutmodel.CheckoutContext]
 	queue           myqueue.TaskQueuer
 	logger          mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(checkoutStore store.CheckoutStorer, queue myqueue.TaskQueuer, logger mylog.Logger) (*service, error) {
+func NewService(checkoutStore experiment.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, logger mylog.Logger) (*service, error) {
 	merchantAccount := os.Getenv(merchantAccountVarname)
 	if merchantAccount == "" {
 		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", merchantAccountVarname))
@@ -131,7 +131,7 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 		}
 
 		// Store checkout context because we need it later again
-		err = s.checkoutStore.Put(c, basketUID, &checkoutmodel.CheckoutContext{
+		err = s.checkoutStore.Put(c, basketUID, checkoutmodel.CheckoutContext{
 			BasketUID:         basketUID,
 			OriginalReturnURL: returnURL,
 			ID:                checkoutSessionResp.Id,
@@ -214,7 +214,7 @@ func (s service) statusRedirectCallback() http.HandlerFunc {
 
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for checkout for %s -> %s", basketUID, status)
 
-		var checkoutContext *checkoutmodel.CheckoutContext
+		var checkoutContext checkoutmodel.CheckoutContext
 		var found bool
 		var err error
 		err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
@@ -296,7 +296,7 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received: %+v", item)
 
-	var checkoutContext *checkoutmodel.CheckoutContext
+	var checkoutContext checkoutmodel.CheckoutContext
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {

@@ -11,21 +11,21 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mycontext"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
 	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
-	"github.com/MarcGrol/shopbackend/shop/store"
 )
 
 type service struct {
-	basketStore store.BasketStorer
+	basketStore experiment.Store[shopmodel.Basket]
 	logger      mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(store store.BasketStorer, logger mylog.Logger) *service {
+func NewService(store experiment.Store[shopmodel.Basket], logger mylog.Logger) *service {
 	return &service{
 		basketStore: store,
 		logger:      logger,
@@ -90,7 +90,7 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		s.logger.Log(c, uid, mylog.SeverityInfo, "Creating new basket with uid %s", uid)
 
 		basket := createBasket(uid, returnURL)
-		err := s.basketStore.Put(c, uid, &basket)
+		err := s.basketStore.Put(c, uid, basket)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
@@ -139,7 +139,7 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
 
-		var basket *shopmodel.Basket
+		var basket shopmodel.Basket
 		var found bool
 		var err error
 		err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
@@ -182,7 +182,7 @@ func (s service) checkoutStatusWebhookCallback() http.HandlerFunc {
 
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %s", basketUID, eventCode, status)
 
-		var basket *shopmodel.Basket
+		var basket shopmodel.Basket
 		var found bool
 		var err error
 		err = s.basketStore.RunInTransaction(c, func(c context.Context) error {

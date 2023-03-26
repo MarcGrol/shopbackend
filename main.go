@@ -10,12 +10,12 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout"
-	checkoutstore "github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/myqueue"
 	"github.com/MarcGrol/shopbackend/shop"
-	basketstore "github.com/MarcGrol/shopbackend/shop/store"
+	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 	}
 	defer queueCleanup()
 
-	checkoutStore, checkoutStoreCleanup, err := checkoutstore.New(c)
+	checkoutStore, checkoutStoreCleanup, err := experiment.New[checkoutmodel.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
@@ -49,7 +49,7 @@ func main() {
 	}
 	checkoutService.RegisterEndpoints(c, router)
 
-	basketStore, basketstoreCleanup, err := basketstore.New(c)
+	basketStore, basketstoreCleanup, err := experiment.New[shopmodel.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}
