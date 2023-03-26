@@ -191,6 +191,7 @@ func (s service) checkoutStatusWebhookCallback() http.HandlerFunc {
 		var found bool
 		var err error
 		err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
+			// must be idempotent
 			basket, found, err = s.basketStore.Get(c, basketUID)
 			if err != nil {
 				return myerrors.NewInternalError(err)

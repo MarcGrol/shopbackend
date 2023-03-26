@@ -20,7 +20,7 @@ func (s *inMemoryStore[T]) RunInTransaction(c context.Context, f func(c context.
 	// Start transaction
 	s.Lock()
 
-	ctx := context.WithValue(c, "transaction", true)
+	ctx := context.WithValue(c, ctxTransactionKey{}, true)
 
 	// Within this block everything is transactional
 	err := f(ctx)
@@ -39,7 +39,7 @@ func (s *inMemoryStore[T]) RunInTransaction(c context.Context, f func(c context.
 }
 
 func (s *inMemoryStore[T]) Put(c context.Context, uid string, value T) error {
-	nonTransactional := c.Value("transaction") == nil
+	nonTransactional := c.Value(ctxTransactionKey{}) == nil
 
 	if nonTransactional {
 		s.Lock()
@@ -55,7 +55,7 @@ func (s *inMemoryStore[T]) Put(c context.Context, uid string, value T) error {
 }
 
 func (s *inMemoryStore[T]) Get(c context.Context, uid string) (T, bool, error) {
-	nonTransactional := c.Value("transaction") == nil
+	nonTransactional := c.Value(ctxTransactionKey{}) == nil
 
 	if nonTransactional {
 		s.Lock()
@@ -70,7 +70,7 @@ func (s *inMemoryStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 }
 
 func (s *inMemoryStore[T]) List(c context.Context) ([]T, error) {
-	nonTransactional := c.Value("transaction") == nil
+	nonTransactional := c.Value(ctxTransactionKey{}) == nil
 
 	if nonTransactional {
 		s.Lock()

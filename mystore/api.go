@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+type ctxTransactionKey struct{}
+
 type Store[T any] interface {
 	RunInTransaction(c context.Context, f func(c context.Context) error) error
 	Put(c context.Context, uid string, value T) error

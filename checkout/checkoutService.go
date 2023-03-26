@@ -218,6 +218,7 @@ func (s service) statusRedirectCallback() http.HandlerFunc {
 		var found bool
 		var err error
 		err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+			// must be idempotent
 
 			checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
 			if err != nil {
@@ -300,6 +301,7 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
 
 		checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
 		if err != nil {

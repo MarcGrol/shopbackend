@@ -3,6 +3,7 @@ package mystore
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -33,23 +34,46 @@ func newGcloudStore[T any](c context.Context) (*gcloudStore[T], func(), error) {
 }
 
 func (s *gcloudStore[T]) RunInTransaction(c context.Context, f func(c context.Context) error) error {
+	var err error
+	// retry 3 times
+	for i := 1; i <= 3; i++ {
+		log.Printf("Attempt %d to run logic transaction", i)
+		err = s.runInTransaction(c, f)
+		if err != nil {
+			if err == datastore.ErrConcurrentTransaction {
+				// force retry: this approach requires idempotency of the business logic
+				continue
+			}
+
+			return err
+		}
+		return nil
+	}
+	return err
+}
+
+func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Context) error) error {
 	// Start transaction
 	t, err := s.client.NewTransaction(c)
 	if err != nil {
 		return fmt.Errorf("error creating transaction: %s", err)
 	}
 
-	ctx := context.WithValue(c, "transaction", t)
+	log.Printf("Start transaction %p", t)
 
-	// Within this block everything is transactional
+	ctx := context.WithValue(c, ctxTransactionKey{}, t)
+
+	// Shadow original context with new transactional context
 	err = f(ctx)
 	if err != nil {
+		log.Printf("Rolling back transaction %p due to error %s", t, err)
 
 		// Rollback
-		err = t.Rollback()
+		rollbackError := t.Rollback()
 		if err != nil {
-			return fmt.Errorf("error rolling-back transaction: %s", err)
+			return fmt.Errorf("error rolling-back transaction: %s", rollbackError)
 		}
+
 		return err
 	}
 
@@ -59,17 +83,22 @@ func (s *gcloudStore[T]) RunInTransaction(c context.Context, f func(c context.Co
 		return fmt.Errorf("error committing transaction: %s", err)
 	}
 
+	log.Printf("Committed transaction %p", t)
+
 	return nil
 }
 
 func (s *gcloudStore[T]) Put(c context.Context, uid string, value T) error {
-	transaction := c.Value("transaction")
+	transaction := c.Value(ctxTransactionKey{})
 
 	if transaction != nil {
-		_, err := transaction.(*datastore.Transaction).Put(datastore.NameKey(s.kind, uid, nil), value)
+		_, err := transaction.(*datastore.Transaction).Put(datastore.NameKey(s.kind, uid, nil), &value)
 		if err != nil {
 			return fmt.Errorf("error transctionally storing entity %s with uid %s: %s", s.kind, uid, err)
 		}
+
+		log.Printf("In transaction %p: stored entity %s with uid %s", transaction, s.kind, uid)
+
 		return nil
 	}
 
@@ -77,13 +106,16 @@ func (s *gcloudStore[T]) Put(c context.Context, uid string, value T) error {
 	if err != nil {
 		return fmt.Errorf("error storing entity %s with uid %s: %s", s.kind, uid, err)
 	}
+
+	log.Printf("Non-transactionally stored entity %s with uid %s", s.kind, uid)
+
 	return nil
 }
 
 func (s *gcloudStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 	value := new(T)
 
-	transaction := c.Value("transaction")
+	transaction := c.Value(ctxTransactionKey{})
 
 	if transaction != nil {
 		err := transaction.(*datastore.Transaction).Get(datastore.NameKey(s.kind, uid, nil), value)
@@ -93,6 +125,9 @@ func (s *gcloudStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 			}
 			return *value, false, fmt.Errorf("error transctionally fetching entity %s with uid %s: %s", s.kind, uid, err)
 		}
+
+		log.Printf("In transaction %p: fetched entity %s with uid %s", transaction, s.kind, uid)
+
 		return *value, true, nil
 	}
 
@@ -103,6 +138,9 @@ func (s *gcloudStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 		}
 		return *value, false, fmt.Errorf("error fetching entity %s with uid %s: %s", s.kind, uid, err)
 	}
+
+	log.Printf("Non-transactionally fetched entity %s with uid %s", s.kind, uid)
+
 	return *value, true, nil
 }
 
