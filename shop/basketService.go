@@ -6,26 +6,27 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
-	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mycontext"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
 	"github.com/MarcGrol/shopbackend/mylog"
+	"github.com/MarcGrol/shopbackend/mystore"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
 type service struct {
-	basketStore experiment.Store[shopmodel.Basket]
+	basketStore mystore.Store[shopmodel.Basket]
 	logger      mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(store experiment.Store[shopmodel.Basket], logger mylog.Logger) *service {
+func NewService(store mystore.Store[shopmodel.Basket], logger mylog.Logger) *service {
 	return &service{
 		basketStore: store,
 		logger:      logger,
@@ -69,6 +70,10 @@ func (s service) basketListPage() http.HandlerFunc {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
+
+		sort.Slice(baskets, func(i, j int) bool {
+			return baskets[i].CreatedAt.After(baskets[j].CreatedAt)
+		})
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketListPageTemplate.Execute(w, baskets)

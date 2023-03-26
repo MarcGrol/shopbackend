@@ -11,9 +11,9 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/myqueue"
+	"github.com/MarcGrol/shopbackend/mystore"
 	"github.com/MarcGrol/shopbackend/shop"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
@@ -23,12 +23,12 @@ func main() {
 
 	router := mux.NewRouter()
 
-	personStore, personStoreCleanup, err := experiment.New[experiment.Person](c)
+	personStore, personStoreCleanup, err := mystore.New[mystore.Person](c)
 	if err != nil {
 		log.Fatalf("Error creating queue: %s", err)
 	}
 	defer personStoreCleanup()
-	personService := experiment.NewPersonService(personStore)
+	personService := mystore.NewPersonService(personStore)
 	personService.RegisterEndpoints(c, router)
 
 	queue, queueCleanup, err := myqueue.New(c)
@@ -37,7 +37,7 @@ func main() {
 	}
 	defer queueCleanup()
 
-	checkoutStore, checkoutStoreCleanup, err := experiment.New[checkoutmodel.CheckoutContext](c)
+	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutmodel.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
@@ -49,7 +49,7 @@ func main() {
 	}
 	checkoutService.RegisterEndpoints(c, router)
 
-	basketStore, basketstoreCleanup, err := experiment.New[shopmodel.Basket](c)
+	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}

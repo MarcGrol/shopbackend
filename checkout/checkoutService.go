@@ -16,12 +16,12 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mycontext"
 	"github.com/MarcGrol/shopbackend/myerrors"
 	"github.com/MarcGrol/shopbackend/myhttp"
 	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/myqueue"
+	"github.com/MarcGrol/shopbackend/mystore"
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/adyen/adyen-go-api-library/v6/src/common"
@@ -49,13 +49,13 @@ type service struct {
 	merchantAccount string
 	clientKey       string
 	apiClient       *adyen.APIClient
-	checkoutStore   experiment.Store[checkoutmodel.CheckoutContext]
+	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
 	queue           myqueue.TaskQueuer
 	logger          mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(checkoutStore experiment.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, logger mylog.Logger) (*service, error) {
+func NewService(checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, logger mylog.Logger) (*service, error) {
 	merchantAccount := os.Getenv(merchantAccountVarname)
 	if merchantAccount == "" {
 		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", merchantAccountVarname))

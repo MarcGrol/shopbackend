@@ -1,4 +1,4 @@
-package experiment
+package mystore
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestI(t *testing.T) {
+func TestIt(t *testing.T) {
 	c := context.TODO()
 	ps, cleanup, err := newInMemoryStore[Person](c)
 	assert.NoError(t, err)
