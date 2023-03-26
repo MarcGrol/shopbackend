@@ -11,6 +11,7 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	checkoutstore "github.com/MarcGrol/shopbackend/checkout/store"
+	"github.com/MarcGrol/shopbackend/experiment"
 	"github.com/MarcGrol/shopbackend/mylog"
 	"github.com/MarcGrol/shopbackend/myqueue"
 	"github.com/MarcGrol/shopbackend/shop"
@@ -21,6 +22,14 @@ func main() {
 	c := context.Background()
 
 	router := mux.NewRouter()
+
+	personStore, personStoreCleanup, err := experiment.New[experiment.Person](c)
+	if err != nil {
+		log.Fatalf("Error creating queue: %s", err)
+	}
+	defer personStoreCleanup()
+	personService := experiment.NewPersonService(personStore)
+	personService.RegisterEndpoints(c, router)
 
 	queue, queueCleanup, err := myqueue.New(c)
 	if err != nil {

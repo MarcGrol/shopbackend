@@ -54,10 +54,6 @@ type service struct {
 	logger          mylog.Logger
 }
 
-type Starter interface {
-	PrepareForCheckoutPage(basketUID string, req checkout.CreateCheckoutSessionRequest) (string, error)
-}
-
 // Use dependency injection to isolate the infrastructure and easy testing
 func NewService(checkoutStore store.CheckoutStorer, queue myqueue.TaskQueuer, logger mylog.Logger) (*service, error) {
 	merchantAccount := os.Getenv(merchantAccountVarname)
