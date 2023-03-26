@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/MarcGrol/shopbackend/lib/mycontext"
 )
 
 func init() {
@@ -33,7 +35,7 @@ func (l structuredLogger) Log(ctx context.Context, traceLabel string, severity S
 	log.Println(entry{
 		Component: l.componentName,
 		Labels:    map[string]string{"aggregate": traceLabel},
-		Trace:     ctx.Value("Cloud-Trace-Context").(string),
+		Trace:     ctx.Value(mycontext.CtxTraceContext{}).(string),
 		Severity:  string(severity),
 		Message:   l.componentName + ":" + fmt.Sprintf(format, a...),
 	}.String())
