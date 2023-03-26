@@ -23,25 +23,40 @@ func main() {
 
 	router := mux.NewRouter()
 
-	personStore, personStoreCleanup, err := mystore.New[mystore.Person](c)
-	if err != nil {
-		log.Fatalf("Error creating queue: %s", err)
-	}
-	defer personStoreCleanup()
-	personService := mystore.NewPersonService(personStore)
-	personService.RegisterEndpoints(c, router)
-
 	queue, queueCleanup, err := myqueue.New(c)
 	if err != nil {
 		log.Fatalf("Error creating queue: %s", err)
 	}
 	defer queueCleanup()
 
+	checkoutServiceCleanup := createCheckoutService(c, router, queue)
+	defer checkoutServiceCleanup()
+
+	shopServiceCleanup := createShopService(c, router)
+	defer shopServiceCleanup()
+
+	startWebServerBlocking(router)
+}
+
+func createShopService(c context.Context, router *mux.Router) func() {
+
+	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
+	if err != nil {
+		log.Fatalf("Error creating basket store: %s", err)
+	}
+
+	basketService := shop.NewService(basketStore, mylog.New("basket"))
+	basketService.RegisterEndpoints(c, router)
+
+	return basketstoreCleanup
+}
+
+func createCheckoutService(c context.Context, router *mux.Router, queue myqueue.TaskQueuer) func() {
+
 	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutmodel.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
-	defer checkoutStoreCleanup()
 
 	checkoutService, err := checkout.NewService(checkoutStore, queue, mylog.New("checkout"))
 	if err != nil {
@@ -49,16 +64,7 @@ func main() {
 	}
 	checkoutService.RegisterEndpoints(c, router)
 
-	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
-	if err != nil {
-		log.Fatalf("Error creating basket store: %s", err)
-	}
-	defer basketstoreCleanup()
-
-	basketService := shop.NewService(basketStore, mylog.New("basket"))
-	basketService.RegisterEndpoints(c, router)
-
-	startWebServerBlocking(router)
+	return checkoutStoreCleanup
 }
 
 func startWebServerBlocking(router *mux.Router) {
