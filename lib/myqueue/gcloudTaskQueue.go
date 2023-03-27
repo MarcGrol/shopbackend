@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
+	grpcCodes "google.golang.org/grpc/codes"
+	grpcStatus "google.golang.org/grpc/status"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type gcloudTaskQueue struct {
@@ -32,10 +36,12 @@ func newGcloudQueue(c context.Context) (TaskQueuer, func(), error) {
 }
 
 func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
+	taskUID := composeTaskName(task.UID)
 	_, err := q.client.CreateTask(c, &taskspb.CreateTaskRequest{
 		Parent: composeQueueName(),
 		Task: &taskspb.Task{
-			// Name: composeTaskName(task.UID), // do not de-duplicate
+			Name:         taskUID,                                          // de-duplicate
+			ScheduleTime: timestamppb.New(time.Now().Add(time.Second * 1)), // delay to give shop some time for redirect
 			MessageType: &taskspb.Task_AppEngineHttpRequest{
 				AppEngineHttpRequest: &taskspb.AppEngineHttpRequest{
 					HttpMethod:  taskspb.HttpMethod_PUT,
@@ -47,6 +53,12 @@ func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 		},
 	})
 	if err != nil {
+		rsp, ok := grpcStatus.FromError(err)
+		if ok && rsp.Code() == grpcCodes.AlreadyExists {
+			fmt.Printf("task with id %s already exists", taskUID)
+			// Convert error into success
+			return nil
+		}
 		return fmt.Errorf("error submitting task to queue: %s", err)
 	}
 	return nil
