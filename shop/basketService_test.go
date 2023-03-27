@@ -96,8 +96,8 @@ func TestBasketService(t *testing.T) {
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
-		uuider.EXPECT().Create().Return("123")
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		uuider.EXPECT().Create().Return("123")
 
 		// when
 		request, _ := http.NewRequest(http.MethodPost, "/basket", nil)
@@ -108,6 +108,69 @@ func TestBasketService(t *testing.T) {
 		assert.Equal(t, 303, response.Code)
 		redirectURL := response.Header().Get("Location")
 		assert.True(t, strings.HasSuffix(redirectURL, "/basket"))
+		_, found, _ := storer.Get(ctx, "123")
+		assert.True(t, found)
+
+	})
+
+	t.Run("Handle status redirect", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
+		ctx, router, storer, nower, _ := setup(ctrl)
+
+		// given
+		storer.Put(ctx, basket1.UID, basket1)
+		nower.EXPECT().Now().Return(mytime.ExampleTime)
+
+		// when
+		request, _ := http.NewRequest(http.MethodGet, "/basket/123/checkout/completed", nil)
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 200, response.Code)
+	})
+
+	t.Run("Handle async update", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
+		ctx, router, storer, nower, _ := setup(ctrl)
+
+		// given
+		storer.Put(ctx, basket1.UID, basket1)
+		nower.EXPECT().Now().Return(mytime.ExampleTime)
+
+		// when
+		request, _ := http.NewRequest(http.MethodPut, "/api/basket/123/status/AUTHORISATION/true", strings.NewReader(`{
+   "live":"false",
+   "notificationItems":[
+      {
+         "NotificationRequestItem":{
+            "eventCode":"AUTHORISATION",
+            "success":"true",
+            "eventDate":"2019-06-28T18:03:50+01:00",
+            "merchantAccountCode":"YOUR_MERCHANT_ACCOUNT",
+            "pspReference": "7914073381342284",
+            "merchantReference": "456",
+            "amount": {
+                "value":200,
+                "currency":"EUR"
+            }
+         }
+      }
+   ]
+}`))
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 200, response.Code)
+		got := response.Body.String()
+		assert.Contains(t, got, "{}")
 	})
 }
 

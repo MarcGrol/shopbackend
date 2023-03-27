@@ -164,6 +164,7 @@ func (s service) checkoutCompletedRedirectCallback() http.HandlerFunc {
 			}
 
 			basket.InitialPaymentStatus = status
+			basket.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
 
 			err = s.basketStore.Put(c, basketUID, basket)
 			if err != nil {
