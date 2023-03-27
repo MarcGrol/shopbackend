@@ -4,13 +4,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
-
 	"html/template"
 	"net/http"
 	"sort"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
@@ -18,18 +16,24 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
+	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
 type service struct {
 	basketStore mystore.Store[shopmodel.Basket]
+	nower       mytime.Nower
+	uuider      myuuid.UUIDer
 	logger      mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(store mystore.Store[shopmodel.Basket], logger mylog.Logger) *service {
+func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, logger mylog.Logger) *service {
 	return &service{
 		basketStore: store,
+		nower:       nower,
+		uuider:      uuider,
 		logger:      logger,
 	}
 }
@@ -90,12 +94,13 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		uid := func() string { u, _ := uuid.NewUUID(); return u.String() }()
+		uid := s.uuider.Create()
+		createdAt := s.nower.Now()
 		returnURL := fmt.Sprintf("%s/basket/%s/checkout/completed", myhttp.HostnameWithScheme(r), uid)
 
 		s.logger.Log(c, uid, mylog.SeverityInfo, "Creating new basket with uid %s", uid)
 
-		basket := createBasket(uid, returnURL)
+		basket := createBasket(uid, createdAt, returnURL)
 		err := s.basketStore.Put(c, uid, basket)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
@@ -204,6 +209,7 @@ func (s service) checkoutStatusWebhookCallback() http.HandlerFunc {
 			// Final codes matter!
 			basket.FinalPaymentEvent = eventCode
 			basket.FinalPaymentStatus = status
+			basket.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
 
 			err = s.basketStore.Put(c, basketUID, basket)
 			if err != nil {
@@ -222,12 +228,12 @@ func (s service) checkoutStatusWebhookCallback() http.HandlerFunc {
 	}
 }
 
-func createBasket(orderRef string, returnURL string) shopmodel.Basket {
+func createBasket(uid string, createdAt time.Time, returnURL string) shopmodel.Basket {
 	return shopmodel.Basket{
-		UID:        orderRef,
-		CreatedAt:  time.Now(),
+		UID:        uid,
+		CreatedAt:  createdAt,
 		Shop:       getCurrentShop(),
-		Shopper:    getCurrentShopper(),
+		Shopper:    getCurrentShopper(uid),
 		TotalPrice: 51000,
 		Currency:   "EUR",
 		SelectedProducts: []shopmodel.SelectedProduct{
@@ -261,8 +267,7 @@ func getCurrentShop() shopmodel.Shop {
 	}
 }
 
-func getCurrentShopper() shopmodel.Shopper {
-	uid, _ := uuid.NewRandom()
+func getCurrentShopper(uid string) shopmodel.Shopper {
 	return shopmodel.Shopper{
 		UID:         "shopper_marc_grol",
 		FirstName:   "Marc",
@@ -278,7 +283,7 @@ func getCurrentShopper() shopmodel.Shopper {
 		},
 		Country:      "NL",
 		Locale:       "nl-NL",
-		EmailAddress: fmt.Sprintf("marc.grol+%s@gmail.com", uid.String()),
+		EmailAddress: fmt.Sprintf("marc.grol+%s@gmail.com", uid),
 		PhoneNumber:  "+31648928856",
 	}
 }

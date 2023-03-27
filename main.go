@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"log"
 	"net/http"
 	"os"
@@ -29,36 +31,41 @@ func main() {
 	}
 	defer queueCleanup()
 
-	checkoutServiceCleanup := createCheckoutService(c, router, queue)
+	nower := mytime.RealNower{}
+	uuider := myuuid.RealUUIDer{}
+
+	checkoutServiceCleanup := createCheckoutService(c, router, queue, nower, uuider)
 	defer checkoutServiceCleanup()
 
-	shopServiceCleanup := createShopService(c, router)
+	shopServiceCleanup := createShopService(c, router, nower, uuider)
 	defer shopServiceCleanup()
 
 	startWebServerBlocking(router)
 }
 
-func createShopService(c context.Context, router *mux.Router) func() {
+func createShopService(c context.Context, router *mux.Router, nower mytime.Nower,
+	uuider myuuid.UUIDer) func() {
 
 	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}
 
-	basketService := shop.NewService(basketStore, mylog.New("basket"))
+	basketService := shop.NewService(basketStore, nower, uuider, mylog.New("basket"))
 	basketService.RegisterEndpoints(c, router)
 
 	return basketstoreCleanup
 }
 
-func createCheckoutService(c context.Context, router *mux.Router, queue myqueue.TaskQueuer) func() {
+func createCheckoutService(c context.Context, router *mux.Router, queue myqueue.TaskQueuer,
+	nower mytime.Nower, uuider myuuid.UUIDer) func() {
 
 	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutmodel.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
 
-	checkoutService, err := checkout.NewService(checkoutStore, queue, mylog.New("checkout"))
+	checkoutService, err := checkout.NewService(checkoutStore, queue, nower, mylog.New("checkout"))
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}

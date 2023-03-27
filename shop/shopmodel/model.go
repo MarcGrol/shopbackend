@@ -37,6 +37,7 @@ type Address struct {
 type Basket struct {
 	UID                  string
 	CreatedAt            time.Time
+	LastModified         *time.Time
 	Shop                 Shop
 	Shopper              Shopper
 	TotalPrice           int64

@@ -16,6 +16,8 @@ func NewCheckoutContext() CheckoutContext {
 
 type CheckoutContext struct {
 	BasketUID         string
+	CreatedAt         time.Time
+	LastModified      *time.Time
 	OriginalReturnURL string
 	ID                string
 	SessionData       string `datastore:",noindex"`

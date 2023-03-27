@@ -22,6 +22,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
+	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/adyen/adyen-go-api-library/v6/src/common"
@@ -51,11 +52,12 @@ type service struct {
 	apiClient       *adyen.APIClient
 	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
 	queue           myqueue.TaskQueuer
+	nower           mytime.Nower
 	logger          mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, logger mylog.Logger) (*service, error) {
+func NewService(checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
 	merchantAccount := os.Getenv(merchantAccountVarname)
 	if merchantAccount == "" {
 		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", merchantAccountVarname))
@@ -87,6 +89,7 @@ func NewService(checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queu
 		}),
 		checkoutStore: checkoutStore,
 		queue:         queue,
+		nower:         nower,
 		logger:        logger,
 	}, nil
 }
@@ -133,6 +136,7 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 		// Store checkout context because we need it later again
 		err = s.checkoutStore.Put(c, basketUID, checkoutmodel.CheckoutContext{
 			BasketUID:         basketUID,
+			CreatedAt:         s.nower.Now(),
 			OriginalReturnURL: returnURL,
 			ID:                checkoutSessionResp.Id,
 			SessionData:       checkoutSessionResp.SessionData,
@@ -229,6 +233,7 @@ func (s service) statusRedirectCallback() http.HandlerFunc {
 			}
 
 			checkoutContext.Status = status
+			checkoutContext.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
 
 			err = s.checkoutStore.Put(c, basketUID, checkoutContext)
 			if err != nil {
