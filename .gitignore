@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+.idea/
 .DS_Store
 app.yaml
 
