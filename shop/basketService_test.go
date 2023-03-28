@@ -108,8 +108,11 @@ func TestBasketService(t *testing.T) {
 		assert.Equal(t, 303, response.Code)
 		redirectURL := response.Header().Get("Location")
 		assert.True(t, strings.HasSuffix(redirectURL, "/basket"))
-		_, found, _ := storer.Get(ctx, "123")
-		assert.True(t, found)
+		basket, exists, _ := storer.Get(ctx, "123")
+		assert.True(t, exists)
+		assert.Equal(t, "123", basket.UID)
+		assert.Equal(t, int64(51000), basket.TotalPrice)
+		assert.Equal(t, "EUR", basket.Currency)
 
 	})
 
