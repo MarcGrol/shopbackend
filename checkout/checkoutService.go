@@ -8,9 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -23,16 +21,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
-	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
-	"github.com/adyen/adyen-go-api-library/v6/src/common"
-)
-
-const (
-	merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"
-	apiKeyVarname          = "ADYEN_API_KEY"
-	clientKeyVarname       = "ADYEN_CLIENT_KEY"
-	environmentVarname     = "ADYEN_ENVIRONMENT"
 )
 
 //go:embed templates
@@ -45,11 +34,19 @@ func init() {
 	checkoutPageTemplate = template.Must(template.ParseFS(templateFolder, "templates/checkout.html"))
 }
 
+type Config struct {
+	Environment     string
+	MerchantAccount string
+	ClientKey       string
+	ApiKey          string
+}
+
 type service struct {
 	environment     string
 	merchantAccount string
 	clientKey       string
-	apiClient       *adyen.APIClient
+	apiKey          string
+	payer           Payer
 	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
 	queue           myqueue.TaskQueuer
 	nower           mytime.Nower
@@ -57,40 +54,17 @@ type service struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
-	merchantAccount := os.Getenv(merchantAccountVarname)
-	if merchantAccount == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", merchantAccountVarname))
-	}
-
-	environment := os.Getenv(environmentVarname)
-	if environment == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", environmentVarname))
-	}
-
-	apiKey := os.Getenv(apiKeyVarname)
-	if apiKey == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", apiKeyVarname))
-	}
-
-	clientKey := os.Getenv(clientKeyVarname)
-	if clientKey == "" {
-		return nil, myerrors.NewInvalidInputError(fmt.Errorf("missing env-var %s", clientKeyVarname))
-	}
-
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
 	return &service{
-		merchantAccount: merchantAccount,
-		environment:     environment,
-		clientKey:       clientKey,
-		apiClient: adyen.NewClient(&common.Config{
-			ApiKey:      apiKey,
-			Environment: common.Environment(strings.ToUpper(environment)),
-			//Debug:       true,
-		}),
-		checkoutStore: checkoutStore,
-		queue:         queue,
-		nower:         nower,
-		logger:        logger,
+		merchantAccount: cfg.MerchantAccount,
+		environment:     cfg.Environment,
+		clientKey:       cfg.ClientKey,
+		apiKey:          cfg.ApiKey,
+		payer:           payer,
+		checkoutStore:   checkoutStore,
+		queue:           queue,
+		nower:           nower,
+		logger:          logger,
 	}, nil
 }
 
@@ -120,16 +94,16 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
 		// Initiate a checkout session on the Adyen platform
-		checkoutSessionResp, _, err := s.apiClient.Checkout.Sessions(sessionRequest)
+		checkoutSessionResp, err := s.payer.Sessions(c, sessionRequest)
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
 			return
 		}
 
 		// Ask the Adyen platform to return payment methods that are allowed for me
-		paymentMethodsResp, _, err := s.apiClient.Checkout.PaymentMethods(checkoutToPaymentMethodsRequest(sessionRequest))
+		paymentMethodsResp, err := s.payer.PaymentMethods(c, checkoutToPaymentMethodsRequest(sessionRequest))
 		if err != nil {
-			errorWriter.WriteError(c, w, 3, fmt.Errorf("error fetching payment methods for checkoutContext %s: %s", basketUID, err))
+			errorWriter.WriteError(c, w, 3, fmt.Errorf("error fetching payment methods for checkout %s: %s", basketUID, err))
 			return
 		}
 
@@ -160,7 +134,7 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 			CountryCode:            sessionRequest.CountryCode,
 			ShopperLocale:          sessionRequest.ShopperLocale,
 			ShopperEmail:           sessionRequest.ShopperEmail,
-			PaymentMethodsResponse: paymentMethodsResp,
+			PaymentMethodsResponse: *paymentMethodsResp,
 			ID:                     checkoutSessionResp.Id,
 			SessionData:            checkoutSessionResp.SessionData,
 		})
@@ -360,7 +334,7 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	currency := r.Form.Get("currency")
 	amount, err := strconv.Atoi(r.Form.Get("amount"))
 	if err != nil {
-		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount:%s", err))
+		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount '%s' (%s)", r.Form.Get("amount"), err))
 	}
 	addressCity := r.Form.Get("shopper.address.city")
 	addressCountry := r.Form.Get("shopper.address.country")

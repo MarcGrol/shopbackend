@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/lib/mytime"
-	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +14,8 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
+	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/shop"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
@@ -57,15 +57,50 @@ func createShopService(c context.Context, router *mux.Router, nower mytime.Nower
 	return basketstoreCleanup
 }
 
+const (
+	merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"
+	apiKeyVarname          = "ADYEN_API_KEY"
+	clientKeyVarname       = "ADYEN_CLIENT_KEY"
+	environmentVarname     = "ADYEN_ENVIRONMENT"
+)
+
 func createCheckoutService(c context.Context, router *mux.Router, queue myqueue.TaskQueuer,
 	nower mytime.Nower, uuider myuuid.UUIDer) func() {
+
+	merchantAccount := os.Getenv(merchantAccountVarname)
+	if merchantAccount == "" {
+		log.Fatalf("missing env-var %s", merchantAccountVarname)
+	}
+
+	environment := os.Getenv(environmentVarname)
+	if environment == "" {
+		log.Fatalf("missing env-var %s", environmentVarname)
+	}
+
+	apiKey := os.Getenv(apiKeyVarname)
+	if apiKey == "" {
+		log.Fatalf("missing env-var %s", apiKeyVarname)
+	}
+
+	clientKey := os.Getenv(clientKeyVarname)
+	if clientKey == "" {
+		log.Fatalf("missing env-var %s", clientKeyVarname)
+	}
 
 	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutmodel.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
+	cfg := checkout.Config{
+		Environment:     environment,
+		MerchantAccount: merchantAccount,
+		ClientKey:       clientKey,
+		ApiKey:          apiKey,
+	}
 
-	checkoutService, err := checkout.NewService(checkoutStore, queue, nower, mylog.New("checkout"))
+	payer := checkout.NewPayer(environment, apiKey)
+
+	checkoutService, err := checkout.NewService(cfg, payer, checkoutStore, queue, nower, mylog.New("checkout"))
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}
