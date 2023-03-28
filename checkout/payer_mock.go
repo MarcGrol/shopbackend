@@ -36,10 +36,10 @@ func (m *MockPayer) EXPECT() *MockPayerMockRecorder {
 }
 
 // PaymentMethods mocks base method.
-func (m *MockPayer) PaymentMethods(ctx context.Context, req *checkout.PaymentMethodsRequest) (*checkout.PaymentMethodsResponse, error) {
+func (m *MockPayer) PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PaymentMethods", ctx, req)
-	ret0, _ := ret[0].(*checkout.PaymentMethodsResponse)
+	ret0, _ := ret[0].(checkout.PaymentMethodsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -51,10 +51,10 @@ func (mr *MockPayerMockRecorder) PaymentMethods(ctx, req interface{}) *gomock.Ca
 }
 
 // Sessions mocks base method.
-func (m *MockPayer) Sessions(ctx context.Context, req *checkout.CreateCheckoutSessionRequest) (*checkout.CreateCheckoutSessionResponse, error) {
+func (m *MockPayer) Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Sessions", ctx, req)
-	ret0, _ := ret[0].(*checkout.CreateCheckoutSessionResponse)
+	ret0, _ := ret[0].(checkout.CreateCheckoutSessionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -134,7 +134,7 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 			CountryCode:            sessionRequest.CountryCode,
 			ShopperLocale:          sessionRequest.ShopperLocale,
 			ShopperEmail:           sessionRequest.ShopperEmail,
-			PaymentMethodsResponse: *paymentMethodsResp,
+			PaymentMethodsResponse: paymentMethodsResp,
 			ID:                     checkoutSessionResp.Id,
 			SessionData:            checkoutSessionResp.SessionData,
 		})
@@ -319,15 +319,15 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 	return nil
 }
 
-func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateCheckoutSessionRequest, string, string, error) {
+func parseRequest(r *http.Request, merchantAccount string) (checkout.CreateCheckoutSessionRequest, string, string, error) {
 	basketUID := mux.Vars(r)["basketUID"]
 	if basketUID == "" {
-		return nil, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
+		return checkout.CreateCheckoutSessionRequest{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
 	}
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, basketUID, "", myerrors.NewInvalidInputError(err)
+		return checkout.CreateCheckoutSessionRequest{}, basketUID, "", myerrors.NewInvalidInputError(err)
 	}
 
 	returnURL := r.Form.Get("returnUrl")
@@ -335,7 +335,7 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	currency := r.Form.Get("currency")
 	amount, err := strconv.Atoi(r.Form.Get("amount"))
 	if err != nil {
-		return nil, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount '%s' (%s)", r.Form.Get("amount"), err))
+		return checkout.CreateCheckoutSessionRequest{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount '%s' (%s)", r.Form.Get("amount"), err))
 	}
 	addressCity := r.Form.Get("shopper.address.city")
 	addressCountry := r.Form.Get("shopper.address.country")
@@ -368,7 +368,7 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 
 	//expiresAt := time.Now().Add(time.Hour * 24)
 
-	return &checkout.CreateCheckoutSessionRequest{
+	return checkout.CreateCheckoutSessionRequest{
 		//AccountInfo:           nil,
 		//AdditionalAmount:      nil,
 		//AdditionalData:        nil,
@@ -469,8 +469,8 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	}, basketUID, returnURL, nil
 }
 
-func checkoutToPaymentMethodsRequest(checkoutReq *checkout.CreateCheckoutSessionRequest) *checkout.PaymentMethodsRequest {
-	return &checkout.PaymentMethodsRequest{
+func checkoutToPaymentMethodsRequest(checkoutReq checkout.CreateCheckoutSessionRequest) checkout.PaymentMethodsRequest {
+	return checkout.PaymentMethodsRequest{
 		Channel:         "Web",
 		MerchantAccount: checkoutReq.MerchantAccount,
 		CountryCode:     checkoutReq.CountryCode,

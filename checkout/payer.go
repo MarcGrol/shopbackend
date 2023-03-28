@@ -11,8 +11,8 @@ import (
 
 //go:generate mockgen -source=payer.go -package checkout -destination payer_mock.go Payer
 type Payer interface {
-	Sessions(ctx context.Context, req *checkout.CreateCheckoutSessionRequest) (*checkout.CreateCheckoutSessionResponse, error)
-	PaymentMethods(ctx context.Context, req *checkout.PaymentMethodsRequest) (*checkout.PaymentMethodsResponse, error)
+	Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error)
+	PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error)
 }
 
 type adyenPayer struct {
@@ -29,18 +29,18 @@ func NewPayer(environment string, apiKey string) *adyenPayer {
 	}
 }
 
-func (p *adyenPayer) Sessions(ctx context.Context, req *checkout.CreateCheckoutSessionRequest) (*checkout.CreateCheckoutSessionResponse, error) {
-	resp, _, err := p.client.Checkout.Sessions(req, ctx)
+func (p *adyenPayer) Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error) {
+	resp, _, err := p.client.Checkout.Sessions(&req, ctx)
 	if err != nil {
-		return nil, err
+		return checkout.CreateCheckoutSessionResponse{}, err
 	}
-	return &resp, err
+	return resp, err
 }
 
-func (p *adyenPayer) PaymentMethods(ctx context.Context, req *checkout.PaymentMethodsRequest) (*checkout.PaymentMethodsResponse, error) {
-	resp, _, err := p.client.Checkout.PaymentMethods(req, ctx)
+func (p *adyenPayer) PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error) {
+	resp, _, err := p.client.Checkout.PaymentMethods(&req, ctx)
 	if err != nil {
-		return nil, err
+		return checkout.PaymentMethodsResponse{}, err
 	}
-	return &resp, err
+	return resp, err
 }

@@ -74,8 +74,8 @@ func TestCheckoutService(t *testing.T) {
 		ctx, router, storer, payer, _, nower := setup(ctrl)
 
 		// given
-		payer.EXPECT().Sessions(gomock.Any(), &sessionRequest).Return(&sessionResp, nil)
-		payer.EXPECT().PaymentMethods(gomock.Any(), &paymentMethodsReq).Return(&paymentMethodsResp, nil)
+		payer.EXPECT().Sessions(gomock.Any(), sessionRequest).Return(sessionResp, nil)
+		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 
 		// when
