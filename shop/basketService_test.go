@@ -39,7 +39,9 @@ func TestBasketService(t *testing.T) {
 		storer.Put(ctx, basket2.UID, basket2)
 
 		// when
-		request, _ := http.NewRequest(http.MethodGet, "/basket", nil)
+		request, err := http.NewRequest(http.MethodGet, "/basket", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
@@ -61,7 +63,9 @@ func TestBasketService(t *testing.T) {
 		storer.Put(ctx, basket1.UID, basket1)
 
 		// when
-		request, _ := http.NewRequest(http.MethodGet, "/basket/123", nil)
+		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
@@ -79,7 +83,9 @@ func TestBasketService(t *testing.T) {
 		_, router, _, _, _ := setup(ctrl)
 
 		// when
-		request, _ := http.NewRequest(http.MethodGet, "/basket/123", nil)
+		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
@@ -100,14 +106,16 @@ func TestBasketService(t *testing.T) {
 		uuider.EXPECT().Create().Return("123")
 
 		// when
-		request, _ := http.NewRequest(http.MethodPost, "/basket", nil)
+		request, err := http.NewRequest(http.MethodPost, "/basket", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
 		// then
 		assert.Equal(t, 303, response.Code)
 		redirectURL := response.Header().Get("Location")
-		assert.True(t, strings.HasSuffix(redirectURL, "/basket"))
+		assert.Equal(t, "http://localhost:8888/basket", redirectURL)
 		basket, exists, _ := storer.Get(ctx, "123")
 		assert.True(t, exists)
 		assert.Equal(t, "123", basket.UID)
@@ -128,7 +136,9 @@ func TestBasketService(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 
 		// when
-		request, _ := http.NewRequest(http.MethodGet, "/basket/123/checkout/completed", nil)
+		request, err := http.NewRequest(http.MethodGet, "/basket/123/checkout/completed", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
@@ -148,7 +158,7 @@ func TestBasketService(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 
 		// when
-		request, _ := http.NewRequest(http.MethodPut, "/api/basket/123/status/AUTHORISATION/true", strings.NewReader(`{
+		request, err := http.NewRequest(http.MethodPut, "/api/basket/123/status/AUTHORISATION/true", strings.NewReader(`{
    "live":"false",
    "notificationItems":[
       {
@@ -167,6 +177,8 @@ func TestBasketService(t *testing.T) {
       }
    ]
 }`))
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 

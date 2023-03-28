@@ -29,7 +29,7 @@ var (
 		MerchantAccount:        "MyMerchantAccount",
 		MerchantOrderReference: "123",
 		Reference:              "123",
-		ReturnUrl:              "http:///checkout/123",
+		ReturnUrl:              "http://localhost:8888/checkout/123",
 		ShopperLocale:          "nl-nl",
 		TrustedShopper:         true,
 	}
@@ -79,8 +79,10 @@ func TestCheckoutService(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 
 		// when
-		request, _ := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl`))
+		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl`))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
@@ -118,7 +120,9 @@ func TestCheckoutService(t *testing.T) {
 		})
 
 		// when
-		request, _ := http.NewRequest(http.MethodGet, "/checkout/123/status/success", nil)
+		request, err := http.NewRequest(http.MethodGet, "/checkout/123/status/success", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
@@ -154,7 +158,7 @@ func TestCheckoutService(t *testing.T) {
 		})
 
 		// when
-		request, _ := http.NewRequest(http.MethodPost, "/checkout/webhook/event", strings.NewReader(`{
+		request, err := http.NewRequest(http.MethodPost, "/checkout/webhook/event", strings.NewReader(`{
    "live":"false",
    "notificationItems":[
       {
@@ -173,6 +177,8 @@ func TestCheckoutService(t *testing.T) {
       }
    ]
 }`))
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
