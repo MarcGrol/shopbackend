@@ -292,6 +292,7 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
 		checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
 		checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
+		checkoutContext.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
 
 		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
 		if err != nil {
@@ -365,7 +366,7 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 	shopperUID := r.Form.Get("shopper.uid")
 	shopperPhoneNumber := r.Form.Get("shopper.phone")
 
-	expiresAt := time.Now().Add(time.Hour * 24)
+	//expiresAt := time.Now().Add(time.Hour * 24)
 
 	return &checkout.CreateCheckoutSessionRequest{
 		//AccountInfo:           nil,
@@ -378,40 +379,55 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 		},
 		//ApplicationInfo:    nil,
 		//AuthenticationData: nil,
-		BillingAddress: &checkout.Address{
-			City:              addressCity,
-			Country:           addressCountry,
-			HouseNumberOrName: addressHouseNumber,
-			PostalCode:        addressPostalCode,
-			StateOrProvince:   addressStateOrProvince,
-			Street:            addressStreet,
-		},
+		BillingAddress: func() *checkout.Address {
+			if addressCity != "" {
+				return &checkout.Address{
+					City:              addressCity,
+					Country:           addressCountry,
+					HouseNumberOrName: addressHouseNumber,
+					PostalCode:        addressPostalCode,
+					StateOrProvince:   addressStateOrProvince,
+					Street:            addressStreet,
+				}
+			}
+			return nil
+		}(),
 		//BlockedPaymentMethods: []string{},
 		//CaptureDelayHours:     0,
 		Channel: "Web",
-		Company: &checkout.Company{
-			Homepage:           companyHomepage,
-			Name:               companyName,
-			RegistrationNumber: "",
-			RegistryLocation:   "",
-			TaxId:              "",
-			Type:               "",
-		},
+		Company: func() *checkout.Company {
+			if companyName != "" || companyHomepage != "" {
+				return &checkout.Company{
+					Homepage:           companyHomepage,
+					Name:               companyName,
+					RegistrationNumber: "",
+					RegistryLocation:   "",
+					TaxId:              "",
+					Type:               "",
+				}
+			}
+			return nil
+		}(),
 		CountryCode: countryCode,
 		DateOfBirth: shopperDateOfBirth,
 		//DeliverAt:   nil,
-		DeliveryAddress: &checkout.Address{
-			City:              addressCity,
-			Country:           addressCountry,
-			HouseNumberOrName: addressHouseNumber,
-			PostalCode:        addressPostalCode,
-			StateOrProvince:   addressStateOrProvince,
-			Street:            addressStreet,
-		},
+		DeliveryAddress: func() *checkout.Address {
+			if addressCity != "" {
+				return &checkout.Address{
+					City:              addressCity,
+					Country:           addressCountry,
+					HouseNumberOrName: addressHouseNumber,
+					PostalCode:        addressPostalCode,
+					StateOrProvince:   addressStateOrProvince,
+					Street:            addressStreet,
+				}
+			}
+			return nil
+		}(),
 		//EnableOneClick:           false,
 		//EnablePayOut:             false,
 		//EnableRecurring:          false,
-		ExpiresAt: &expiresAt,
+		//ExpiresAt: &expiresAt,
 		//LineItems:                nil,
 		//Mandate:                  nil,
 		//Mcc:                      "",
@@ -431,10 +447,15 @@ func parseRequest(r *http.Request, merchantAccount string) (*checkout.CreateChec
 		ShopperIP:          "",
 		ShopperInteraction: "",
 		ShopperLocale:      shopperLocale,
-		ShopperName: &checkout.Name{
-			FirstName: shopperFirstName,
-			LastName:  shopperLastName,
-		},
+		ShopperName: func() *checkout.Name {
+			if shopperFirstName != "" {
+				return &checkout.Name{
+					FirstName: shopperFirstName,
+					LastName:  shopperLastName,
+				}
+			}
+			return nil
+		}(),
 		ShopperReference: shopperUID,
 		//ShopperStatement:          "",
 		//SocialSecurityNumber:      "",
