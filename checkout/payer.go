@@ -24,7 +24,7 @@ func NewPayer(environment string, apiKey string) *adyenPayer {
 		client: adyen.NewClient(&common.Config{
 			ApiKey:      apiKey,
 			Environment: common.Environment(strings.ToUpper(environment)),
-			//Debug:       true,
+			Debug:       false,
 		}),
 	}
 }

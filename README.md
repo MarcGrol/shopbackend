@@ -17,7 +17,7 @@ https://marcsexperiment.ew.r.appspot.com/
     gcloud tasks queues create default --max-attempts=10 --max-concurrent-dispatches=5
     
     # Create your own app.yaml
-    cp app.yaml.template app.yaml # set env-vars to the right values
+    cp app_example.yaml.template app.yaml # set env-vars to the right values
     
     # Perform the actual deployment
     gcloud app deploy app.yaml --version version1 --quiet
