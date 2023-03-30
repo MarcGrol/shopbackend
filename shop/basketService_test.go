@@ -115,7 +115,7 @@ func TestBasketService(t *testing.T) {
 		// then
 		assert.Equal(t, 303, response.Code)
 		redirectURL := response.Header().Get("Location")
-		assert.Equal(t, "http://localhost:8888/basket", redirectURL)
+		assert.Equal(t, "http://localhost:8888/basket/"+basket1.UID, redirectURL)
 		basket, exists, _ := storer.Get(ctx, "123")
 		assert.True(t, exists)
 		assert.Equal(t, "123", basket.UID)

@@ -108,7 +108,7 @@ func (s service) createNewBasketPage() http.HandlerFunc {
 		}
 
 		// Back to the basket list
-		http.Redirect(w, r, fmt.Sprintf("%s/basket", myhttp.HostnameWithScheme(r)), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("%s/basket/%s", myhttp.HostnameWithScheme(r), uid), http.StatusSeeOther)
 	}
 }
 
