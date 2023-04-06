@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
@@ -21,7 +21,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
-	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 
 //go:embed templates
@@ -41,34 +40,28 @@ type Config struct {
 	ApiKey          string
 }
 
-type service struct {
-	environment     string
-	merchantAccount string
-	clientKey       string
-	apiKey          string
-	payer           Payer
-	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
-	queue           myqueue.TaskQueuer
-	nower           mytime.Nower
-	logger          mylog.Logger
+type webService struct {
+	service *service
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
-	return &service{
-		merchantAccount: cfg.MerchantAccount,
-		environment:     cfg.Environment,
-		clientKey:       cfg.ClientKey,
-		apiKey:          cfg.ApiKey,
-		payer:           payer,
-		checkoutStore:   checkoutStore,
-		queue:           queue,
-		nower:           nower,
-		logger:          logger,
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*webService, error) {
+	return &webService{
+		service: &service{
+			merchantAccount: cfg.MerchantAccount,
+			environment:     cfg.Environment,
+			clientKey:       cfg.ClientKey,
+			apiKey:          cfg.ApiKey,
+			payer:           payer,
+			checkoutStore:   checkoutStore,
+			queue:           queue,
+			nower:           nower,
+			logger:          logger,
+		},
 	}, nil
 }
 
-func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
+func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 	// Endpoints that compose the userinterface
 	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
 	router.HandleFunc("/checkout/{basketUID}", s.finalizeCheckoutPage()).Methods("GET")
@@ -79,65 +72,27 @@ func (s service) RegisterEndpoints(c context.Context, router *mux.Router) {
 }
 
 // startCheckoutPage starts a checkout session on the Adyen platform
-func (s service) startCheckoutPage() http.HandlerFunc {
+func (s webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		errorWriter := myhttp.NewWriter(s.service.logger)
 
 		// Convert request-body into a CreateCheckoutSessionRequest
-		sessionRequest, basketUID, returnURL, err := parseRequest(r, s.merchantAccount)
+		sessionRequest, basketUID, returnURL, err := parseRequest(r)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
 
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
-
-		// Initiate a checkout session on the Adyen platform
-		checkoutSessionResp, err := s.payer.Sessions(c, sessionRequest)
+		resp, err := s.service.startCheckoutPage(c, basketUID, sessionRequest, returnURL)
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
-			return
-		}
-
-		// Ask the Adyen platform to return payment methods that are allowed for me
-		paymentMethodsResp, err := s.payer.PaymentMethods(c, checkoutToPaymentMethodsRequest(sessionRequest))
-		if err != nil {
-			errorWriter.WriteError(c, w, 3, fmt.Errorf("error fetching payment methods for checkout %s: %s", basketUID, err))
-			return
-		}
-
-		// Store checkout context because we need it later again
-		err = s.checkoutStore.Put(c, basketUID, checkoutmodel.CheckoutContext{
-			BasketUID:         basketUID,
-			CreatedAt:         s.nower.Now(),
-			OriginalReturnURL: returnURL,
-			ID:                checkoutSessionResp.Id,
-			SessionData:       checkoutSessionResp.SessionData,
-		})
-		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err)))
+			errorWriter.WriteError(c, w, 2, err)
 			return
 		}
 
 		// Pass relevant data to the checkout page
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		err = checkoutPageTemplate.Execute(w, checkoutmodel.CheckoutPageInfo{
-			Environment:     s.environment,
-			ClientKey:       s.clientKey,
-			MerchantAccount: s.merchantAccount,
-			BasketUID:       basketUID,
-			Amount: checkoutmodel.Amount{
-				Currency: sessionRequest.Amount.Currency,
-				Value:    sessionRequest.Amount.Value,
-			},
-			CountryCode:            sessionRequest.CountryCode,
-			ShopperLocale:          sessionRequest.ShopperLocale,
-			ShopperEmail:           sessionRequest.ShopperEmail,
-			PaymentMethodsResponse: paymentMethodsResp,
-			ID:                     checkoutSessionResp.Id,
-			SessionData:            checkoutSessionResp.SessionData,
-		})
+		err = checkoutPageTemplate.Execute(w, resp)
 		if err != nil {
 			errorWriter.WriteError(c, w, 5, myerrors.NewInternalError(fmt.Errorf("error executimng template: %s", err)))
 			return
@@ -146,35 +101,22 @@ func (s service) startCheckoutPage() http.HandlerFunc {
 }
 
 // finalizeCheckoutPage is called when the shopper has finished the checkout process
-func (s service) finalizeCheckoutPage() http.HandlerFunc {
+func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		errorWriter := myhttp.NewWriter(s.service.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 
-		checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
+		resp, err := s.service.finalizeCheckoutPage(c, basketUID)
 		if err != nil {
-			errorWriter.WriteError(c, w, 10, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 10, err)
 			return
 		}
-		if !found {
-			errorWriter.WriteError(c, w, 11, myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID)))
-			return
-		}
-
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		// Second time, less data is needed
-		err = checkoutPageTemplate.Execute(w, checkoutmodel.CheckoutPageInfo{
-			Environment:     s.environment,
-			MerchantAccount: s.merchantAccount,
-			ClientKey:       s.clientKey,
-			BasketUID:       basketUID,
-			ID:              checkoutContext.ID,
-			SessionData:     checkoutContext.SessionData,
-		})
+		err = checkoutPageTemplate.Execute(w, resp)
 		if err != nil {
 			errorWriter.WriteError(c, w, 12, myerrors.NewInternalError(fmt.Errorf("error executimng template: %s", err)))
 			return
@@ -182,69 +124,28 @@ func (s service) finalizeCheckoutPage() http.HandlerFunc {
 	}
 }
 
-func (s service) statusRedirectCallback() http.HandlerFunc {
+func (s webService) statusRedirectCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		errorWriter := myhttp.NewWriter(s.service.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
 
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for checkout for %s -> %s", basketUID, status)
-
-		var checkoutContext checkoutmodel.CheckoutContext
-		var found bool
-		var err error
-		err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
-			// must be idempotent
-
-			checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
-			if err != nil {
-				return myerrors.NewInternalError(fmt.Errorf("error fetching checkout with uid %s: %s", basketUID, err))
-			}
-			if !found {
-				return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
-			}
-
-			checkoutContext.Status = status
-			checkoutContext.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
-
-			err = s.checkoutStore.Put(c, basketUID, checkoutContext)
-			if err != nil {
-				return myerrors.NewInternalError(err)
-			}
-			return nil
-		})
+		redirectURL, err := s.service.statusRedirectCallback(c, basketUID, status)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
 		}
 
-		adjustedReturnURL, err := addStatusQueryParam(checkoutContext.OriginalReturnURL, status)
-		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
-			return
-		}
-
-		http.Redirect(w, r, adjustedReturnURL, http.StatusSeeOther)
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 	}
 }
 
-func addStatusQueryParam(orgUrl string, status string) (string, error) {
-	u, err := url.Parse(orgUrl)
-	if err != nil {
-		return "", myerrors.NewInvalidInputError(fmt.Errorf("error parsing return URL %s: %s", orgUrl, err))
-	}
-	params := u.Query()
-	params.Set("status", status)
-	u.RawQuery = params.Encode()
-	return u.String(), nil
-}
-
-func (s service) webhookNotification() http.HandlerFunc {
+func (s webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		errorWriter := myhttp.NewWriter(s.service.logger)
 
 		event := checkoutmodel.WebhookNotification{}
 		err := json.NewDecoder(r.Body).Decode(&event)
@@ -253,16 +154,11 @@ func (s service) webhookNotification() http.HandlerFunc {
 			return
 		}
 
-		if len(event.NotificationItems) == 0 {
-			s.logger.Log(c, event.NotificationItems[0].NotificationRequestItem.MerchantReference, mylog.SeverityInfo, "Webhook: status update on checkout received: %+v", event)
-		}
-
-		for _, item := range event.NotificationItems {
-			err := s.processNotificationItem(c, item)
-			if err != nil {
-				errorWriter.WriteError(c, w, 1, fmt.Errorf("error handling item: %s", err))
-				return
-			}
+		err = s.service.webhookNotification(c, event)
+		if err != nil {
+			errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
+				Status: err.Error(),
+			})
 		}
 
 		errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
@@ -271,55 +167,7 @@ func (s service) webhookNotification() http.HandlerFunc {
 	}
 }
 
-func (s service) processNotificationItem(c context.Context, item checkoutmodel.NotificationItem) error {
-	basketUID := item.NotificationRequestItem.MerchantReference
-
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received: %+v", item)
-
-	var checkoutContext checkoutmodel.CheckoutContext
-	var found bool
-	var err error
-	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
-		// must be idempotent
-
-		checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
-		if err != nil {
-			return myerrors.NewInternalError(err)
-		}
-		if !found {
-			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
-		}
-		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
-		checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
-		checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
-		checkoutContext.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
-
-		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
-		if err != nil {
-			return myerrors.NewInternalError(err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	// Asynchronously inform basket service
-	err = s.queue.Enqueue(c, myqueue.Task{
-		UID: basketUID,
-		WebhookURLPath: fmt.Sprintf("/api/basket/%s/status/%s/%s", basketUID,
-			item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success),
-		Payload: []byte{},
-	})
-	if err != nil {
-		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
-	}
-
-	return nil
-}
-
-func parseRequest(r *http.Request, merchantAccount string) (checkout.CreateCheckoutSessionRequest, string, string, error) {
+func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, string, string, error) {
 	basketUID := mux.Vars(r)["basketUID"]
 	if basketUID == "" {
 		return checkout.CreateCheckoutSessionRequest{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
@@ -431,7 +279,7 @@ func parseRequest(r *http.Request, merchantAccount string) (checkout.CreateCheck
 		//LineItems:                nil,
 		//Mandate:                  nil,
 		//Mcc:                      "",
-		MerchantAccount:        merchantAccount,
+		// MerchantAccount:         "",
 		MerchantOrderReference: basketUID,
 		//Metadata:                 nil,
 		//MpiData:                  nil,
@@ -467,17 +315,4 @@ func parseRequest(r *http.Request, merchantAccount string) (checkout.CreateCheck
 		//ThreeDSAuthenticationOnly: false,
 		TrustedShopper: true,
 	}, basketUID, returnURL, nil
-}
-
-func checkoutToPaymentMethodsRequest(checkoutReq checkout.CreateCheckoutSessionRequest) checkout.PaymentMethodsRequest {
-	return checkout.PaymentMethodsRequest{
-		Channel:         "Web",
-		MerchantAccount: checkoutReq.MerchantAccount,
-		CountryCode:     checkoutReq.CountryCode,
-		ShopperLocale:   checkoutReq.ShopperLocale,
-		Amount: &checkout.Amount{
-			Currency: checkoutReq.Amount.Currency,
-			Value:    checkoutReq.Amount.Value,
-		},
-	}
 }
