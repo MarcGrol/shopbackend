@@ -53,8 +53,6 @@ func (s service) startCheckoutPage(c context.Context, basketUID string, req chec
 		return nil, myerrors.NewInvalidInputError(err)
 	}
 
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
-
 	// Initiate a checkout session on the Adyen platform
 	checkoutSessionResp, err := s.payer.Sessions(c, req)
 	if err != nil {

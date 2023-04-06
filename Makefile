@@ -17,4 +17,7 @@ gen:
 fmt:
 	find . -name '*.go' -exec goimports -l -w {} \;
 
-.PHONY: all clean install test gen fmt
+run:
+	go install && shopbackend && open http://localhost:8082/
+
+.PHONY: all clean install test gen fmt run
