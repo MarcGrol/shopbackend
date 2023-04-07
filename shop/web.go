@@ -20,15 +20,15 @@ import (
 )
 
 type webService struct {
-	service *service
 	logger  mylog.Logger
+	service *service
 }
 
 // Use dependency injection to isolate the infrastructure and ease testing
 func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, logger mylog.Logger) *webService {
 	return &webService{
-		service: newService(store, nower, uuider, logger),
 		logger:  logger,
+		service: newService(store, nower, uuider, logger),
 	}
 }
 

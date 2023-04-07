@@ -41,12 +41,14 @@ type Config struct {
 }
 
 type webService struct {
+	logger  mylog.Logger
 	service *service
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
 func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*webService, error) {
 	return &webService{
+		logger: logger,
 		service: &service{
 			merchantAccount: cfg.MerchantAccount,
 			environment:     cfg.Environment,
@@ -77,7 +79,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 func (s webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.service.logger)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		// Convert request-body into a CreateCheckoutSessionRequest
 		sessionRequest, basketUID, returnURL, err := parseRequest(r)
@@ -106,7 +108,7 @@ func (s webService) startCheckoutPage() http.HandlerFunc {
 func (s webService) resumeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.service.logger)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 
@@ -130,7 +132,7 @@ func (s webService) resumeCheckoutPage() http.HandlerFunc {
 func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.service.logger)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
@@ -149,7 +151,7 @@ func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 func (s webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.service.logger)
+		errorWriter := myhttp.NewWriter(s.logger)
 
 		event := checkoutmodel.WebhookNotification{}
 		err := json.NewDecoder(r.Body).Decode(&event)

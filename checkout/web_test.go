@@ -101,6 +101,45 @@ func TestCheckoutService(t *testing.T) {
 		assert.Equal(t, "http://a.b/c", checkout.OriginalReturnURL)
 	})
 
+	t.Run("Resume checkout", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
+		ctx, router, storer, _, _, _ := setup(ctrl)
+
+		// given
+		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
+			BasketUID:         "123",
+			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
+			LastModified:      nil,
+			OriginalReturnURL: "http://localhost:8080/basket/123/checkout",
+			ID:                "456",
+			SessionData:       "lalala",
+		})
+
+		// when
+		request, err := http.NewRequest(http.MethodGet, "/checkout/123", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 200, response.Code)
+		got := response.Body.String()
+		assert.Contains(t, got, "<td>123</td>")
+		assert.Contains(t, got, `id: "456"`)
+		assert.Contains(t, got, `sessionData: "lalala"`)
+
+		checkout, exists, _ := storer.Get(ctx, "123")
+		assert.True(t, exists)
+		assert.Equal(t, "123", checkout.BasketUID)
+		assert.Equal(t, "456", checkout.ID)
+		assert.Equal(t, "lalala", checkout.SessionData)
+		assert.Equal(t, "http://localhost:8080/basket/123/checkout", checkout.OriginalReturnURL)
+	})
+
 	t.Run("Handle checkout status redirect", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
