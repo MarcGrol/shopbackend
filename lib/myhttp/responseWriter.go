@@ -3,10 +3,11 @@ package myhttp
 import (
 	"context"
 	"encoding/json"
-	"github.com/MarcGrol/shopbackend/lib/myerrors"
-	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"log"
 	"net/http"
+
+	"github.com/MarcGrol/shopbackend/lib/myerrors"
+	"github.com/MarcGrol/shopbackend/lib/mylog"
 )
 
 type ResponseWriter interface {

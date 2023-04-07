@@ -62,9 +62,11 @@ func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmod
 }
 
 func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
-	// Endpoints that compose the userinterface
+	// Endpoints that compose the user-interface
 	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
 	router.HandleFunc("/checkout/{basketUID}", s.resumeCheckoutPage()).Methods("GET")
+
+	// Adyen will redirect to this endpoint after checkout has finalized
 	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.finalizeCheckoutPage()).Methods("GET")
 
 	// Final notification called by Adyen at a later time
@@ -100,7 +102,7 @@ func (s webService) startCheckoutPage() http.HandlerFunc {
 	}
 }
 
-// resumeCheckoutPage is called when the shopper has finished the checkout process
+// resumeCheckoutPage is called halfway the checkout process
 func (s webService) resumeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
@@ -124,7 +126,7 @@ func (s webService) resumeCheckoutPage() http.HandlerFunc {
 	}
 }
 
-// finalizeCheckoutPage reports the status of the checkout
+// finalizeCheckoutPage reports the status after finalisation of the checkout
 func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)

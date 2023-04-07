@@ -33,12 +33,13 @@ func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuide
 }
 
 func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
-
 	// Endpoints that compose the userinterface
 	router.HandleFunc("/", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.createNewBasketPage()).Methods("POST")
 	router.HandleFunc("/basket/{basketUID}", s.basketDetailsPage()).Methods("GET")
+
+	// Checkout component will redirect to this endpoint after checkout has finalized
 	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutFinalized()).Methods("GET")
 
 	// Checkout component will call this endpoint to update the status of the checkout
