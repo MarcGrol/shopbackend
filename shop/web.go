@@ -24,7 +24,7 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-// Use dependency injection to isolate the infrastructure and easy testing
+// Use dependency injection to isolate the infrastructure and ease testing
 func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, logger mylog.Logger) *webService {
 	return &webService{
 		service: newService(store, nower, uuider, logger),
@@ -39,10 +39,10 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/basket", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.createNewBasketPage()).Methods("POST")
 	router.HandleFunc("/basket/{basketUID}", s.basketDetailsPage()).Methods("GET")
-	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutCompletedRedirectCallback()).Methods("GET")
+	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutFinalized()).Methods("GET")
 
 	// Checkout component will call this endpoint to update the status of the checkout
-	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutStatusWebhookCallback()).Methods("PUT")
+	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutFinalStatusWebhook()).Methods("PUT")
 }
 
 //go:embed templates
@@ -115,7 +115,7 @@ func (s webService) basketDetailsPage() http.HandlerFunc {
 	}
 }
 
-func (s webService) checkoutCompletedRedirectCallback() http.HandlerFunc {
+func (s webService) checkoutFinalized() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -123,7 +123,7 @@ func (s webService) checkoutCompletedRedirectCallback() http.HandlerFunc {
 		basketUID := mux.Vars(r)["basketUID"]
 		status := r.URL.Query().Get("status")
 
-		basket, err := s.service.checkoutCompletedRedirectCallback(c, basketUID, status)
+		basket, err := s.service.checkoutFinalized(c, basketUID, status)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
@@ -134,7 +134,7 @@ func (s webService) checkoutCompletedRedirectCallback() http.HandlerFunc {
 	}
 }
 
-func (s webService) checkoutStatusWebhookCallback() http.HandlerFunc {
+func (s webService) checkoutFinalStatusWebhook() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -143,7 +143,7 @@ func (s webService) checkoutStatusWebhookCallback() http.HandlerFunc {
 		eventCode := mux.Vars(r)["eventCode"]
 		status := mux.Vars(r)["status"]
 
-		err := s.service.checkoutStatusWebhookCallback(c, basketUID, eventCode, status)
+		err := s.service.checkoutFinalStatusWebhook(c, basketUID, eventCode, status)
 		if err != nil {
 			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
 			return

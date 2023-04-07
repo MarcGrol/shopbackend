@@ -43,8 +43,8 @@ func newService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmod
 	}, nil
 }
 
-// startCheckoutPage starts a checkout session on the Adyen platform
-func (s service) startCheckoutPage(c context.Context, basketUID string, req checkout.CreateCheckoutSessionRequest, returnURL string) (*checkoutmodel.CheckoutPageInfo, error) {
+// startCheckout starts a checkout session on the Adyen platform
+func (s service) startCheckout(c context.Context, basketUID string, req checkout.CreateCheckoutSessionRequest, returnURL string) (*checkoutmodel.CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
 	req.MerchantAccount = s.merchantAccount
@@ -98,15 +98,17 @@ func (s service) startCheckoutPage(c context.Context, basketUID string, req chec
 func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 	if req.Amount.Currency == "" || req.Amount.Value == 0 || req.CountryCode == "" ||
 		req.ShopperLocale == "" || req.ReturnUrl == "" || req.MerchantOrderReference == "" ||
-		req.Reference == "" || req.MerchantAccount == "" {
+		req.Reference == "" || req.MerchantAccount == "" || req.Channel == "" {
 		return myerrors.NewInvalidInputError(fmt.Errorf("Missing mandatory field"))
 	}
 
 	return nil
 }
 
-// finalizeCheckoutPage is called when the shopper has finished the checkout process
-func (s service) finalizeCheckoutPage(c context.Context, basketUID string) (*checkoutmodel.CheckoutPageInfo, error) {
+// resumeCheckout is called when the shopper has finished the checkout process
+func (s service) resumeCheckout(c context.Context, basketUID string) (*checkoutmodel.CheckoutPageInfo, error) {
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
+
 	checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
 	if err != nil {
 		return nil, myerrors.NewInternalError(err)
@@ -114,8 +116,6 @@ func (s service) finalizeCheckoutPage(c context.Context, basketUID string) (*che
 	if !found {
 		return nil, myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
 	}
-
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
 
 	return &checkoutmodel.CheckoutPageInfo{
 		Environment:     s.environment,
@@ -127,8 +127,8 @@ func (s service) finalizeCheckoutPage(c context.Context, basketUID string) (*che
 	}, nil
 }
 
-func (s service) statusRedirectCallback(c context.Context, basketUID string, status string) (string, error) {
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for checkout for %s -> %s", basketUID, status)
+func (s service) finalizeCheckout(c context.Context, basketUID string, status string) (string, error) {
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
 
 	var checkoutContext checkoutmodel.CheckoutContext
 	var found bool
@@ -179,7 +179,7 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 func (s service) webhookNotification(c context.Context, event checkoutmodel.WebhookNotification) error {
 
 	if len(event.NotificationItems) >= 0 {
-		s.logger.Log(c, event.NotificationItems[0].NotificationRequestItem.MerchantReference, mylog.SeverityInfo, "Webhook: status update on checkout received: %+v", event)
+		s.logger.Log(c, event.NotificationItems[0].NotificationRequestItem.MerchantReference, mylog.SeverityInfo, "Webhook: status update on basket received: %+v", event)
 	}
 
 	for _, item := range event.NotificationItems {
@@ -194,7 +194,7 @@ func (s service) webhookNotification(c context.Context, event checkoutmodel.Webh
 func (s service) processNotificationItem(c context.Context, item checkoutmodel.NotificationItem) error {
 	basketUID := item.NotificationRequestItem.MerchantReference
 
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received: %+v", item)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received on basket %s: %+v", item.NotificationRequestItem.MerchantReference, item)
 
 	var checkoutContext checkoutmodel.CheckoutContext
 	var found bool

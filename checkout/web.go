@@ -64,10 +64,10 @@ func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmod
 func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 	// Endpoints that compose the userinterface
 	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
-	router.HandleFunc("/checkout/{basketUID}", s.finalizeCheckoutPage()).Methods("GET")
-	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.statusRedirectCallback()).Methods("GET")
+	router.HandleFunc("/checkout/{basketUID}", s.resumeCheckoutPage()).Methods("GET")
+	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.finalizeCheckoutPage()).Methods("GET")
 
-	// Webhook notification called by Adyen at a later time
+	// Final notification called by Adyen at a later time
 	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 }
 
@@ -84,7 +84,7 @@ func (s webService) startCheckoutPage() http.HandlerFunc {
 			return
 		}
 
-		resp, err := s.service.startCheckoutPage(c, basketUID, sessionRequest, returnURL)
+		resp, err := s.service.startCheckout(c, basketUID, sessionRequest, returnURL)
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return
@@ -94,21 +94,21 @@ func (s webService) startCheckoutPage() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = checkoutPageTemplate.Execute(w, resp)
 		if err != nil {
-			errorWriter.WriteError(c, w, 5, myerrors.NewInternalError(fmt.Errorf("error executimng template: %s", err)))
+			errorWriter.WriteError(c, w, 5, myerrors.NewInternalError(fmt.Errorf("error executing template: %s", err)))
 			return
 		}
 	}
 }
 
-// finalizeCheckoutPage is called when the shopper has finished the checkout process
-func (s webService) finalizeCheckoutPage() http.HandlerFunc {
+// resumeCheckoutPage is called when the shopper has finished the checkout process
+func (s webService) resumeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.service.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 
-		resp, err := s.service.finalizeCheckoutPage(c, basketUID)
+		resp, err := s.service.resumeCheckout(c, basketUID)
 		if err != nil {
 			errorWriter.WriteError(c, w, 10, err)
 			return
@@ -118,13 +118,14 @@ func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 		// Second time, less data is needed
 		err = checkoutPageTemplate.Execute(w, resp)
 		if err != nil {
-			errorWriter.WriteError(c, w, 12, myerrors.NewInternalError(fmt.Errorf("error executimng template: %s", err)))
+			errorWriter.WriteError(c, w, 12, myerrors.NewInternalError(fmt.Errorf("error executing template: %s", err)))
 			return
 		}
 	}
 }
 
-func (s webService) statusRedirectCallback() http.HandlerFunc {
+// finalizeCheckoutPage reports the status of the checkout
+func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.service.logger)
@@ -132,7 +133,7 @@ func (s webService) statusRedirectCallback() http.HandlerFunc {
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
 
-		redirectURL, err := s.service.statusRedirectCallback(c, basketUID, status)
+		redirectURL, err := s.service.finalizeCheckout(c, basketUID, status)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
@@ -142,6 +143,7 @@ func (s webService) statusRedirectCallback() http.HandlerFunc {
 	}
 }
 
+// webhookNotification received a json-formatted notification message with the definitive checkout status
 func (s webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
@@ -162,7 +164,7 @@ func (s webService) webhookNotification() http.HandlerFunc {
 		}
 
 		errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
-			Status: "[accepted]",
+			Status: "[accepted]", // Body containing "[accepted]" is the signal that message has been succesfully processed
 		})
 	}
 }

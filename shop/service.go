@@ -76,8 +76,8 @@ func (s service) getBasket(c context.Context, basketUID string) (shopmodel.Baske
 	return basket, nil
 }
 
-func (s service) checkoutCompletedRedirectCallback(c context.Context, basketUID string, status string) (shopmodel.Basket, error) {
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
+func (s service) checkoutFinalized(c context.Context, basketUID string, status string) (shopmodel.Basket, error) {
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout finalized for basket %s -> %s", basketUID, status)
 
 	var basket shopmodel.Basket
 	var found bool
@@ -109,7 +109,7 @@ func (s service) checkoutCompletedRedirectCallback(c context.Context, basketUID 
 	return basket, nil
 }
 
-func (s service) checkoutStatusWebhookCallback(c context.Context, basketUID string, eventCode string, status string) error {
+func (s service) checkoutFinalStatusWebhook(c context.Context, basketUID string, eventCode string, status string) error {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %s", basketUID, eventCode, status)
 
 	var basket shopmodel.Basket
