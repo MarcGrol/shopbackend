@@ -1,6 +1,6 @@
 
 
-all: gen fmt test install
+all: gen fmt test install run
 
 clean:
 	go clean ./...

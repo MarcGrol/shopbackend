@@ -29,15 +29,15 @@ type service struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
+func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
 		clientKey:       cfg.ClientKey,
 		apiKey:          cfg.ApiKey,
 		payer:           payer,
-		checkoutStore:   checkoutStore,
-		queue:           queue,
+		checkoutStore:   checkoutStorer,
+		queue:           queuer,
 		nower:           nower,
 		logger:          logger,
 	}, nil
@@ -168,7 +168,7 @@ func (s service) finalizeCheckout(c context.Context, basketUID string, status st
 func addStatusQueryParam(orgUrl string, status string) (string, error) {
 	u, err := url.Parse(orgUrl)
 	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error parsing return URL %s: %s", orgUrl, err))
+		return "", myerrors.NewInternalError(fmt.Errorf("error parsing return ReturnURL %s: %s", orgUrl, err))
 	}
 	params := u.Query()
 	params.Set("status", status)

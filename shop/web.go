@@ -25,7 +25,8 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and ease testing
-func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, logger mylog.Logger) *webService {
+func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer) *webService {
+	logger := mylog.New("basket")
 	return &webService{
 		logger:  logger,
 		service: newService(store, nower, uuider, logger),

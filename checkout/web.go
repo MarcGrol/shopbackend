@@ -46,20 +46,15 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queue myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*webService, error) {
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queuer myqueue.TaskQueuer, nower mytime.Nower) (*webService, error) {
+	logger := mylog.New("checkout")
+	s, err := newService(cfg, payer, checkoutStore, queuer, nower, logger)
+	if err != nil {
+		return nil, err
+	}
 	return &webService{
-		logger: logger,
-		service: &service{
-			merchantAccount: cfg.MerchantAccount,
-			environment:     cfg.Environment,
-			clientKey:       cfg.ClientKey,
-			apiKey:          cfg.ApiKey,
-			payer:           payer,
-			checkoutStore:   checkoutStore,
-			queue:           queue,
-			nower:           nower,
-			logger:          logger,
-		},
+		logger:  logger,
+		service: s,
 	}, nil
 }
 

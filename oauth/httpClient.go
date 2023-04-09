@@ -1,4 +1,4 @@
-package myhttpclient
+package oauth
 
 import (
 	"bytes"
@@ -11,24 +11,28 @@ import (
 	"time"
 )
 
-const (
-	timeout = 5 * time.Second
-)
+const httpClientTimeout = 5 * time.Second
 
-type jsonHTTPClient struct {
+type httpOAuthClient struct {
+	username string
+	password string
 }
 
-func newJSONHTTPClient() HTTPSender {
-	return &jsonHTTPClient{}
+func newHttpClient(username string, password string) *httpOAuthClient {
+	return &httpOAuthClient{
+		username: username,
+		password: password,
+	}
 }
 
-func (_ jsonHTTPClient) Send(c context.Context, method string, url string, body []byte) (int, []byte, error) {
+func (c httpOAuthClient) Send(ctx context.Context, method string, url string, body []byte) (int, []byte, error) {
 	httpReq, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
 		return 0, []byte{}, fmt.Errorf("Error creating http request for %s %s: %s", method, url, err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	httpReq.Header.Set("Accept", "application/x-www-form-urlencoded")
+	httpReq.SetBasicAuth(c.username, c.password)
 
 	reqDump, err := httputil.DumpRequestOut(httpReq, true)
 	if err == nil {
@@ -37,11 +41,11 @@ func (_ jsonHTTPClient) Send(c context.Context, method string, url string, body 
 
 	log.Printf("HTTP request: %s %s", method, url)
 	httpClient := &http.Client{
-		Timeout: timeout,
+		Timeout: httpClientTimeout,
 	}
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		return 0, []byte{}, fmt.Errorf("Error sending %s %s: %s", method, url, err)
+		return 0, []byte{}, fmt.Errorf("Error calling %s %s: %s", method, url, err)
 	}
 	defer httpResp.Body.Close()
 

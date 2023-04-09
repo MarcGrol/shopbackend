@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -194,7 +193,7 @@ func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store
 	storer, _, _ := mystore.New[shopmodel.Basket](c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
-	sut := NewService(storer, nower, uuider, mylog.New("basket"))
+	sut := NewService(storer, nower, uuider)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)
 

@@ -9,5 +9,5 @@ type HTTPSender interface {
 }
 
 func New() HTTPSender {
-	return newRealClient()
+	return newJSONHTTPClient()
 }

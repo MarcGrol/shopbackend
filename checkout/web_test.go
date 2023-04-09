@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -249,7 +248,7 @@ func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store
 		MerchantAccount: "MyMerchantAccount",
 		ClientKey:       "my_client_key",
 		ApiKey:          "my_api_key",
-	}, payer, storer, queuer, nower, mylog.New("checkout"))
+	}, payer, storer, queuer, nower)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)
 

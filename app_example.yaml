@@ -8,6 +8,9 @@ env_variables:
   ADYEN_MERCHANT_ACCOUNT: "..." # set your own value
   ADYEN_API_KEY: "..."          # set your own value
   ADYEN_CLIENT_KEY: "..."       # set your own value
+  OAUTH_CLIENT_ID: "..."        # set your own value
+  OAUTH_CLIENT_SECRET: "..."    # set your own value
+
 
 handlers:
   - url: /.*
