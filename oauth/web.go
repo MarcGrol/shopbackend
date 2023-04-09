@@ -3,12 +3,12 @@ package oauth
 import (
 	"context"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
+	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
@@ -82,9 +82,10 @@ func (s webService) start() http.HandlerFunc {
 			CompletionURL: completionURL,
 			Scope:         exampleScope,
 			State:         uid,
+			CodeVerifier:  codeVerifierValue,
 		})
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInternalError(fmt.Errorf("error creating auth url: %s", err)))
+			errorWriter.WriteError(c, w, 4, myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err)))
 			return
 		}
 
