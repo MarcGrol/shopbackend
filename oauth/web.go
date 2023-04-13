@@ -69,6 +69,7 @@ func (s webService) start() http.HandlerFunc {
 			UID:       uid,
 			ReturnURL: originalReturnURL,
 			Verifier:  codeVerifierValue,
+			CreatedAt: s.nower.Now(),
 		})
 		if err != nil {
 			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(fmt.Errorf("error storing: %s", err)))

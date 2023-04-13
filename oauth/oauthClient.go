@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"net/http"
 	"net/url"
+
+	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 )
@@ -32,6 +33,7 @@ type GetTokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+//go:generate mockgen -source=oauthClient.go -package oauth -destination oauthClient_mock.go OauthClient
 type OauthClient interface {
 	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)
@@ -63,13 +65,13 @@ func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest
 	method, challenge := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
 
 	u.RawQuery = url.Values{
-		"response_type":         []string{"code"},
 		"client_id":             []string{g.clientID},
+		"code_challenge":        []string{challenge},
+		"code_challenge_method": []string{method},
 		"redirect_uri":          []string{req.CompletionURL},
+		"response_type":         []string{"code"},
 		"scope":                 []string{req.Scope},
 		"state":                 []string{req.State},
-		"code_challenge_method": []string{method},
-		"code_challenge":        []string{challenge},
 	}.Encode()
 
 	return u.String(), nil
