@@ -43,7 +43,6 @@ https://marcsexperiment.ew.r.appspot.com/
 
     POST /v1/token HTTP/1.1
         Accept: application/x-www-form-urlencoded
-        Authorization: Basic MTIzOjQ1Ng==
         Content-Type: application/x-www-form-urlencoded
 
         client_id=123
