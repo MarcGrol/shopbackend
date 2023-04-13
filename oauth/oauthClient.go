@@ -50,8 +50,8 @@ func NewOAuthClient(clientId string, clientSecret string) OauthClient {
 }
 
 const (
-	authURL  = "https://www.oauth.com/playground/auth-dialog.html"
-	tokenURL = "https://www.oauth.com/playground/token-dialog.html"
+	authURL  = "https://ca-test.adyen.com/ca/ca/oauth/connect.shtml"
+	tokenURL = "https://ca-test.adyen.com/v1/token"
 )
 
 func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
@@ -60,13 +60,13 @@ func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest
 		return "", err
 	}
 
-	challenge, method := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
+	method, challenge := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
 
 	u.RawQuery = url.Values{
 		"response_type":         []string{"code"},
 		"client_id":             []string{g.clientID},
 		"redirect_uri":          []string{req.CompletionURL},
-		"exampleScope":          []string{req.Scope},
+		"scope":                 []string{req.Scope},
 		"state":                 []string{req.State},
 		"code_challenge_method": []string{method},
 		"code_challenge":        []string{challenge},

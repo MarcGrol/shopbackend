@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	exampleScope = "photo+offline_access" // TODO
+	exampleScope = "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"
 )
 
 type webService struct {
