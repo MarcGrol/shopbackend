@@ -3,7 +3,6 @@ package oauth
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
@@ -12,6 +11,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 )
 
 const (
@@ -19,16 +19,18 @@ const (
 )
 
 type service struct {
-	storer      mystore.Store[Session]
+	storer      mystore.Store[OAuthSessionSetup]
+	vault       myvault.Vault
 	nower       mytime.Nower
 	uuider      myuuid.UUIDer
 	logger      mylog.Logger
 	oauthClient OauthClient
 }
 
-func newService(storer mystore.Store[Session], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *service {
+func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.Vault, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *service {
 	return &service{
 		storer:      storer,
+		vault:       vault,
 		nower:       nower,
 		uuider:      uuider,
 		oauthClient: oauthClient,
@@ -47,7 +49,7 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 	sessionUID := s.uuider.Create()
 
 	// Create new session
-	err = s.storer.Put(c, sessionUID, Session{
+	err = s.storer.Put(c, sessionUID, OAuthSessionSetup{
 		UID:       sessionUID,
 		ReturnURL: originalReturnURL,
 		Verifier:  codeVerifierValue,
@@ -83,7 +85,7 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 			return myerrors.NewInternalError(fmt.Errorf("Error fetching session: %s", err))
 		}
 		if !exist {
-			return myerrors.NewNotFoundError(fmt.Errorf("Session with uid %s not found", sessionUID))
+			return myerrors.NewNotFoundError(fmt.Errorf("OAuthSessionSetup with uid %s not found", sessionUID))
 		}
 		returnURL = session.ReturnURL
 
@@ -97,23 +99,77 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 			return myerrors.NewInternalError(fmt.Errorf("Error getting token: %s", err))
 		}
 
-		// Store tokens
-		session.TokenData = tokenResp
+		s.logger.Log(c, sessionUID, mylog.SeverityDebug, "token-resp: %+v", tokenResp)
+
+		// Update session
+		session.TokenData = &tokenResp
 		session.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
+		session.Done = true
 		err = s.storer.Put(c, sessionUID, session)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("Error storing session: %s", err))
 		}
 
-		log.Printf("token-resp: %+v", tokenResp)
+		// Store tokens in vault
+		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+			AccessToken:  tokenResp.AccessToken,
+			RefreshToken: tokenResp.RefreshToken,
+			ExpiresIn:    tokenResp.ExpiresIn,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("Error storing token in vault: %s", err))
+		}
 
 		return nil
 	})
 	if err != nil {
-		return "", myerrors.NewInvalidInputError(err)
+		return "", err
 	}
 
 	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
 
 	return returnURL, nil
+}
+
+func (s service) refreshToken(c context.Context) error {
+
+	err := s.storer.RunInTransaction(c, func(c context.Context) error {
+		currentToken, exists, err := s.vault.Get(c, myvault.CurrentToken)
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("Error fetching current token:%s", err))
+		}
+
+		if !exists {
+			// cannot refreshToken without a token: do not consider this a failure
+			return nil
+		}
+
+		refreshedTokenResp, err := s.oauthClient.RefreshAccessToken(c, RefreshTokenRequest{
+			AccessToken:  currentToken.AccessToken,
+			RefreshToken: currentToken.RefreshToken,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("Error refreshing token: %s", err))
+		}
+
+		s.logger.Log(c, "", mylog.SeverityDebug, "token-resp: %+v", refreshedTokenResp)
+
+		// Update token
+		currentToken.RefreshToken = refreshedTokenResp.RefreshToken
+		currentToken.AccessToken = refreshedTokenResp.AccessToken
+		currentToken.ExpiresIn = refreshedTokenResp.ExpiresIn
+		err = s.vault.Put(c, myvault.CurrentToken, currentToken)
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("Error storing token: %s", err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	s.logger.Log(c, "", mylog.SeverityInfo, "Complete oauth session-refreshToken")
+
+	return nil
 }

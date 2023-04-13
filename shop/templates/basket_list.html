@@ -10,6 +10,13 @@
 <div class="container">
     <h1>My webshop</h1>
     <div class="row">
+        <form action="/oauth/start" method="GET">
+            <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
+            <button type="submit" class="btn btn-secondary">Start oauth session-setup</button>
+        </form>
+    </div>
+
+    <div class="row">
 <h2>All baskets</h2>
 
     <form action="/basket" method="POST">

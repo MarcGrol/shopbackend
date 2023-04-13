@@ -14,6 +14,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 )
 
 type service struct {
@@ -23,13 +24,14 @@ type service struct {
 	apiKey          string
 	payer           Payer
 	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
+	vault           myvault.Vault
 	queue           myqueue.TaskQueuer
 	nower           mytime.Nower
 	logger          mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
+func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.Vault, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -37,6 +39,7 @@ func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmo
 		apiKey:          cfg.ApiKey,
 		payer:           payer,
 		checkoutStore:   checkoutStorer,
+		vault:           vault,
 		queue:           queuer,
 		nower:           nower,
 		logger:          logger,
@@ -51,6 +54,13 @@ func (s service) startCheckout(c context.Context, basketUID string, req checkout
 	err := validateRequest(req)
 	if err != nil {
 		return nil, myerrors.NewInvalidInputError(err)
+	}
+
+	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+	if err == nil && exist {
+		s.payer.UseToken(accessToken.AccessToken)
+	} else {
+		// use api-key
 	}
 
 	// Initiate a checkout session on the Adyen platform
@@ -176,7 +186,9 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 	return u.String(), nil
 }
 
-func (s service) webhookNotification(c context.Context, event checkoutmodel.WebhookNotification) error {
+func (s service) webhookNotification(c context.Context, username, password string, event checkoutmodel.WebhookNotification) error {
+
+	// TODO check username+password to make sure notification originates from Adyen
 
 	if len(event.NotificationItems) >= 0 {
 		s.logger.Log(c, event.NotificationItems[0].NotificationRequestItem.MerchantReference, mylog.SeverityInfo, "Webhook: status update on basket received: %+v", event)

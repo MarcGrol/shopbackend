@@ -63,3 +63,18 @@ func (mr *MockOauthClientMockRecorder) GetAccessToken(c, req interface{}) *gomoc
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccessToken", reflect.TypeOf((*MockOauthClient)(nil).GetAccessToken), c, req)
 }
+
+// RefreshAccessToken mocks base method.
+func (m *MockOauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshAccessToken", c, req)
+	ret0, _ := ret[0].(GetTokenResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RefreshAccessToken indicates an expected call of RefreshAccessToken.
+func (mr *MockOauthClientMockRecorder) RefreshAccessToken(c, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshAccessToken", reflect.TypeOf((*MockOauthClient)(nil).RefreshAccessToken), c, req)
+}

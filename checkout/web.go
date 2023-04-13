@@ -21,6 +21,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 )
 
 //go:embed templates
@@ -46,9 +47,9 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], queuer myqueue.TaskQueuer, nower mytime.Nower) (*webService, error) {
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.Vault, queuer myqueue.TaskQueuer, nower mytime.Nower) (*webService, error) {
 	logger := mylog.New("checkout")
-	s, err := newService(cfg, payer, checkoutStore, queuer, nower, logger)
+	s, err := newService(cfg, payer, checkoutStore, vault, queuer, nower, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +146,11 @@ func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 // webhookNotification received a json-formatted notification message with the definitive checkout status
 func (s webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
+
+		username, password, _ := r.BasicAuth()
 
 		event := checkoutmodel.WebhookNotification{}
 		err := json.NewDecoder(r.Body).Decode(&event)
@@ -155,7 +159,7 @@ func (s webService) webhookNotification() http.HandlerFunc {
 			return
 		}
 
-		err = s.service.webhookNotification(c, event)
+		err = s.service.webhookNotification(c, username, password, event)
 		if err != nil {
 			errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
 				Status: err.Error(),

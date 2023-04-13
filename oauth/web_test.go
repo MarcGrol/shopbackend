@@ -13,6 +13,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 )
 
 func TestOauth(t *testing.T) {
@@ -22,7 +23,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, uuider, oauthClient := setup(ctrl)
+		ctx, router, storer, _, nower, uuider, oauthClient := setup(ctrl)
 
 		// given
 		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return(authURL, nil)
@@ -57,7 +58,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, oauthClient := setup(ctrl)
+		ctx, router, storer, vault, nower, _, oauthClient := setup(ctrl)
 
 		exampleResp := GetTokenResponse{
 			TokenType:    "bearer",
@@ -68,12 +69,12 @@ func TestOauth(t *testing.T) {
 		}
 
 		// given
-		storer.Put(ctx, "abcdef", Session{
+		storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:       "abcdef",
 			ReturnURL: "http://localhost:8888/basket",
 			Verifier:  "exampleHash",
 			CreatedAt: mytime.ExampleTime,
-			TokenData: exampleResp,
+			TokenData: &exampleResp,
 		})
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		oauthClient.EXPECT().GetAccessToken(gomock.Any(), gomock.Any()).Return(exampleResp, nil)
@@ -96,19 +97,27 @@ func TestOauth(t *testing.T) {
 		assert.Equal(t, "abcdef", session.UID)
 		assert.Equal(t, "abc123", session.TokenData.AccessToken)
 		assert.Equal(t, "2023-02-27T23:58:59", session.LastModified.Format("2006-01-02T15:04:05"))
+		assert.True(t, session.Done)
+
+		token, exists, err := vault.Get(ctx, myvault.CurrentToken)
+		assert.NoError(t, err)
+		assert.True(t, exists)
+		assert.Equal(t, "abc123", token.AccessToken)
+		assert.Equal(t, "rst456", session.TokenData.RefreshToken)
 	})
 
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[Session], *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], myvault.Vault, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
 	c := context.TODO()
 	router := mux.NewRouter()
-	storer, _, _ := mystore.New[Session](c)
+	storer, _, _ := mystore.New[OAuthSessionSetup](c)
+	vault, _, _ := myvault.New(c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)
-	sut := NewService(storer, nower, uuider, oauthClient)
+	sut := NewService(storer, vault, nower, uuider, oauthClient)
 	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, nower, uuider, oauthClient
+	return c, router, storer, vault, nower, uuider, oauthClient
 }

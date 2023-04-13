@@ -64,3 +64,15 @@ func (mr *MockPayerMockRecorder) Sessions(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sessions", reflect.TypeOf((*MockPayer)(nil).Sessions), ctx, req)
 }
+
+// UseToken mocks base method.
+func (m *MockPayer) UseToken(accessToken string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UseToken", accessToken)
+}
+
+// UseToken indicates an expected call of UseToken.
+func (mr *MockPayerMockRecorder) UseToken(accessToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseToken", reflect.TypeOf((*MockPayer)(nil).UseToken), accessToken)
+}

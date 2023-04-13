@@ -2,6 +2,7 @@ package checkout
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/adyen"
@@ -11,6 +12,7 @@ import (
 
 //go:generate mockgen -source=payer.go -package checkout -destination payer_mock.go Payer
 type Payer interface {
+	UseToken(accessToken string)
 	Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error)
 	PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error)
 }
@@ -27,6 +29,10 @@ func NewPayer(environment string, apiKey string) *adyenPayer {
 			Debug:       false,
 		}),
 	}
+}
+
+func (p *adyenPayer) UseToken(accessToken string) {
+	p.client.GetConfig().DefaultHeader["Authorization"] = fmt.Sprintf("Bearer %s", accessToken)
 }
 
 func (p *adyenPayer) Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error) {

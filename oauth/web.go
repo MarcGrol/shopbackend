@@ -14,6 +14,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 )
 
 type webService struct {
@@ -21,9 +22,9 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-func NewService(storer mystore.Store[Session], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *webService {
+func NewService(storer mystore.Store[OAuthSessionSetup], vault myvault.Vault, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *webService {
 	return &webService{
-		service: newService(storer, nower, uuider, oauthClient),
+		service: newService(storer, vault, nower, uuider, oauthClient),
 		logger:  mylog.New("oauth"),
 	}
 }
@@ -31,6 +32,7 @@ func NewService(storer mystore.Store[Session], nower mytime.Nower, uuider myuuid
 func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/oauth/start", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
+	router.HandleFunc("/oauth/refresh", s.refreshTokenPage()).Methods("GET")
 }
 
 func (s webService) startPage() http.HandlerFunc {
@@ -73,10 +75,24 @@ func (s webService) donePage() http.HandlerFunc {
 
 		originalRedirectURL, err := s.service.done(c, sessionUID, code)
 		if err != nil {
-			errorWriter.WriteError(c, w, 3, myerrors.NewInvalidInputError(err))
+			errorWriter.WriteError(c, w, 3, err)
 			return
 		}
 
 		http.Redirect(w, r, originalRedirectURL, http.StatusSeeOther)
+	}
+}
+
+func (s webService) refreshTokenPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		err := s.service.refreshToken(c)
+		if err != nil {
+			errorWriter.WriteError(c, w, 4, err)
+			return
+		}
+
 	}
 }

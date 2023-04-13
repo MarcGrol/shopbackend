@@ -25,6 +25,11 @@ type GetTokenRequest struct {
 	CodeVerifier string
 }
 
+type RefreshTokenRequest struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type GetTokenResponse struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
@@ -37,6 +42,7 @@ type GetTokenResponse struct {
 type OauthClient interface {
 	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)
+	RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error)
 }
 
 type oauthClient struct {
@@ -107,6 +113,6 @@ func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (G
 	return resp, nil
 }
 
-func (g oauthClient) GetRefreshToken(c context.Context, tokenURL string, code string, returnURL string) (GetTokenResponse, error) {
+func (g oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
 	return GetTokenResponse{}, myerrors.NewNotImplementedError(fmt.Errorf("Refresh token"))
 }
