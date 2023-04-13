@@ -31,7 +31,7 @@ https://marcsexperiment.ew.r.appspot.com/
 ### Auth-url
 
     https://ca-test.adyen.com/ca/ca/oauth/connect.shtml?
-        client_id=4G63CsWtgfmz3x4aPjHZqgvA8JpU6f9R
+        client_id=123
         &code_challenge=n-Sg2fMz4TCQdOn6HBdocaISVYzRlNGTWu-a3zxK5cQ
         &code_challenge_method=S256
         &redirect_uri=http%3A%2F%2Flocalhost%3A8082%2Foauth%2Fdone
