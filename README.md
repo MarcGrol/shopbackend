@@ -1,4 +1,4 @@
-# Example shop that interacts with the Adyen paymnent platform
+# Example of shop interacting with the Adyen payment platform
 
 Little example app that demonstrates how Adyen drop-in checkout works
 
