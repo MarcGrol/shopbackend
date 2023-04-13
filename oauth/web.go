@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -134,6 +135,7 @@ func (s webService) done() http.HandlerFunc {
 
 			// Store tokens
 			session.TokenData = tokenResp
+			session.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
 			err = s.storer.Put(c, sessionUID, session)
 			if err != nil {
 				return myerrors.NewInternalError(fmt.Errorf("Error storing session: %s", err))

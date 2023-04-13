@@ -42,22 +42,24 @@ type OauthClient interface {
 type oauthClient struct {
 	clientID     string
 	clientSecret string
+	hostname     string
 }
 
-func NewOAuthClient(clientId string, clientSecret string) OauthClient {
+func NewOAuthClient(clientId string, clientSecret string, hostname string) OauthClient {
 	return &oauthClient{
 		clientID:     clientId,
 		clientSecret: clientSecret,
+		hostname:     hostname,
 	}
 }
 
 const (
-	authURL  = "https://ca-test.adyen.com/ca/ca/oauth/connect.shtml"
-	tokenURL = "https://ca-test.adyen.com/v1/token"
+	authURL  = "/ca/ca/oauth/connect.shtml"
+	tokenURL = "/v1/token"
 )
 
 func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
-	u, err := url.Parse(authURL)
+	u, err := url.Parse(g.hostname + authURL)
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +89,7 @@ func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (G
 	}.Encode()
 
 	httpClient := newHttpClient(g.clientID, g.clientSecret)
-	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, tokenURL, []byte(requestBody))
+	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, g.hostname+tokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
 	}

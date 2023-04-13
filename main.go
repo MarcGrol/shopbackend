@@ -65,6 +65,7 @@ func createOAuthService(c context.Context, router *mux.Router, nower mytime.Nowe
 	const (
 		clientIDVarname     = "OAUTH_CLIENT_ID"
 		clientSecretVarname = "OAUTH_CLIENT_SECRET"
+		hostnameVarname     = "OAUTH_HOSTNAME"
 	)
 
 	sessionStore, sessionStoreCleanup, err := mystore.New[oauth.Session](c)
@@ -82,7 +83,12 @@ func createOAuthService(c context.Context, router *mux.Router, nower mytime.Nowe
 		log.Fatalf("missing env-var %s", clientSecretVarname)
 	}
 
-	tokenGetter := oauth.NewOAuthClient(clientID, clientSecret)
+	hostname := os.Getenv(hostnameVarname)
+	if hostname == "" {
+		log.Fatalf("missing env-var %s", hostnameVarname)
+	}
+
+	tokenGetter := oauth.NewOAuthClient(clientID, clientSecret, hostname)
 	oauthService := oauth.NewService(sessionStore, nower, uuider, tokenGetter)
 
 	oauthService.RegisterEndpoints(c, router)
