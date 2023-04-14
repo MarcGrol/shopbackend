@@ -2,7 +2,6 @@ package myvault
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 )
@@ -17,7 +16,6 @@ type Token struct {
 	ExpiresIn    int
 }
 
-// go:generate mockgen -source=vault.go -package myvault -destination vault_reader_mock.go VaultReader
 type VaultReader interface {
 	Get(c context.Context, uid string) (Token, bool, error)
 }
@@ -29,11 +27,11 @@ type VaultReadWriter interface {
 }
 
 type vault struct {
-	store mystore.Store[[]byte]
+	store mystore.Store[Token]
 }
 
 func New(c context.Context) (VaultReadWriter, func(), error) {
-	store, storeCleanup, err := mystore.New[[]byte](c)
+	store, storeCleanup, err := mystore.New[Token](c)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,26 +41,9 @@ func New(c context.Context) (VaultReadWriter, func(), error) {
 }
 
 func (v vault) Put(c context.Context, uid string, value Token) error {
-	jsonBytes, err := json.MarshalIndent(value, "", "\t")
-	if err != nil {
-		return err
-	}
-	return v.store.Put(c, uid, jsonBytes)
+	return v.store.Put(c, uid, value)
 }
 
 func (v vault) Get(c context.Context, uid string) (Token, bool, error) {
-	token := Token{}
-
-	jsonBytes, exists, err := v.store.Get(c, uid)
-	if err != nil {
-		return token, false, err
-	}
-	if !exists {
-		return token, false, nil
-	}
-	err = json.Unmarshal(jsonBytes, &token)
-	if err != nil {
-		return token, true, err
-	}
-	return token, true, nil
+	return v.store.Get(c, uid)
 }

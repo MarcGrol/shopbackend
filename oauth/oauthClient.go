@@ -8,8 +8,6 @@ import (
 	"net/url"
 
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
-
-	"github.com/MarcGrol/shopbackend/lib/myerrors"
 )
 
 type ComposeAuthURLRequest struct {
@@ -26,7 +24,6 @@ type GetTokenRequest struct {
 }
 
 type RefreshTokenRequest struct {
-	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
@@ -46,16 +43,18 @@ type OauthClient interface {
 }
 
 type oauthClient struct {
-	clientID     string
-	clientSecret string
-	hostname     string
+	clientID      string
+	clientSecret  string
+	authHostname  string
+	tokenHostname string
 }
 
-func NewOAuthClient(clientId string, clientSecret string, hostname string) OauthClient {
+func NewOAuthClient(clientId string, clientSecret string, authHostname string, tokenHostname string) OauthClient {
 	return &oauthClient{
-		clientID:     clientId,
-		clientSecret: clientSecret,
-		hostname:     hostname,
+		clientID:      clientId,
+		clientSecret:  clientSecret,
+		authHostname:  authHostname,
+		tokenHostname: tokenHostname,
 	}
 }
 
@@ -65,7 +64,7 @@ const (
 )
 
 func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
-	u, err := url.Parse(g.hostname + authURL)
+	u, err := url.Parse(g.authHostname + authURL)
 	if err != nil {
 		return "", err
 	}
@@ -88,14 +87,13 @@ func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest
 func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (GetTokenResponse, error) {
 	requestBody := url.Values{
 		"grant_type":    {"authorization_code"},
-		"client_id":     {g.clientID},
 		"redirect_uri":  {req.RedirectUri},
 		"code":          {req.Code},
 		"code_verifier": {req.CodeVerifier},
 	}.Encode()
 
 	httpClient := newHttpClient(g.clientID, g.clientSecret)
-	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, g.hostname+tokenURL, []byte(requestBody))
+	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, g.tokenHostname+tokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
 	}
@@ -113,6 +111,27 @@ func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (G
 	return resp, nil
 }
 
-func (g oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
-	return GetTokenResponse{}, myerrors.NewNotImplementedError(fmt.Errorf("Refresh token"))
+func (g oauthClient) RefreshAccessToken(ctx context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
+	requestBody := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {req.RefreshToken},
+	}.Encode()
+
+	httpClient := newHttpClient(g.clientID, g.clientSecret)
+	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, g.tokenHostname+tokenURL, []byte(requestBody))
+	if err != nil {
+		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %s", err)
+	}
+
+	if httpRespCode != 200 {
+		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %d", httpRespCode)
+	}
+
+	resp := GetTokenResponse{}
+	err = json.Unmarshal(respBody, &resp)
+	if err != nil {
+		return GetTokenResponse{}, fmt.Errorf("error parsing response: %s", err)
+	}
+
+	return resp, nil
 }

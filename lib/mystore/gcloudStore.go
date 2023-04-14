@@ -23,7 +23,10 @@ func newGcloudStore[T any](c context.Context) (*gcloudStore[T], func(), error) {
 	}
 
 	val := new(T)
-	kind := strings.Split(fmt.Sprintf("%T", *val), ".")[1]
+	kind := fmt.Sprintf("%T", *val)
+	if strings.Contains(kind, ".") {
+		kind = strings.Split(kind, ".")[1]
+	}
 
 	return &gcloudStore[T]{
 			client: client,
@@ -70,7 +73,7 @@ func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Co
 
 		// Rollback
 		rollbackError := t.Rollback()
-		if err != nil {
+		if rollbackError != nil {
 			return fmt.Errorf("error rolling-back transaction: %s", rollbackError)
 		}
 

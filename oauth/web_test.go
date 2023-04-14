@@ -78,7 +78,7 @@ func TestOauth(t *testing.T) {
 		})
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		oauthClient.EXPECT().GetAccessToken(gomock.Any(), GetTokenRequest{
-			RedirectUri:  "http://localhost:8888/basket",
+			RedirectUri:  "http://localhost:8888/oauth/done",
 			Code:         "789",
 			CodeVerifier: "exampleHash",
 		}).Return(exampleResp, nil)

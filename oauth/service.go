@@ -77,14 +77,14 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 	return authURL, nil
 }
 
-func (s service) done(c context.Context, sessionUID string, code string) (string, error) {
+func (s service) done(c context.Context, sessionUID string, code string, hostname string) (string, error) {
 	returnURL := ""
 	tokenResp := GetTokenResponse{}
 
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
 		session, exist, err := s.storer.Get(c, sessionUID)
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error fetching session: %s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error fetching session: %s", err))
 		}
 		if !exist {
 			return myerrors.NewNotFoundError(fmt.Errorf("OAuthSessionSetup with uid %s not found", sessionUID))
@@ -92,13 +92,15 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 		returnURL = session.ReturnURL
 
 		// Get token
+		completionURL := fmt.Sprintf("%s/oauth/done", hostname)
+
 		tokenResp, err = s.oauthClient.GetAccessToken(c, GetTokenRequest{
-			RedirectUri:  session.ReturnURL,
+			RedirectUri:  completionURL,
 			Code:         code,
 			CodeVerifier: session.Verifier,
 		})
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error getting token: %s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error getting token: %s", err))
 		}
 
 		s.logger.Log(c, sessionUID, mylog.SeverityDebug, "token-resp: %+v", tokenResp)
@@ -109,7 +111,7 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 		session.Done = true
 		err = s.storer.Put(c, sessionUID, session)
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error storing session: %s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error storing session: %s", err))
 		}
 
 		return nil
@@ -127,10 +129,10 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 		ExpiresIn:    tokenResp.ExpiresIn,
 	})
 	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("Error storing token in vault: %s", err))
+		return "", myerrors.NewInternalError(fmt.Errorf("error storing token in vault: %s", err))
 	}
 
-	// TODO Publish that a new token is available
+	// TODO Publish that a new access-token is available
 
 	return returnURL, nil
 }
@@ -139,7 +141,7 @@ func (s service) refreshToken(c context.Context) error {
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
 		currentToken, exists, err := s.vault.Get(c, myvault.CurrentToken)
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error fetching current token:%s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error fetching current token:%s", err))
 		}
 
 		if !exists {
@@ -148,16 +150,15 @@ func (s service) refreshToken(c context.Context) error {
 		}
 
 		refreshedTokenResp, err := s.oauthClient.RefreshAccessToken(c, RefreshTokenRequest{
-			AccessToken:  currentToken.AccessToken,
 			RefreshToken: currentToken.RefreshToken,
 		})
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error refreshing token: %s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error refreshing token: %s", err))
 		}
 
-		s.logger.Log(c, "", mylog.SeverityDebug, "token-resp: %+v", refreshedTokenResp)
+		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", refreshedTokenResp)
 
-		// TODO Publish that a new accesss token is available
+		// TODO Publish that a new access-token is available
 
 		// Update token
 		currentToken.RefreshToken = refreshedTokenResp.RefreshToken
@@ -165,7 +166,7 @@ func (s service) refreshToken(c context.Context) error {
 		currentToken.ExpiresIn = refreshedTokenResp.ExpiresIn
 		err = s.vault.Put(c, myvault.CurrentToken, currentToken)
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error storing token: %s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}
 
 		return nil

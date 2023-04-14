@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -42,11 +43,15 @@ func (s webService) startPage() http.HandlerFunc {
 
 		originalReturnURL := r.URL.Query().Get("returnURL")
 		if originalReturnURL == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("Missing returnURL")))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing returnURL")))
 			return
 		}
 
-		authenticationURL, err := s.service.start(c, originalReturnURL, myhttp.HostnameWithScheme(r))
+		hostname := myhttp.HostnameWithScheme(r)
+
+		log.Printf("originalReturnURL: %s, Hostname: %s", originalReturnURL, hostname)
+
+		authenticationURL, err := s.service.start(c, originalReturnURL, hostname)
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return
@@ -63,17 +68,19 @@ func (s webService) donePage() http.HandlerFunc {
 
 		sessionUID := r.URL.Query().Get("state")
 		if sessionUID == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("Missing state")))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing state")))
 			return
 		}
 
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputError(fmt.Errorf("Missing code")))
+			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputError(fmt.Errorf("missing code")))
 			return
 		}
 
-		originalRedirectURL, err := s.service.done(c, sessionUID, code)
+		hostname := myhttp.HostnameWithScheme(r)
+
+		originalRedirectURL, err := s.service.done(c, sessionUID, code, hostname)
 		if err != nil {
 			errorWriter.WriteError(c, w, 3, err)
 			return

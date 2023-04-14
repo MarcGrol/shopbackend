@@ -13,7 +13,7 @@ import (
 func TestOAuthClient(t *testing.T) {
 	t.Run("Compose auth url", func(t *testing.T) {
 
-		oauthClient := NewOAuthClient("123", "456", "https://ca-test.adyen.com")
+		oauthClient := NewOAuthClient("123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
 		url, err := oauthClient.ComposeAuthURL(context.TODO(), ComposeAuthURLRequest{
 			CompletionURL: "http://localhost:8888/oauth/done",
 			Scope:         exampleScope,
@@ -40,16 +40,15 @@ func TestOAuthClient(t *testing.T) {
 			// request validation logic
 			assert.Equal(t, "/v1/token", r.RequestURI)
 			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-			username, password, ok := r.BasicAuth()
+			clientID, clientSecret, ok := r.BasicAuth()
 			assert.True(t, ok)
-			assert.Equal(t, "123", username)
-			assert.Equal(t, "456", password)
+			assert.Equal(t, "123", clientID)
+			assert.Equal(t, "456", clientSecret)
 
 			err := r.ParseForm()
 			assert.NoError(t, err)
 
 			assert.Equal(t, "authorization_code", r.Form.Get("grant_type"))
-			assert.Equal(t, "123", r.Form.Get("client_id"))
 			assert.Equal(t, "http://localhost:8080/oauth/done", r.Form.Get("redirect_uri"))
 			assert.Equal(t, "mycode", r.Form.Get("code"))
 			assert.Equal(t, "exampleHash", r.Form.Get("code_verifier"))
@@ -61,7 +60,7 @@ func TestOAuthClient(t *testing.T) {
 			assert.NoError(t, err)
 		})
 
-		client := NewOAuthClient("123", "456", ts.URL)
+		client := NewOAuthClient("123", "456", ts.URL, ts.URL)
 		resp, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
 			RedirectUri:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
