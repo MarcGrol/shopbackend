@@ -59,11 +59,8 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 		return "", myerrors.NewInternalError(fmt.Errorf("error storing: %s", err))
 	}
 
-	// Be called back here when authorisation has completed
-	completionURL := fmt.Sprintf("%s/oauth/done", hostname)
-
 	authURL, err := s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
-		CompletionURL: completionURL,
+		CompletionURL: createCompletionURL(hostname), // Be called back here when authorisation has completed
 		Scope:         exampleScope,
 		State:         sessionUID,
 		CodeVerifier:  codeVerifierValue,
@@ -92,10 +89,8 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 		returnURL = session.ReturnURL
 
 		// Get token
-		completionURL := fmt.Sprintf("%s/oauth/done", hostname)
-
 		tokenResp, err = s.oauthClient.GetAccessToken(c, GetTokenRequest{
-			RedirectUri:  completionURL,
+			RedirectUri:  createCompletionURL(hostname),
 			Code:         code,
 			CodeVerifier: session.Verifier,
 		})
@@ -135,6 +130,10 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 	// TODO Publish that a new access-token is available
 
 	return returnURL, nil
+}
+
+func createCompletionURL(hostname string) string {
+	return fmt.Sprintf("%s/oauth/done", hostname)
 }
 
 func (s service) refreshToken(c context.Context) error {

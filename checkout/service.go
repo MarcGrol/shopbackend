@@ -59,10 +59,10 @@ func (s service) startCheckout(c context.Context, basketUID string, req checkout
 	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
 	if err != nil || !exist {
 		s.payer.UseApiKey(s.apiKey)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key %s", s.apiKey)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
 	} else {
 		s.payer.UseToken(accessToken.AccessToken)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token %s", accessToken.AccessToken)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
 	}
 
 	// Initiate a checkout session on the Adyen platform

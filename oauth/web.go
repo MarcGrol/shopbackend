@@ -3,7 +3,6 @@ package oauth
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -47,11 +46,7 @@ func (s webService) startPage() http.HandlerFunc {
 			return
 		}
 
-		hostname := myhttp.HostnameWithScheme(r)
-
-		log.Printf("originalReturnURL: %s, Hostname: %s", originalReturnURL, hostname)
-
-		authenticationURL, err := s.service.start(c, originalReturnURL, hostname)
+		authenticationURL, err := s.service.start(c, originalReturnURL, myhttp.HostnameWithScheme(r))
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return
@@ -78,9 +73,7 @@ func (s webService) donePage() http.HandlerFunc {
 			return
 		}
 
-		hostname := myhttp.HostnameWithScheme(r)
-
-		originalRedirectURL, err := s.service.done(c, sessionUID, code, hostname)
+		originalRedirectURL, err := s.service.done(c, sessionUID, code, myhttp.HostnameWithScheme(r))
 		if err != nil {
 			errorWriter.WriteError(c, w, 3, err)
 			return
