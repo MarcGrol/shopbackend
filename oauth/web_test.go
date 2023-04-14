@@ -77,7 +77,16 @@ func TestOauth(t *testing.T) {
 			TokenData: &exampleResp,
 		})
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		oauthClient.EXPECT().GetAccessToken(gomock.Any(), gomock.Any()).Return(exampleResp, nil)
+		oauthClient.EXPECT().GetAccessToken(gomock.Any(), GetTokenRequest{
+			RedirectUri:  "http://localhost:8888/basket",
+			Code:         "789",
+			CodeVerifier: "exampleHash",
+		}).Return(exampleResp, nil)
+		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+			AccessToken:  "abc123",
+			RefreshToken: "rst456",
+			ExpiresIn:    12345,
+		})
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/done?code=789&state=abcdef", nil)
@@ -99,20 +108,15 @@ func TestOauth(t *testing.T) {
 		assert.Equal(t, "2023-02-27T23:58:59", session.LastModified.Format("2006-01-02T15:04:05"))
 		assert.True(t, session.Done)
 
-		token, exists, err := vault.Get(ctx, myvault.CurrentToken)
-		assert.NoError(t, err)
-		assert.True(t, exists)
-		assert.Equal(t, "abc123", token.AccessToken)
-		assert.Equal(t, "rst456", session.TokenData.RefreshToken)
 	})
 
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], myvault.Vault, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVault, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
 	c := context.TODO()
 	router := mux.NewRouter()
 	storer, _, _ := mystore.New[OAuthSessionSetup](c)
-	vault, _, _ := myvault.New(c)
+	vault := myvault.NewMockVault(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)

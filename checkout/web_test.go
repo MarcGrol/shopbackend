@@ -71,9 +71,10 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, payer, _, nower := setup(ctrl)
+		ctx, router, storer, vault, payer, _, nower := setup(ctrl)
 
 		// given
+		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
 		payer.EXPECT().UseApiKey(gomock.Any())
 		payer.EXPECT().Sessions(gomock.Any(), sessionRequest).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
@@ -238,10 +239,10 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], myvault.Vault, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVault, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[checkoutmodel.CheckoutContext](c)
-	vault, _, _ := myvault.New(c)
+	vault := myvault.NewMockVault(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	queuer := myqueue.NewMockTaskQueuer(ctrl)
 	payer := NewMockPayer(ctrl)
