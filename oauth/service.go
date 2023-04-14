@@ -20,14 +20,14 @@ const (
 
 type service struct {
 	storer      mystore.Store[OAuthSessionSetup]
-	vault       myvault.Vault
+	vault       myvault.VaultReadWriter
 	nower       mytime.Nower
 	uuider      myuuid.UUIDer
 	logger      mylog.Logger
 	oauthClient OauthClient
 }
 
-func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.Vault, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *service {
+func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *service {
 	return &service{
 		storer:      storer,
 		vault:       vault,

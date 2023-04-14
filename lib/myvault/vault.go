@@ -17,17 +17,22 @@ type Token struct {
 	ExpiresIn    int
 }
 
-//go:generate mockgen -source=vault.go -package myvault -destination vault_mock.go Vault
-type Vault interface {
-	Put(c context.Context, uid string, value Token) error
+// go:generate mockgen -source=vault.go -package myvault -destination vault_reader_mock.go VaultReader
+type VaultReader interface {
 	Get(c context.Context, uid string) (Token, bool, error)
+}
+
+//go:generate mockgen -source=vault.go -package myvault -destination vault_read_writer_mock.go VaultReadWriter
+type VaultReadWriter interface {
+	Get(c context.Context, uid string) (Token, bool, error)
+	Put(c context.Context, uid string, value Token) error
 }
 
 type vault struct {
 	store mystore.Store[[]byte]
 }
 
-func New(c context.Context) (Vault, func(), error) {
+func New(c context.Context) (VaultReadWriter, func(), error) {
 	store, storeCleanup, err := mystore.New[[]byte](c)
 	if err != nil {
 		return nil, nil, err

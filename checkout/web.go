@@ -47,7 +47,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.Vault, queuer myqueue.TaskQueuer, nower mytime.Nower) (*webService, error) {
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower) (*webService, error) {
 	logger := mylog.New("checkout")
 	s, err := newService(cfg, payer, checkoutStore, vault, queuer, nower, logger)
 	if err != nil {

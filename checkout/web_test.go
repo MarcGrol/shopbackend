@@ -239,10 +239,10 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVault, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[checkoutmodel.CheckoutContext](c)
-	vault := myvault.NewMockVault(ctrl)
+	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	queuer := myqueue.NewMockTaskQueuer(ctrl)
 	payer := NewMockPayer(ctrl)

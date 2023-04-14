@@ -24,14 +24,14 @@ type service struct {
 	apiKey          string
 	payer           Payer
 	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
-	vault           myvault.Vault
+	vault           myvault.VaultReader
 	queue           myqueue.TaskQueuer
 	nower           mytime.Nower
 	logger          mylog.Logger
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.Vault, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
+func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,

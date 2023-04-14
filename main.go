@@ -67,7 +67,7 @@ func createShopService(c context.Context, router *mux.Router, nower mytime.Nower
 	return basketstoreCleanup
 }
 
-func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vault, nower mytime.Nower, uuider myuuid.UUIDer) func() {
+func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer) func() {
 
 	const (
 		clientIDVarname     = "OAUTH_CLIENT_ID"
@@ -103,7 +103,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	return sessionStoreCleanup
 }
 
-func createCheckoutService(c context.Context, router *mux.Router, vault myvault.Vault, queue myqueue.TaskQueuer, nower mytime.Nower) func() {
+func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, queue myqueue.TaskQueuer, nower mytime.Nower) func() {
 
 	const (
 		merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"

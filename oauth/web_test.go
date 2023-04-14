@@ -112,11 +112,11 @@ func TestOauth(t *testing.T) {
 
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVault, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
 	c := context.TODO()
 	router := mux.NewRouter()
 	storer, _, _ := mystore.New[OAuthSessionSetup](c)
-	vault := myvault.NewMockVault(ctrl)
+	vault := myvault.NewMockVaultReadWriter(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)
