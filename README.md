@@ -1,4 +1,4 @@
-# Example shop that interacts with the Adyen paymnent platform
+# Example of shop interacting with the Adyen payment platform
 
 Little example app that demonstrates how Adyen drop-in checkout works
 
@@ -31,7 +31,7 @@ https://marcsexperiment.ew.r.appspot.com/
 ### Auth-url
 
     https://ca-test.adyen.com/ca/ca/oauth/connect.shtml?
-        client_id=4G63CsWtgfmz3x4aPjHZqgvA8JpU6f9R
+        client_id=123
         &code_challenge=n-Sg2fMz4TCQdOn6HBdocaISVYzRlNGTWu-a3zxK5cQ
         &code_challenge_method=S256
         &redirect_uri=http%3A%2F%2Flocalhost%3A8082%2Foauth%2Fdone
@@ -43,7 +43,6 @@ https://marcsexperiment.ew.r.appspot.com/
 
     POST /v1/token HTTP/1.1
         Accept: application/x-www-form-urlencoded
-        Authorization: Basic MTIzOjQ1Ng==
         Content-Type: application/x-www-form-urlencoded
 
         client_id=123
