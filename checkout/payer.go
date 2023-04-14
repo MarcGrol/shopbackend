@@ -12,6 +12,7 @@ import (
 
 //go:generate mockgen -source=payer.go -package checkout -destination payer_mock.go Payer
 type Payer interface {
+	UseApiKey(key string)
 	UseToken(accessToken string)
 	Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error)
 	PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error)
@@ -21,7 +22,7 @@ type adyenPayer struct {
 	client *adyen.APIClient
 }
 
-func NewPayer(environment string, apiKey string) *adyenPayer {
+func NewPayer(environment string, apiKey string) Payer {
 	return &adyenPayer{
 		client: adyen.NewClient(&common.Config{
 			ApiKey:      apiKey,
@@ -31,7 +32,17 @@ func NewPayer(environment string, apiKey string) *adyenPayer {
 	}
 }
 
+func (p *adyenPayer) UseApiKey(apiKey string) {
+	// clear header
+	delete(p.client.GetConfig().DefaultHeader, "Authorization")
+	// set api-key
+	p.client.GetConfig().ApiKey = apiKey
+}
+
 func (p *adyenPayer) UseToken(accessToken string) {
+	// clear api-key
+	p.client.GetConfig().ApiKey = ""
+	// set header
 	p.client.GetConfig().DefaultHeader["Authorization"] = fmt.Sprintf("Bearer %s", accessToken)
 }
 

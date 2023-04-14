@@ -84,3 +84,7 @@ type Amount struct {
 func (a Amount) String() string {
 	return fmt.Sprintf("%s %.2f", a.Currency, float32(a.Value/100.00))
 }
+
+type AuthTokenUpdateEvent struct {
+	AccessToken string
+}

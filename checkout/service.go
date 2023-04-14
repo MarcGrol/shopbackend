@@ -57,10 +57,10 @@ func (s service) startCheckout(c context.Context, basketUID string, req checkout
 	}
 
 	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
-	if err == nil && exist {
-		s.payer.UseToken(accessToken.AccessToken)
+	if err != nil || !exist {
+		s.payer.UseApiKey(s.apiKey)
 	} else {
-		// use api-key
+		s.payer.UseToken(accessToken.AccessToken)
 	}
 
 	// Initiate a checkout session on the Adyen platform
@@ -248,6 +248,11 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
 	}
 
+	return nil
+}
+
+func (s service) authTokenUpdate(c context.Context, event checkoutmodel.AuthTokenUpdateEvent) error {
+	s.payer.UseToken(event.AccessToken)
 	return nil
 }
 

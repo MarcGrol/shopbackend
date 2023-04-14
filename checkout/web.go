@@ -60,6 +60,8 @@ func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmod
 }
 
 func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
+	// TODO: subscribe to receive access-token updates
+
 	// Endpoints that compose the user-interface
 	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
 	router.HandleFunc("/checkout/{basketUID}", s.resumeCheckoutPage()).Methods("GET")
@@ -69,6 +71,9 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 
 	// Final notification called by Adyen at a later time
 	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
+
+	// Listen for token refresh
+	router.HandleFunc("/checkout/token/update", s.authTokenUpdate()).Methods("POST")
 }
 
 // startCheckoutPage starts a checkout session on the Adyen platform
@@ -169,6 +174,28 @@ func (s webService) webhookNotification() http.HandlerFunc {
 		errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
 			Status: "[accepted]", // Body containing "[accepted]" is the signal that message has been succesfully processed
 		})
+	}
+}
+
+func (s webService) authTokenUpdate() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		event := checkoutmodel.AuthTokenUpdateEvent{}
+		err := json.NewDecoder(r.Body).Decode(&event)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, fmt.Errorf("error token-refresh-request webhook notification event:%s", err))
+			return
+		}
+
+		err = s.service.authTokenUpdate(c, event)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, err)
+			return
+		}
+
+		errorWriter.Write(c, w, http.StatusOK, myhttp.EmptyResponse{})
 	}
 }
 

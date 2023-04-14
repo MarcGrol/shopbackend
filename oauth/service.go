@@ -79,6 +79,8 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 
 func (s service) done(c context.Context, sessionUID string, code string) (string, error) {
 	returnURL := ""
+	tokenResp := GetTokenResponse{}
+
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
 		session, exist, err := s.storer.Get(c, sessionUID)
 		if err != nil {
@@ -90,7 +92,7 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 		returnURL = session.ReturnURL
 
 		// Get token
-		tokenResp, err := s.oauthClient.GetAccessToken(c, GetTokenRequest{
+		tokenResp, err = s.oauthClient.GetAccessToken(c, GetTokenRequest{
 			RedirectUri:  session.ReturnURL,
 			Code:         code,
 			CodeVerifier: session.Verifier,
@@ -110,16 +112,6 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 			return myerrors.NewInternalError(fmt.Errorf("Error storing session: %s", err))
 		}
 
-		// Store tokens in vault
-		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
-			AccessToken:  tokenResp.AccessToken,
-			RefreshToken: tokenResp.RefreshToken,
-			ExpiresIn:    tokenResp.ExpiresIn,
-		})
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("Error storing token in vault: %s", err))
-		}
-
 		return nil
 	})
 	if err != nil {
@@ -128,11 +120,22 @@ func (s service) done(c context.Context, sessionUID string, code string) (string
 
 	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
 
+	// Store token in vault
+	err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		ExpiresIn:    tokenResp.ExpiresIn,
+	})
+	if err != nil {
+		return "", myerrors.NewInternalError(fmt.Errorf("Error storing token in vault: %s", err))
+	}
+
+	// TODO Publish that a new token is available
+
 	return returnURL, nil
 }
 
 func (s service) refreshToken(c context.Context) error {
-
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
 		currentToken, exists, err := s.vault.Get(c, myvault.CurrentToken)
 		if err != nil {
@@ -154,6 +157,8 @@ func (s service) refreshToken(c context.Context) error {
 
 		s.logger.Log(c, "", mylog.SeverityDebug, "token-resp: %+v", refreshedTokenResp)
 
+		// TODO Publish that a new accesss token is available
+
 		// Update token
 		currentToken.RefreshToken = refreshedTokenResp.RefreshToken
 		currentToken.AccessToken = refreshedTokenResp.AccessToken
@@ -169,7 +174,7 @@ func (s service) refreshToken(c context.Context) error {
 		return err
 	}
 
-	s.logger.Log(c, "", mylog.SeverityInfo, "Complete oauth session-refreshToken")
+	s.logger.Log(c, "", mylog.SeverityInfo, "Complete oauth session-refresh-token")
 
 	return nil
 }

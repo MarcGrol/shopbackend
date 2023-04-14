@@ -1,0 +1,4 @@
+cron:
+  - description: "hourly token refresh"
+    url: /oauth/refresh
+    schedule: every 1 hours
