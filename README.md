@@ -7,7 +7,7 @@ Example app that demonstrates how Adyen OAuth and drop-in checkout works
 https://marcsexperiment.ew.r.appspot.com/
 
 
-## Deploy on Google Appengine
+## Manual deployment on Google Appengine
 
     # Login in to gcloud to start using the cli
     gcloud auth login 
@@ -17,7 +17,7 @@ https://marcsexperiment.ew.r.appspot.com/
     gcloud tasks queues create default --max-attempts=10 --max-concurrent-dispatches=5
     
     # Create your own app.yaml
-    cp app_example.yaml.template app.yaml # set env-vars to the right values
+    cp app_example.yaml app.yaml # and set env-vars to the right values
     
     # Perform the actual deployment
     gcloud app deploy app.yaml --version version1 --quiet
