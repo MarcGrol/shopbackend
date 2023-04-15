@@ -249,6 +249,7 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 	if err != nil {
 		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
 	}
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Successfully forwarded status change for basket %s", basketUID)
 
 	return nil
 }
