@@ -1,6 +1,6 @@
 # Example of shop interacting with the Adyen payment platform
 
-Little example app that demonstrates how Adyen drop-in checkout works
+Example app that demonstrates how Adyen OAuth and drop-in checkout works
 
 ## Play around with the app
 
