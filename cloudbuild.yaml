@@ -1,0 +1,23 @@
+substitutions:
+  _APP: github.com/MarcGrol/shopbackend
+  _BUCKET: eu.artifacts.marcsexperiment.appspot.com
+
+steps:
+- name: "gcr.io/cloud-builders/go"
+  args:
+  - get
+  - "google.golang.org/appengine"
+  env: 
+  - "GOPATH=go"
+- name: "gcr.io/cloud-builders/gcloud"
+  args:
+  - app
+  - deploy
+  - "go/src/${_APP}"
+  env:
+  - "GOPATH=go"
+
+artifacts:
+  objects:
+    location: 'gs://${_BUCKET}/'
+    paths: "go/src/${_APP}/main.go"
