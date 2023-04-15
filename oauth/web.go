@@ -23,9 +23,9 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-func NewService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *webService {
+func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *webService {
 	return &webService{
-		service: newService(storer, vault, nower, uuider, oauthClient, pub),
+		service: newService(clientID, storer, vault, nower, uuider, oauthClient, pub),
 		logger:  mylog.New("oauth"),
 	}
 }

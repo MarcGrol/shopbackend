@@ -31,13 +31,12 @@ type GetTokenResponse struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
 	AccessToken  string `json:"access_token"`
-	Scope        string `json:"exampleScope"`
+	Scope        string `json:"scope"`
 	RefreshToken string `json:"refresh_token"`
 }
 
 //go:generate mockgen -source=oauthClient.go -package oauth -destination oauthClient_mock.go OauthClient
 type OauthClient interface {
-	GetClientID() string
 	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)
 	RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error)
@@ -50,7 +49,7 @@ type oauthClient struct {
 	tokenHostname string
 }
 
-func NewOAuthClient(clientId string, clientSecret string, authHostname string, tokenHostname string) OauthClient {
+func NewOAuthClient(clientId string, clientSecret string, authHostname string, tokenHostname string) *oauthClient {
 	return &oauthClient{
 		clientID:      clientId,
 		clientSecret:  clientSecret,
@@ -63,10 +62,6 @@ const (
 	authURL  = "/ca/ca/oauth/connect.shtml"
 	tokenURL = "/v1/token"
 )
-
-func (g oauthClient) GetClientID() string {
-	return g.clientID
-}
 
 func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
 	u, err := url.Parse(g.authHostname + authURL)

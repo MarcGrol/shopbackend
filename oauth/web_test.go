@@ -27,11 +27,14 @@ func TestOauth(t *testing.T) {
 		ctx, router, storer, _, nower, uuider, oauthClient, publisher := setup(ctrl)
 
 		// given
-		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return(authURL, nil)
-		oauthClient.EXPECT().GetClientID().Return("exampleClientID")
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("abcdef")
-		publisher.EXPECT().Publish(gomock.Any(), TopicName, gomock.Any()).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), TopicName, OAuthSessionSetupStarted{
+			SessionUID: "abcdef",
+			ClientID:   "client12345",
+			Scopes:     "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write",
+		}).Return(nil)
+		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return(authURL, nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/start?returnURL=http://localhost:8888/basket", nil)
@@ -66,13 +69,15 @@ func TestOauth(t *testing.T) {
 			TokenType:    "bearer",
 			ExpiresIn:    12345,
 			AccessToken:  "abc123",
-			Scope:        exampleScope,
+			Scope:        exampleScopes,
 			RefreshToken: "rst456",
 		}
 
 		// given
 		storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:       "abcdef",
+			ClientID:  "client12345",
+			Scopes:    exampleScopes,
 			ReturnURL: "http://localhost:8888/basket",
 			Verifier:  "exampleHash",
 			CreatedAt: mytime.ExampleTime,
@@ -85,11 +90,15 @@ func TestOauth(t *testing.T) {
 			CodeVerifier: "exampleHash",
 		}).Return(exampleResp, nil)
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+			ClientID:     "client12345",
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
 			ExpiresIn:    12345,
-		})
-		publisher.EXPECT().Publish(gomock.Any(), TopicName, gomock.Any()).Return(nil)
+		}).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), TopicName, OAuthSessionSetupCompleted{
+			SessionUID: "abcdef",
+			Success:    true,
+		}).Return(nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/done?code=789&state=abcdef", nil)
@@ -113,6 +122,69 @@ func TestOauth(t *testing.T) {
 
 	})
 
+	t.Run("Refresh token", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
+		ctx, router, storer, vault, _, _, oauthClient, publisher := setup(ctrl)
+
+		// given
+		storer.Put(ctx, "abcdef", OAuthSessionSetup{
+			UID:       "abcdef",
+			ClientID:  "client12345",
+			Scopes:    exampleScopes,
+			ReturnURL: "http://localhost:8888/basket",
+			Verifier:  "exampleHash",
+			CreatedAt: mytime.ExampleTime,
+			TokenData: &GetTokenResponse{
+				TokenType:    "bearer",
+				ExpiresIn:    12345,
+				AccessToken:  "abc123",
+				Scope:        exampleScopes,
+				RefreshToken: "rst456",
+			},
+		})
+		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken).Return(myvault.Token{
+			ClientID:     "client12345",
+			AccessToken:  "abc123",
+			RefreshToken: "rst456",
+			ExpiresIn:    12345,
+		}, true, nil)
+		oauthClient.EXPECT().RefreshAccessToken(gomock.Any(), RefreshTokenRequest{
+			RefreshToken: "rst456",
+		}).Return(GetTokenResponse{
+			TokenType:    "bearer",
+			ExpiresIn:    123456,
+			AccessToken:  "abc123new",
+			Scope:        exampleScopes,
+			RefreshToken: "rst456new",
+		}, nil)
+		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+			ClientID:     "client12345",
+			AccessToken:  "abc123new",
+			RefreshToken: "rst456new",
+			ExpiresIn:    123456,
+		}).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), TopicName, OAuthTokenRefreshCompleted{
+			ClientID: "client12345",
+			Success:  true,
+		}).Return(nil)
+
+		// when
+		request, err := http.NewRequest(http.MethodGet, "/oauth/refresh", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 200, response.Code)
+		got := response.Body.String()
+		assert.Contains(t, got, "Successfully refreshed token")
+
+	})
+
 }
 
 func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient, *mypubsub.MockPublisher) {
@@ -124,7 +196,7 @@ func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)
 	publisher := mypubsub.NewMockPublisher(ctrl)
-	sut := NewService(storer, vault, nower, uuider, oauthClient, publisher)
+	sut := NewService("client12345", storer, vault, nower, uuider, oauthClient, publisher)
 	sut.RegisterEndpoints(c, router)
 
 	return c, router, storer, vault, nower, uuider, oauthClient, publisher

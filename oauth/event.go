@@ -7,6 +7,7 @@ const (
 type OAuthSessionSetupStarted struct {
 	SessionUID string
 	ClientID   string
+	Scopes     string
 }
 
 func (OAuthSessionSetupStarted) GetEventTypeName() string {
@@ -34,7 +35,7 @@ func (OAuthTokenCreationCompleted) GetEventTypeName() string {
 }
 
 type OAuthTokenRefreshCompleted struct {
-	SessionUID   string
+	ClientID     string
 	Success      bool
 	ErrorMessage string
 }

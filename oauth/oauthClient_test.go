@@ -16,7 +16,7 @@ func TestOAuthClient(t *testing.T) {
 		oauthClient := NewOAuthClient("123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
 		url, err := oauthClient.ComposeAuthURL(context.TODO(), ComposeAuthURLRequest{
 			CompletionURL: "http://localhost:8888/oauth/done",
-			Scope:         exampleScope,
+			Scope:         exampleScopes,
 			State:         "abcdef",
 			CodeVerifier:  "exampleHash",
 		})
@@ -33,7 +33,7 @@ func TestOAuthClient(t *testing.T) {
 			TokenType:    "bearer",
 			ExpiresIn:    12345,
 			AccessToken:  "abc123",
-			Scope:        exampleScope,
+			Scope:        exampleScopes,
 			RefreshToken: "rst456",
 		}
 		mux.HandleFunc(tokenURL, func(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +79,7 @@ func TestOAuthClient(t *testing.T) {
 			TokenType:    "bearer",
 			ExpiresIn:    12345,
 			AccessToken:  "anewbc123",
-			Scope:        exampleScope,
+			Scope:        exampleScopes,
 			RefreshToken: "newrst456",
 		}
 		mux.HandleFunc(tokenURL, func(w http.ResponseWriter, r *http.Request) {

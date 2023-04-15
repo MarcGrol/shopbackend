@@ -106,7 +106,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	}
 
 	tokenGetter := oauth.NewOAuthClient(clientID, clientSecret, authHostname, tokenHostname)
-	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, tokenGetter, pub)
+	oauthService := oauth.NewService(clientID, sessionStore, vault, nower, uuider, tokenGetter, pub)
 
 	oauthService.RegisterEndpoints(c, router)
 

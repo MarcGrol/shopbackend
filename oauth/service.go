@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	exampleScope = "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"
+	exampleScopes = "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"
 )
 
 type service struct {
+	clientID    string
 	storer      mystore.Store[OAuthSessionSetup]
 	vault       myvault.VaultReadWriter
 	nower       mytime.Nower
@@ -29,8 +30,9 @@ type service struct {
 	publisher   mypubsub.Publisher
 }
 
-func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *service {
+func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *service {
 	return &service{
+		clientID:    clientID,
 		storer:      storer,
 		vault:       vault,
 		nower:       nower,
@@ -54,9 +56,11 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 	authURL := ""
 	err = s.storer.RunInTransaction(c, func(c context.Context) error {
 
-		// Create new session
+		// Create new sessionx
 		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
 			UID:       sessionUID,
+			ClientID:  s.clientID,
+			Scopes:    exampleScopes,
 			ReturnURL: originalReturnURL,
 			Verifier:  codeVerifierValue,
 			CreatedAt: s.nower.Now(),
@@ -67,7 +71,7 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 
 		authURL, err = s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
 			CompletionURL: createCompletionURL(hostname), // Be called back here when authorisation has completed
-			Scope:         exampleScope,
+			Scope:         exampleScopes,
 			State:         sessionUID,
 			CodeVerifier:  codeVerifierValue,
 		})
@@ -77,7 +81,8 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 
 		err = s.publisher.Publish(c, TopicName, OAuthSessionSetupStarted{
 			SessionUID: sessionUID,
-			ClientID:   s.oauthClient.GetClientID(),
+			ClientID:   s.clientID,
+			Scopes:     exampleScopes,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
@@ -131,6 +136,7 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 
 		// Store token in vault
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+			ClientID:     session.ClientID,
 			AccessToken:  tokenResp.AccessToken,
 			RefreshToken: tokenResp.RefreshToken,
 			ExpiresIn:    tokenResp.ExpiresIn,
@@ -183,8 +189,6 @@ func (s service) refreshToken(c context.Context) error {
 
 		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", refreshedTokenResp)
 
-		// TODO Publish that a new access-token is available
-
 		// Update token
 		currentToken.RefreshToken = refreshedTokenResp.RefreshToken
 		currentToken.AccessToken = refreshedTokenResp.AccessToken
@@ -194,13 +198,21 @@ func (s service) refreshToken(c context.Context) error {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}
 
+		err = s.publisher.Publish(c, TopicName, OAuthTokenRefreshCompleted{
+			ClientID: currentToken.ClientID,
+			Success:  true,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		s.logger.Log(c, "", mylog.SeverityInfo, "Complete oauth session-refresh-token")
+
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-
-	s.logger.Log(c, "", mylog.SeverityInfo, "Complete oauth session-refresh-token")
 
 	return nil
 }

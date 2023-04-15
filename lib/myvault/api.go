@@ -9,6 +9,7 @@ const (
 )
 
 type Token struct {
+	ClientID     string
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int
