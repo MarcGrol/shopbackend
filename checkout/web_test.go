@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -71,7 +72,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, payer, _, nower := setup(ctrl)
+		ctx, router, storer, vault, payer, _, nower, _ := setup(ctrl)
 
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
@@ -108,7 +109,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
@@ -147,7 +148,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _, nower := setup(ctrl)
+		ctx, router, storer, _, _, _, nower, _ := setup(ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -183,7 +184,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, queuer, nower := setup(ctrl)
+		ctx, router, storer, _, _, queuer, nower, _ := setup(ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
@@ -239,22 +240,23 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower, *mypubsub.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[checkoutmodel.CheckoutContext](c)
 	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	queuer := myqueue.NewMockTaskQueuer(ctrl)
 	payer := NewMockPayer(ctrl)
+	publisher := mypubsub.NewMockPublisher(ctrl)
 
 	sut, _ := NewService(Config{
 		Environment:     "Test",
 		MerchantAccount: "MyMerchantAccount",
 		ClientKey:       "my_client_key",
 		ApiKey:          "my_api_key",
-	}, payer, storer, vault, queuer, nower)
+	}, payer, storer, vault, queuer, nower, publisher)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, vault, payer, queuer, nower
+	return c, router, storer, vault, payer, queuer, nower, publisher
 }

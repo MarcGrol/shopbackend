@@ -37,6 +37,7 @@ type GetTokenResponse struct {
 
 //go:generate mockgen -source=oauthClient.go -package oauth -destination oauthClient_mock.go OauthClient
 type OauthClient interface {
+	GetClientID() string
 	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)
 	RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error)
@@ -62,6 +63,10 @@ const (
 	authURL  = "/ca/ca/oauth/connect.shtml"
 	tokenURL = "/v1/token"
 )
+
+func (g oauthClient) GetClientID() string {
+	return g.clientID
+}
 
 func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
 	u, err := url.Parse(g.authHostname + authURL)

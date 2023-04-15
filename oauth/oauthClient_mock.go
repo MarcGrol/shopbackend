@@ -64,6 +64,20 @@ func (mr *MockOauthClientMockRecorder) GetAccessToken(c, req interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccessToken", reflect.TypeOf((*MockOauthClient)(nil).GetAccessToken), c, req)
 }
 
+// GetClientID mocks base method.
+func (m *MockOauthClient) GetClientID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClientID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetClientID indicates an expected call of GetClientID.
+func (mr *MockOauthClientMockRecorder) GetClientID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClientID", reflect.TypeOf((*MockOauthClient)(nil).GetClientID))
+}
+
 // RefreshAccessToken mocks base method.
 func (m *MockOauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
 	m.ctrl.T.Helper()

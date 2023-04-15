@@ -8,6 +8,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -25,9 +26,10 @@ type service struct {
 	uuider      myuuid.UUIDer
 	logger      mylog.Logger
 	oauthClient OauthClient
+	publisher   mypubsub.Publisher
 }
 
-func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient) *service {
+func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *service {
 	return &service{
 		storer:      storer,
 		vault:       vault,
@@ -35,6 +37,7 @@ func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultRead
 		uuider:      uuider,
 		oauthClient: oauthClient,
 		logger:      mylog.New("oauth"),
+		publisher:   pub,
 	}
 }
 
@@ -48,28 +51,45 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 
 	sessionUID := s.uuider.Create()
 
-	// Create new session
-	err = s.storer.Put(c, sessionUID, OAuthSessionSetup{
-		UID:       sessionUID,
-		ReturnURL: originalReturnURL,
-		Verifier:  codeVerifierValue,
-		CreatedAt: s.nower.Now(),
+	authURL := ""
+	err = s.storer.RunInTransaction(c, func(c context.Context) error {
+
+		// Create new session
+		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
+			UID:       sessionUID,
+			ReturnURL: originalReturnURL,
+			Verifier:  codeVerifierValue,
+			CreatedAt: s.nower.Now(),
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing: %s", err))
+		}
+
+		authURL, err = s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
+			CompletionURL: createCompletionURL(hostname), // Be called back here when authorisation has completed
+			Scope:         exampleScope,
+			State:         sessionUID,
+			CodeVerifier:  codeVerifierValue,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
+		}
+
+		err = s.publisher.Publish(c, TopicName, OAuthSessionSetupStarted{
+			SessionUID: sessionUID,
+			ClientID:   s.oauthClient.GetClientID(),
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Start oauth session-setup %s", sessionUID)
+
+		return nil
 	})
 	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error storing: %s", err))
+		return "", err
 	}
-
-	authURL, err := s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
-		CompletionURL: createCompletionURL(hostname), // Be called back here when authorisation has completed
-		Scope:         exampleScope,
-		State:         sessionUID,
-		CodeVerifier:  codeVerifierValue,
-	})
-	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
-	}
-
-	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Start oauth session-setup %s", sessionUID)
 
 	return authURL, nil
 }
@@ -121,7 +141,13 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 
 		s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
 
-		// TODO Transactionally publish that a new access-token is available
+		err = s.publisher.Publish(c, TopicName, OAuthSessionSetupCompleted{
+			SessionUID: sessionUID,
+			Success:    true,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
 
 		return nil
 	})

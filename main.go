@@ -11,6 +11,7 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -23,8 +24,15 @@ import (
 
 func main() {
 	c := context.Background()
-
 	router := mux.NewRouter()
+	nower := mytime.RealNower{}
+	uuider := myuuid.RealUUIDer{}
+
+	eventPublisher, eventPublisherCleanup, err := mypubsub.New(c, nower, uuider)
+	if err != nil {
+		log.Fatalf("Error creating event publisher: %s", err)
+	}
+	defer eventPublisherCleanup()
 
 	queue, queueCleanup, err := myqueue.New(c)
 	if err != nil {
@@ -38,36 +46,33 @@ func main() {
 	}
 	defer vaultCleanup()
 
-	nower := mytime.RealNower{}
-	uuider := myuuid.RealUUIDer{}
-
-	oauthServiceCleanup := createOAuthService(c, router, vault, nower, uuider)
+	oauthServiceCleanup := createOAuthService(c, router, vault, nower, uuider, eventPublisher)
 	defer oauthServiceCleanup()
 
-	checkoutServiceCleanup := createCheckoutService(c, router, vault, queue, nower)
+	checkoutServiceCleanup := createCheckoutService(c, router, vault, queue, nower, eventPublisher)
 	defer checkoutServiceCleanup()
 
-	shopServiceCleanup := createShopService(c, router, nower, uuider)
+	shopServiceCleanup := createShopService(c, router, nower, uuider, eventPublisher)
 	defer shopServiceCleanup()
 
 	startWebServerBlocking(router)
 }
 
 func createShopService(c context.Context, router *mux.Router, nower mytime.Nower,
-	uuider myuuid.UUIDer) func() {
+	uuider myuuid.UUIDer, pub mypubsub.Publisher) func() {
 
 	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}
 
-	basketService := shop.NewService(basketStore, nower, uuider)
+	basketService := shop.NewService(basketStore, nower, uuider, pub)
 	basketService.RegisterEndpoints(c, router)
 
 	return basketstoreCleanup
 }
 
-func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer) func() {
+func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, pub mypubsub.Publisher) func() {
 
 	const (
 		clientIDVarname      = "OAUTH_CLIENT_ID"
@@ -101,14 +106,14 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	}
 
 	tokenGetter := oauth.NewOAuthClient(clientID, clientSecret, authHostname, tokenHostname)
-	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, tokenGetter)
+	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, tokenGetter, pub)
 
 	oauthService.RegisterEndpoints(c, router)
 
 	return sessionStoreCleanup
 }
 
-func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, queue myqueue.TaskQueuer, nower mytime.Nower) func() {
+func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, queue myqueue.TaskQueuer, nower mytime.Nower, pub mypubsub.Publisher) func() {
 
 	const (
 		merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"
@@ -150,7 +155,7 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 
 	payer := checkout.NewPayer(environment, apiKey)
 
-	checkoutService, err := checkout.NewService(cfg, payer, checkoutStore, vault, queue, nower)
+	checkoutService, err := checkout.NewService(cfg, payer, checkoutStore, vault, queue, nower, pub)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}

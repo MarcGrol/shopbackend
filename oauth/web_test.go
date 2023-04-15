@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -23,12 +24,14 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, nower, uuider, oauthClient := setup(ctrl)
+		ctx, router, storer, _, nower, uuider, oauthClient, publisher := setup(ctrl)
 
 		// given
 		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return(authURL, nil)
+		oauthClient.EXPECT().GetClientID().Return("exampleClientID")
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("abcdef")
+		publisher.EXPECT().Publish(gomock.Any(), TopicName, gomock.Any()).Return(nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/start?returnURL=http://localhost:8888/basket", nil)
@@ -57,7 +60,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, nower, _, oauthClient := setup(ctrl)
+		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(ctrl)
 
 		exampleResp := GetTokenResponse{
 			TokenType:    "bearer",
@@ -86,6 +89,7 @@ func TestOauth(t *testing.T) {
 			RefreshToken: "rst456",
 			ExpiresIn:    12345,
 		})
+		publisher.EXPECT().Publish(gomock.Any(), TopicName, gomock.Any()).Return(nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/done?code=789&state=abcdef", nil)
@@ -111,7 +115,7 @@ func TestOauth(t *testing.T) {
 
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient, *mypubsub.MockPublisher) {
 	c := context.TODO()
 	router := mux.NewRouter()
 	storer, _, _ := mystore.New[OAuthSessionSetup](c)
@@ -119,8 +123,9 @@ func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)
-	sut := NewService(storer, vault, nower, uuider, oauthClient)
+	publisher := mypubsub.NewMockPublisher(ctrl)
+	sut := NewService(storer, vault, nower, uuider, oauthClient, publisher)
 	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, vault, nower, uuider, oauthClient
+	return c, router, storer, vault, nower, uuider, oauthClient, publisher
 }
