@@ -69,4 +69,46 @@ func TestOAuthClient(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, exampleResp, resp)
 	})
+
+	t.Run("Refresh access token", func(t *testing.T) {
+		mux := http.NewServeMux()
+		ts := httptest.NewServer(mux)
+		defer ts.Close()
+
+		exampleResp := GetTokenResponse{
+			TokenType:    "bearer",
+			ExpiresIn:    12345,
+			AccessToken:  "anewbc123",
+			Scope:        exampleScope,
+			RefreshToken: "newrst456",
+		}
+		mux.HandleFunc(tokenURL, func(w http.ResponseWriter, r *http.Request) {
+			// request validation logic
+			assert.Equal(t, "/v1/token", r.RequestURI)
+			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
+			clientID, clientSecret, ok := r.BasicAuth()
+			assert.True(t, ok)
+			assert.Equal(t, "123", clientID)
+			assert.Equal(t, "456", clientSecret)
+
+			err := r.ParseForm()
+			assert.NoError(t, err)
+
+			assert.Equal(t, "refresh_token", r.Form.Get("grant_type"))
+			assert.Equal(t, "r999", r.Form.Get("refresh_token"))
+
+			// write json response
+			w.WriteHeader(200)
+			w.Header().Set("Content-Type", "application/json")
+			err = json.NewEncoder(w).Encode(exampleResp)
+			assert.NoError(t, err)
+		})
+
+		client := NewOAuthClient("123", "456", ts.URL, ts.URL)
+		resp, err := client.RefreshAccessToken(context.TODO(), RefreshTokenRequest{
+			RefreshToken: "r999",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, exampleResp, resp)
+	})
 }

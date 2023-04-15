@@ -184,7 +184,7 @@ func TestBasketService(t *testing.T) {
 		// then
 		assert.Equal(t, 200, response.Code)
 		got := response.Body.String()
-		assert.Contains(t, got, "{}")
+		assert.Contains(t, got, "Final checkout status successfully processed")
 	})
 }
 

@@ -19,7 +19,10 @@ type errorResponse struct {
 	ErrorCode int
 	Message   string
 }
-type EmptyResponse struct{}
+
+type SuccessResponse struct {
+	Message string
+}
 
 func NewWriter(logger mylog.Logger) ResponseWriter {
 	return &responseWriter{

@@ -153,6 +153,8 @@ func (s webService) checkoutFinalStatusWebhook() http.HandlerFunc {
 
 		// This could be the place where a basket is being converted into an order
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.EmptyResponse{})
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+			Message: "Final checkout status successfully processed",
+		})
 	}
 }

@@ -31,7 +31,7 @@ func TestOauth(t *testing.T) {
 		uuider.EXPECT().Create().Return("abcdef")
 
 		// when
-		request, err := http.NewRequest(http.MethodGet, "/oauth/start?returnURL=http://localhost:8888/done", nil)
+		request, err := http.NewRequest(http.MethodGet, "/oauth/start?returnURL=http://localhost:8888/basket", nil)
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
@@ -46,11 +46,10 @@ func TestOauth(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, exists)
 		assert.Equal(t, "abcdef", session.UID)
-		assert.Equal(t, "http://localhost:8888/done", session.ReturnURL)
+		assert.Equal(t, "http://localhost:8888/basket", session.ReturnURL)
 		assert.NotEmpty(t, session.Verifier)
 		assert.Equal(t, "2023-02-27T23:58:59", session.CreatedAt.Format("2006-01-02T15:04:05"))
 		assert.Nil(t, session.LastModified)
-
 	})
 
 	t.Run("Done oauth", func(t *testing.T) {

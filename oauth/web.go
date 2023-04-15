@@ -94,5 +94,8 @@ func (s webService) refreshTokenPage() http.HandlerFunc {
 			return
 		}
 
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+			Message: "Successfully refreshed token",
+		})
 	}
 }

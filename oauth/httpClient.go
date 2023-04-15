@@ -31,7 +31,7 @@ func (c httpOAuthClient) Send(ctx context.Context, method string, url string, bo
 		return 0, []byte{}, fmt.Errorf("error creating http request for %s %s: %s", method, url, err)
 	}
 	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	httpReq.Header.Set("Accept", "application/x-www-form-urlencoded")
+	httpReq.Header.Set("Accept", "application/json")
 	httpReq.SetBasicAuth(c.username, c.password)
 
 	reqDump, err := httputil.DumpRequestOut(httpReq, true)

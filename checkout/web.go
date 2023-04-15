@@ -195,7 +195,9 @@ func (s webService) authTokenUpdate() http.HandlerFunc {
 			return
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.EmptyResponse{})
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+			Message: "Successfully processed token update",
+		})
 	}
 }
 
