@@ -4,10 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 
+	"github.com/MarcGrol/shopbackend/lib/mycontext"
+	"github.com/MarcGrol/shopbackend/lib/myhttp"
+	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/gorilla/mux"
 )
 
 type enveloper struct {
@@ -37,33 +44,93 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 	}, nil
 }
 
-type eventStore struct {
+type publisher struct {
 	store     mystore.Store[EventEnvelope]
+	queue     myqueue.TaskQueuer
 	enveloper enveloper
 }
 
-func New(c context.Context, nower mytime.Nower, uuider myuuid.UUIDer) (Publisher, func(), error) {
+func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower, uuider myuuid.UUIDer) (Publisher, func(), error) {
 	store, storeCleanup, err := mystore.New[EventEnvelope](c)
 	if err != nil {
 		return nil, nil, err
 	}
-	return &eventStore{
+	return &publisher{
 		store:     store,
+		queue:     queue,
 		enveloper: newEnveloper(nower, uuider),
 	}, storeCleanup, nil
 }
 
-func (es eventStore) Publish(c context.Context, topic string, event Event) error {
-	envelope, err := es.enveloper.do(topic, event)
+func (p publisher) RegisterEndpoints(c context.Context, router *mux.Router) {
+	router.HandleFunc("/pubsub/{uid}", p.processTriggerPage()).Methods("POST")
+}
+
+func (p publisher) Publish(c context.Context, topic string, event Event) error {
+	envelope, err := p.enveloper.do(topic, event)
 	if err != nil {
 		return fmt.Errorf("error creating envelope: %s", err)
 	}
-	err = es.store.Put(c, envelope.UID, envelope)
+	err = p.store.Put(c, envelope.UID, envelope)
 	if err != nil {
 		return fmt.Errorf("error storing envelope: %s", err)
 	}
 
-	// TODO trigger event forwarder
+	err = p.queue.Enqueue(c, myqueue.Task{
+		UID:            envelope.UID,
+		WebhookURLPath: fmt.Sprintf("/pubsub/%s", envelope.UID),
+		Payload:        []byte{},
+	})
+	if err != nil {
+		return fmt.Errorf("error queueing publication-trigger %s: %s", envelope.UID, err)
+	}
+
+	return nil
+}
+
+func (p publisher) processTriggerPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(mylog.New("publisher"))
+
+		eventUID := mux.Vars(r)["uid"]
+
+		err := p.processTrigger(c, eventUID)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, err)
+			return
+		}
+
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+			Message: "Successfully processed trigger",
+		})
+	}
+}
+func (p publisher) processTrigger(c context.Context, uid string) error {
+	// fetch all envelopes that are not yet published
+	err := p.store.RunInTransaction(c, func(c context.Context) error {
+
+		// fetch all envelopes that are not yet published
+		envelopes, err := p.store.Query(c, "Published", "=", false)
+		if err != nil {
+			return fmt.Errorf("error fetching envelopes: %s", err)
+		}
+		for _, envelope := range envelopes {
+			log.Printf("Publishing event %s", envelope.UID)
+			// TODO publish to pubsub
+
+			// mark as published
+			envelope.Published = true
+			err := p.store.Put(c, envelope.UID, envelope)
+			if err != nil {
+				return fmt.Errorf("error store envelope: %s", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

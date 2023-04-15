@@ -148,12 +148,34 @@ func (s *gcloudStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 }
 
 func (s *gcloudStore[T]) List(c context.Context) ([]T, error) {
-	objectsToFetch := []T{}
+	transaction := c.Value(ctxTransactionKey{})
 
-	// not transactional for now
+	objectsToFetch := []T{}
 
 	q := datastore.NewQuery(s.kind)
 
+	if transaction != nil {
+		q.Transaction(transaction.(*datastore.Transaction))
+	}
+
+	_, err := s.client.GetAll(c, q, &objectsToFetch)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching all entities %s: %s", s.kind, err)
+	}
+	return objectsToFetch, nil
+}
+
+func (s *gcloudStore[T]) Query(c context.Context, field string, compare string, value any) ([]T, error) {
+	objectsToFetch := []T{}
+
+	transaction := c.Value(ctxTransactionKey{})
+
+	q := datastore.NewQuery(s.kind).
+		FilterField(field, compare, value)
+
+	if transaction != nil {
+		q.Transaction(transaction.(*datastore.Transaction))
+	}
 	_, err := s.client.GetAll(c, q, &objectsToFetch)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching all entities %s: %s", s.kind, err)

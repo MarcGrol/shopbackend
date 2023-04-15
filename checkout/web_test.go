@@ -184,11 +184,12 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, queuer, nower, _ := setup(ctrl)
+		ctx, router, storer, _, _, queuer, nower, publisher := setup(ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
 		queuer.EXPECT().Enqueue(gomock.Any(), gomock.Any()).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
 			BasketUID:         "123",

@@ -28,17 +28,17 @@ func main() {
 	nower := mytime.RealNower{}
 	uuider := myuuid.RealUUIDer{}
 
-	eventPublisher, eventPublisherCleanup, err := mypubsub.New(c, nower, uuider)
-	if err != nil {
-		log.Fatalf("Error creating event publisher: %s", err)
-	}
-	defer eventPublisherCleanup()
-
 	queue, queueCleanup, err := myqueue.New(c)
 	if err != nil {
 		log.Fatalf("Error creating queue: %s", err)
 	}
 	defer queueCleanup()
+
+	eventPublisher, eventPublisherCleanup, err := mypubsub.New(c, queue, nower, uuider)
+	if err != nil {
+		log.Fatalf("Error creating event publisher: %s", err)
+	}
+	defer eventPublisherCleanup()
 
 	vault, vaultCleanup, err := myvault.New(c)
 	if err != nil {

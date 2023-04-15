@@ -11,6 +11,7 @@ import (
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -28,10 +29,11 @@ type service struct {
 	queue           myqueue.TaskQueuer
 	nower           mytime.Nower
 	logger          mylog.Logger
+	publisher       mypubsub.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger) (*service, error) {
+func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger, pub mypubsub.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -43,6 +45,7 @@ func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmo
 		queue:           queuer,
 		nower:           nower,
 		logger:          logger,
+		publisher:       pub,
 	}, nil
 }
 
@@ -250,6 +253,16 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
 	}
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Successfully forwarded status change for basket %s", basketUID)
+
+	err = s.publisher.Publish(c, TopicName, CheckoutCompleted{
+		CheckoutUID:   basketUID,
+		Status:        item.NotificationRequestItem.EventCode,
+		Success:       item.NotificationRequestItem.Success == "true",
+		PaymentMethod: checkoutContext.PaymentMethod,
+	})
+	if err != nil {
+		return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+	}
 
 	return nil
 }

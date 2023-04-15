@@ -2,6 +2,10 @@ package checkout
 
 import "time"
 
+const (
+	TopicName = "checkout"
+)
+
 type CheckoutStarted struct {
 	CheckoutUID   string
 	Timestamp     time.Time

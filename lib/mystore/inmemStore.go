@@ -87,3 +87,7 @@ func (s *inMemoryStore[T]) List(c context.Context) ([]T, error) {
 
 	return result, nil
 }
+
+func (s *inMemoryStore[T]) Query(c context.Context, field string, compare string, value any) ([]T, error) {
+	return s.List(c)
+}
