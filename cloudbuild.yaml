@@ -1,7 +1,7 @@
 steps:
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: bash
-    args: ['-c', 'app.yaml.sh > app.yaml && gcloud config set app/cloud_build_timeout 1600 && gcloud app deploy']
+    args: ['-c', './app.yaml.sh > ./app.yaml && gcloud config set app/cloud_build_timeout 1600 && gcloud app deploy']
     secretEnv:
       - ADYEN_API_KEY_VAR
       - ADYEN_CLIENT_KEY_VAR
@@ -10,9 +10,9 @@ timeout: 1600s
 
 availableSecrets:
   secretManager:
-    - versionName: projects/$PROJECT_ID/secrets/ADYEN_API_KEY_VAR/versions/1
+    - versionName: projects/$PROJECT_ID/secrets/ADYEN_API_KEY_VAR/versions/latest
       env: ADYEN_API_KEY_VAR
-    - versionName: projects/$PROJECT_ID/secrets/ADYEN_CLIENT_KEY_VAR/versions/1
+    - versionName: projects/$PROJECT_ID/secrets/ADYEN_CLIENT_KEY_VAR/versions/latest
       env: ADYEN_CLIENT_KEY_VAR
-    - versionName: projects/$PROJECT_ID/secrets/OAUTH_CLIENT_SECRET_VAR/versions/1
+    - versionName: projects/$PROJECT_ID/secrets/OAUTH_CLIENT_SECRET_VAR/versions/latest
       env: OAUTH_CLIENT_SECRET_VAR
