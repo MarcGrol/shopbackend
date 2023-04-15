@@ -109,25 +109,25 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 			return myerrors.NewInternalError(fmt.Errorf("error storing session: %s", err))
 		}
 
+		// Store token in vault
+		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+			AccessToken:  tokenResp.AccessToken,
+			RefreshToken: tokenResp.RefreshToken,
+			ExpiresIn:    tokenResp.ExpiresIn,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing token in vault: %s", err))
+		}
+
+		s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
+
+		// TODO Transactionally publish that a new access-token is available
+
 		return nil
 	})
 	if err != nil {
 		return "", err
 	}
-
-	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
-
-	// Store token in vault
-	err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
-		AccessToken:  tokenResp.AccessToken,
-		RefreshToken: tokenResp.RefreshToken,
-		ExpiresIn:    tokenResp.ExpiresIn,
-	})
-	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error storing token in vault: %s", err))
-	}
-
-	// TODO Publish that a new access-token is available
 
 	return returnURL, nil
 }
