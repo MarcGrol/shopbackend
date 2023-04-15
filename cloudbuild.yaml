@@ -1,4 +1,11 @@
 steps:
+  - name: golang:1.20
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - |
+        go install github.com/jstemmer/go-junit-report/v2@latest
+        2>&1 go test -timeout 1m -v ./... | /go/bin/go-junit-report -set-exit-code -iocopy -out ${SHORT_SHA}_test_log.xml
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: bash
     args: ['-c', './app.yaml.sh > ./app.yaml && gcloud config set app/cloud_build_timeout 1600 && gcloud app deploy']
