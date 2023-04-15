@@ -3,7 +3,6 @@ package oauth
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
@@ -125,9 +124,11 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 
 		s.logger.Log(c, sessionUID, mylog.SeverityDebug, "token-resp: %+v", tokenResp)
 
+		now := s.nower.Now()
+
 		// Update session
 		session.TokenData = &tokenResp
-		session.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
+		session.LastModified = &now
 		session.Done = true
 		err = s.storer.Put(c, sessionUID, session)
 		if err != nil {
@@ -136,6 +137,7 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 
 		// Store token in vault
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+			CreatedAt:    now,
 			ClientID:     session.ClientID,
 			AccessToken:  tokenResp.AccessToken,
 			RefreshToken: tokenResp.RefreshToken,
@@ -180,20 +182,23 @@ func (s service) refreshToken(c context.Context) error {
 			return nil
 		}
 
-		refreshedTokenResp, err := s.oauthClient.RefreshAccessToken(c, RefreshTokenRequest{
+		newTokenResp, err := s.oauthClient.RefreshAccessToken(c, RefreshTokenRequest{
 			RefreshToken: currentToken.RefreshToken,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error refreshing token: %s", err))
 		}
 
-		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", refreshedTokenResp)
+		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", newTokenResp)
 
 		// Update token
-		currentToken.RefreshToken = refreshedTokenResp.RefreshToken
-		currentToken.AccessToken = refreshedTokenResp.AccessToken
-		currentToken.ExpiresIn = refreshedTokenResp.ExpiresIn
-		err = s.vault.Put(c, myvault.CurrentToken, currentToken)
+		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+			CreatedAt:    s.nower.Now(),
+			ClientID:     currentToken.ClientID,
+			AccessToken:  newTokenResp.AccessToken,
+			RefreshToken: newTokenResp.RefreshToken,
+			ExpiresIn:    newTokenResp.ExpiresIn,
+		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}

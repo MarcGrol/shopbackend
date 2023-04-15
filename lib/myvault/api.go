@@ -2,6 +2,7 @@ package myvault
 
 import (
 	"context"
+	"time"
 )
 
 const (
@@ -9,6 +10,7 @@ const (
 )
 
 type Token struct {
+	CreatedAt    time.Time
 	ClientID     string
 	AccessToken  string
 	RefreshToken string

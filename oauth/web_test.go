@@ -83,13 +83,14 @@ func TestOauth(t *testing.T) {
 			CreatedAt: mytime.ExampleTime,
 			TokenData: &exampleResp,
 		})
-		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		oauthClient.EXPECT().GetAccessToken(gomock.Any(), GetTokenRequest{
 			RedirectUri:  "http://localhost:8888/oauth/done",
 			Code:         "789",
 			CodeVerifier: "exampleHash",
 		}).Return(exampleResp, nil)
+		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
@@ -127,7 +128,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, _, _, oauthClient, publisher := setup(ctrl)
+		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(ctrl)
 
 		// given
 		storer.Put(ctx, "abcdef", OAuthSessionSetup{
@@ -146,6 +147,7 @@ func TestOauth(t *testing.T) {
 			},
 		})
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken).Return(myvault.Token{
+			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
@@ -160,7 +162,9 @@ func TestOauth(t *testing.T) {
 			Scope:        exampleScopes,
 			RefreshToken: "rst456new",
 		}, nil)
+		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
 			AccessToken:  "abc123new",
 			RefreshToken: "rst456new",
