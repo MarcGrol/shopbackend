@@ -7,7 +7,7 @@ import (
 
 type EventEnvelope struct {
 	UID           string
-	Timestamp     time.Time
+	CreatedAt     time.Time
 	Topic         string
 	EventTypeName string
 	EventPayload  string `datastore:",noindex"`

@@ -155,7 +155,7 @@ func (s *gcloudStore[T]) List(c context.Context) ([]T, error) {
 	q := datastore.NewQuery(s.kind)
 
 	if transaction != nil {
-		q.Transaction(transaction.(*datastore.Transaction))
+		q = q.Transaction(transaction.(*datastore.Transaction))
 	}
 
 	_, err := s.client.GetAll(c, q, &objectsToFetch)
@@ -165,16 +165,17 @@ func (s *gcloudStore[T]) List(c context.Context) ([]T, error) {
 	return objectsToFetch, nil
 }
 
-func (s *gcloudStore[T]) Query(c context.Context, field string, compare string, value any) ([]T, error) {
+func (s *gcloudStore[T]) Query(c context.Context, field string, compare string, value any, orderByField string) ([]T, error) {
 	objectsToFetch := []T{}
 
 	transaction := c.Value(ctxTransactionKey{})
 
 	q := datastore.NewQuery(s.kind).
-		FilterField(field, compare, value)
+		FilterField(field, compare, value).
+		Order(orderByField)
 
 	if transaction != nil {
-		q.Transaction(transaction.(*datastore.Transaction))
+		q = q.Transaction(transaction.(*datastore.Transaction))
 	}
 	_, err := s.client.GetAll(c, q, &objectsToFetch)
 	if err != nil {

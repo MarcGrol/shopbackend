@@ -92,6 +92,17 @@ func (s service) startCheckout(c context.Context, basketUID string, req checkout
 		return nil, myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
 	}
 
+	err = s.publisher.Publish(c, TopicName, CheckoutStarted{
+		CheckoutUID:   basketUID,
+		AmountInCents: req.Amount.Value,
+		Currency:      req.Amount.Currency,
+		ShopperUID:    req.ShopperEmail,
+		MerchantUID:   req.MerchantAccount,
+	})
+	if err != nil {
+		return nil, myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+	}
+
 	return &checkoutmodel.CheckoutPageInfo{
 		Environment:     s.environment,
 		ClientKey:       s.clientKey,

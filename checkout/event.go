@@ -1,18 +1,15 @@
 package checkout
 
-import "time"
-
 const (
 	TopicName = "checkout"
 )
 
 type CheckoutStarted struct {
 	CheckoutUID   string
-	Timestamp     time.Time
-	PaymentMethod string
-	AmountInCents int
-	shopperUID    string
-	merchantUID   string
+	AmountInCents int64
+	Currency      string
+	ShopperUID    string
+	MerchantUID   string
 }
 
 func (CheckoutStarted) GetEventTypeName() string {
@@ -21,9 +18,9 @@ func (CheckoutStarted) GetEventTypeName() string {
 
 type CheckoutCompleted struct {
 	CheckoutUID   string
-	Success       bool
-	Status        string
 	PaymentMethod string
+	Status        string
+	Success       bool
 }
 
 func (CheckoutCompleted) GetEventTypeName() string {

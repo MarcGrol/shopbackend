@@ -12,7 +12,7 @@ type Store[T any] interface {
 	Put(c context.Context, uid string, value T) error
 	Get(c context.Context, uid string) (T, bool, error)
 	List(c context.Context) ([]T, error)
-	Query(c context.Context, field string, compare string, value any) ([]T, error)
+	Query(c context.Context, field string, compare string, value any, orderByField string) ([]T, error)
 }
 
 func New[T any](c context.Context) (Store[T], func(), error) {

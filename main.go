@@ -39,6 +39,7 @@ func main() {
 		log.Fatalf("Error creating event publisher: %s", err)
 	}
 	defer eventPublisherCleanup()
+	eventPublisher.RegisterEndpoints(c, router)
 
 	vault, vaultCleanup, err := myvault.New(c)
 	if err != nil {

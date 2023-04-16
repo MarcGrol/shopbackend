@@ -1,0 +1,9 @@
+indexes:
+
+- kind: EventEnvelope
+  ancestor: no
+  properties:
+  - name: Published
+    direction: asc
+  - name: CreatedAt
+    direction: asc

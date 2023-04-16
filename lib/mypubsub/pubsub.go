@@ -36,7 +36,7 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 	}
 	return EventEnvelope{
 		UID:           e.uuider.Create(),
-		Timestamp:     e.nower.Now(),
+		CreatedAt:     e.nower.Now(),
 		Topic:         topic,
 		EventTypeName: event.GetEventTypeName(),
 		EventPayload:  string(jsonPayload),
@@ -45,25 +45,25 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 }
 
 type publisher struct {
-	store     mystore.Store[EventEnvelope]
+	outbox    mystore.Store[EventEnvelope]
 	queue     myqueue.TaskQueuer
 	enveloper enveloper
 }
 
-func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower, uuider myuuid.UUIDer) (Publisher, func(), error) {
+func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower, uuider myuuid.UUIDer) (*publisher, func(), error) {
 	store, storeCleanup, err := mystore.New[EventEnvelope](c)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &publisher{
-		store:     store,
+		outbox:    store,
 		queue:     queue,
 		enveloper: newEnveloper(nower, uuider),
 	}, storeCleanup, nil
 }
 
 func (p publisher) RegisterEndpoints(c context.Context, router *mux.Router) {
-	router.HandleFunc("/pubsub/{uid}", p.processTriggerPage()).Methods("POST")
+	router.HandleFunc("/pubsub/{uid}", p.processTriggerPage()).Methods("PUT")
 }
 
 func (p publisher) Publish(c context.Context, topic string, event Event) error {
@@ -71,7 +71,7 @@ func (p publisher) Publish(c context.Context, topic string, event Event) error {
 	if err != nil {
 		return fmt.Errorf("error creating envelope: %s", err)
 	}
-	err = p.store.Put(c, envelope.UID, envelope)
+	err = p.outbox.Put(c, envelope.UID, envelope)
 	if err != nil {
 		return fmt.Errorf("error storing envelope: %s", err)
 	}
@@ -108,20 +108,22 @@ func (p publisher) processTriggerPage() http.HandlerFunc {
 }
 func (p publisher) processTrigger(c context.Context, uid string) error {
 	// fetch all envelopes that are not yet published
-	err := p.store.RunInTransaction(c, func(c context.Context) error {
+	err := p.outbox.RunInTransaction(c, func(c context.Context) error {
 
 		// fetch all envelopes that are not yet published
-		envelopes, err := p.store.Query(c, "Published", "=", false)
+		envelopes, err := p.outbox.Query(c, "Published", "=", false, "CreatedAt")
 		if err != nil {
 			return fmt.Errorf("error fetching envelopes: %s", err)
 		}
+		log.Printf("Found %d unpublished events", len(envelopes))
+
 		for _, envelope := range envelopes {
 			log.Printf("Publishing event %s", envelope.UID)
-			// TODO publish to pubsub
+			// TODO Use pubsub to publish event
 
 			// mark as published
 			envelope.Published = true
-			err := p.store.Put(c, envelope.UID, envelope)
+			err := p.outbox.Put(c, envelope.UID, envelope)
 			if err != nil {
 				return fmt.Errorf("error store envelope: %s", err)
 			}

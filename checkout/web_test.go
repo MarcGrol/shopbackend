@@ -72,7 +72,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, payer, _, nower, _ := setup(ctrl)
+		ctx, router, storer, vault, payer, _, nower, publisher := setup(ctrl)
 
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
@@ -80,6 +80,7 @@ func TestCheckoutService(t *testing.T) {
 		payer.EXPECT().Sessions(gomock.Any(), sessionRequest).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil) // TODO: check event
 
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl`))
@@ -189,7 +190,7 @@ func TestCheckoutService(t *testing.T) {
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
 		queuer.EXPECT().Enqueue(gomock.Any(), gomock.Any()).Return(nil)
-		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil) // TODO: check event
 
 		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
 			BasketUID:         "123",
