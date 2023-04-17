@@ -50,7 +50,7 @@ func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower) (*tran
 }
 
 func (p transactionalPublisher) RegisterEndpoints(c context.Context, router *mux.Router) {
-	router.HandleFunc("/pubsub/{uid}", p.processTriggerPage()).Methods("PUT")
+	router.HandleFunc("/pubsub/{topic}/{uid}", p.processTriggerPage()).Methods("PUT")
 }
 
 func (p transactionalPublisher) Publish(c context.Context, topic string, event Event) error {
@@ -65,7 +65,7 @@ func (p transactionalPublisher) Publish(c context.Context, topic string, event E
 
 	err = p.queue.Enqueue(c, myqueue.Task{
 		UID:            envelope.UID,
-		WebhookURLPath: fmt.Sprintf("/pubsub/%s", envelope.UID),
+		WebhookURLPath: fmt.Sprintf("/pubsub/%s/%s", envelope.Topic, envelope.UID),
 		Payload:        []byte{},
 	})
 	if err != nil {
@@ -80,9 +80,10 @@ func (p transactionalPublisher) processTriggerPage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(mylog.New("transactionalPublisher"))
 
+		topicName := mux.Vars(r)["topic"]
 		eventUID := mux.Vars(r)["uid"]
 
-		err := p.processTrigger(c, eventUID)
+		err := p.processTrigger(c, topicName, eventUID)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
@@ -93,7 +94,7 @@ func (p transactionalPublisher) processTriggerPage() http.HandlerFunc {
 		})
 	}
 }
-func (p transactionalPublisher) processTrigger(c context.Context, topicName string) error {
+func (p transactionalPublisher) processTrigger(c context.Context, topicName string, uid string) error {
 	// fetch all envelopes that are not yet published
 	err := p.outbox.RunInTransaction(c, func(c context.Context) error {
 

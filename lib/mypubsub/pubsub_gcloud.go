@@ -3,6 +3,7 @@ package mypubsub
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"cloud.google.com/go/pubsub"
@@ -26,6 +27,7 @@ func newGcloudPubSub(c context.Context) (PubSub, func(), error) {
 	}
 	return &gcloudPubSub{
 			client: client,
+			topics: map[string]*pubsub.Topic{},
 		}, func() {
 			client.Close()
 		}, nil
@@ -36,6 +38,7 @@ func (ps *gcloudPubSub) Subscribe(c context.Context, topicName string, urlToPost
 	if err != nil {
 		return err
 	}
+
 	topic := ps.client.Topic(topicName)
 	_, err = ps.client.CreateSubscription(c, topicName, pubsub.SubscriptionConfig{
 		Topic: topic,
@@ -47,10 +50,14 @@ func (ps *gcloudPubSub) Subscribe(c context.Context, topicName string, urlToPost
 		return fmt.Errorf("error subscribing to topic %s: %s", topicName, err)
 	}
 
+	log.Printf("*** Subscribed to topic %s", topic.String())
+
 	return nil
 }
 
 func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
+	log.Printf("*** Creating topic %s", topicName)
+
 	topic := ps.client.Topic(topicName)
 	exists, err := topic.Exists(c)
 	if err != nil {
@@ -66,19 +73,24 @@ func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
 	}
 	ps.topics[topicName] = topic
 
+	log.Printf("*** Created topic %s", topicName)
+
 	return nil
 }
 
 func (ps *gcloudPubSub) Publish(c context.Context, topicName string, data string) error {
 	topic, found := ps.topics[topicName]
 	if !found {
-		topic = ps.client.Topic(topicName)
+		topic := ps.client.Topic(topicName)
 		ps.topics[topicName] = topic
 	}
 
 	_, err := topic.Publish(c, &pubsub.Message{Data: []byte(data)}).Get(c)
 	if err != nil {
-		return fmt.Errorf("error publishing event: %s", err)
+		return fmt.Errorf("error publishing event on topic %s: %s", topicName, err)
 	}
+
+	log.Printf("*** Published event to topic %s", topicName)
+
 	return nil
 }

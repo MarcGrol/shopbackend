@@ -174,7 +174,7 @@ func (s *gcloudStore[T]) Query(c context.Context, filters []Filter, orderByField
 	for _, f := range filters {
 		q = q.FilterField(f.Field, f.Compare, f.Value)
 	}
-	q.Order(orderByField)
+	q = q.Order(orderByField)
 
 	if transaction != nil {
 		q = q.Transaction(transaction.(*datastore.Transaction))

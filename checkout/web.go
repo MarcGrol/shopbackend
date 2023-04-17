@@ -75,7 +75,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 
 	// Listen for token refresh
 	router.HandleFunc("/checkout/token/update", s.authTokenUpdate()).Methods("POST")
-	router.HandleFunc("/checkout/event", s.handleEventEnvelope()).Methods("POST")
+	router.HandleFunc("/api/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
 	err := s.service.subscribe(context.Background())
 	if err != nil {
