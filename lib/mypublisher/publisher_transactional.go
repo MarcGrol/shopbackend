@@ -113,9 +113,8 @@ func (p transactionalPublisher) processTrigger(c context.Context, topicName stri
 			if err != nil {
 				return fmt.Errorf("error serializing event: %s", err)
 			}
-			log.Printf("Publishing event %s", envelope.UID)
 
-			err = p.pubsub.Publish(c, topicName, string(jsonBytes))
+			err = p.pubsub.Publish(c, envelope.Topic, string(jsonBytes))
 			if err != nil {
 				return fmt.Errorf("error publishing event: %s", err)
 			}

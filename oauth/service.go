@@ -190,6 +190,10 @@ func createCompletionURL(hostname string) string {
 }
 
 func (s service) refreshToken(c context.Context) error {
+
+	now := s.nower.Now()
+	uid := s.uuider.Create()
+
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
 		currentToken, exists, err := s.vault.Get(c, myvault.CurrentToken)
 		if err != nil {
@@ -212,7 +216,8 @@ func (s service) refreshToken(c context.Context) error {
 
 		// Update token
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
-			CreatedAt:    s.nower.Now(),
+			UID:          uid,
+			CreatedAt:    now,
 			ClientID:     currentToken.ClientID,
 			AccessToken:  newTokenResp.AccessToken,
 			RefreshToken: newTokenResp.RefreshToken,
@@ -223,6 +228,7 @@ func (s service) refreshToken(c context.Context) error {
 		}
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthTokenRefreshCompleted{
+			UID:      uid,
 			ClientID: currentToken.ClientID,
 			Success:  true,
 		})

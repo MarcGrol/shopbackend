@@ -15,6 +15,10 @@ type EventEnvelope struct {
 	Published     bool
 }
 
+func (e EventEnvelope) String() string {
+	return e.Topic + "." + e.EventTypeName + "." + e.AggregateUID
+}
+
 type Event interface {
 	GetEventTypeName() string
 	GetAggregateName() string

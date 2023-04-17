@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
@@ -21,7 +22,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 
 //go:embed templates
@@ -195,7 +195,7 @@ func (s webService) handleEventEnvelope() http.HandlerFunc {
 			return
 		}
 
-		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %+v", envelope)
+		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %s: %+v", envelope.String(), envelope.EventPayload)
 
 		err = s.service.handleEvent(c, envelope)
 		if err != nil {

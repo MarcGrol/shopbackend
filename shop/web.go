@@ -150,7 +150,7 @@ func (s webService) handleEventEnvelope() http.HandlerFunc {
 			return
 		}
 
-		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %+v", envelope)
+		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %s: %+v", envelope.String(), envelope.EventPayload)
 
 		err = s.service.handleEvent(c, envelope)
 		if err != nil {

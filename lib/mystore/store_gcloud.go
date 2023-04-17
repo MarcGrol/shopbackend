@@ -100,7 +100,7 @@ func (s *gcloudStore[T]) Put(c context.Context, uid string, value T) error {
 			return fmt.Errorf("error transctionally storing entity %s with uid %s: %s", s.kind, uid, err)
 		}
 
-		log.Printf("In transaction %p: stored entity %s with uid %s", transaction, s.kind, uid)
+		//log.Printf("In transaction %p: stored entity %s with uid %s", transaction, s.kind, uid)
 
 		return nil
 	}
@@ -110,7 +110,7 @@ func (s *gcloudStore[T]) Put(c context.Context, uid string, value T) error {
 		return fmt.Errorf("error storing entity %s with uid %s: %s", s.kind, uid, err)
 	}
 
-	log.Printf("Non-transactionally stored entity %s with uid %s", s.kind, uid)
+	//log.Printf("Non-transactionally stored entity %s with uid %s", s.kind, uid)
 
 	return nil
 }
@@ -129,7 +129,7 @@ func (s *gcloudStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 			return *value, false, fmt.Errorf("error transctionally fetching entity %s with uid %s: %s", s.kind, uid, err)
 		}
 
-		log.Printf("In transaction %p: fetched entity %s with uid %s", transaction, s.kind, uid)
+		//log.Printf("In transaction %p: fetched entity %s with uid %s", transaction, s.kind, uid)
 
 		return *value, true, nil
 	}
@@ -142,7 +142,7 @@ func (s *gcloudStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 		return *value, false, fmt.Errorf("error fetching entity %s with uid %s: %s", s.kind, uid, err)
 	}
 
-	log.Printf("Non-transactionally fetched entity %s with uid %s", s.kind, uid)
+	//log.Printf("Non-transactionally fetched entity %s with uid %s", s.kind, uid)
 
 	return *value, true, nil
 }

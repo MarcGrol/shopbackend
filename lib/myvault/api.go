@@ -10,6 +10,7 @@ const (
 )
 
 type Token struct {
+	UID          string
 	CreatedAt    time.Time
 	ClientID     string
 	AccessToken  string

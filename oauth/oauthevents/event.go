@@ -53,6 +53,7 @@ func (e OAuthTokenCreationCompleted) GetAggregateName() string {
 }
 
 type OAuthTokenRefreshCompleted struct {
+	UID          string
 	ClientID     string
 	Success      bool
 	ErrorMessage string

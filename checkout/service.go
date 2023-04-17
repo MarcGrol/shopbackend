@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/lib/mypublisher"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
-	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
 )
 
 type service struct {
@@ -168,12 +168,22 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 func (s service) resumeCheckout(c context.Context, basketUID string) (*checkoutmodel.CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
 
-	checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
+	checkoutContext := checkoutmodel.CheckoutContext{}
+	var found bool
+	var err error
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+		if !found {
+			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+		}
+
+		return nil
+	})
 	if err != nil {
-		return nil, myerrors.NewInternalError(err)
-	}
-	if !found {
-		return nil, myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+		return nil, err
 	}
 
 	return &checkoutmodel.CheckoutPageInfo{
@@ -187,7 +197,7 @@ func (s service) resumeCheckout(c context.Context, basketUID string) (*checkoutm
 }
 
 func (s service) finalizeCheckout(c context.Context, basketUID string, status string) (string, error) {
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect (start): Checkout completed for basket %s -> %s", basketUID, status)
 
 	now := s.nower.Now()
 
@@ -212,6 +222,7 @@ func (s service) finalizeCheckout(c context.Context, basketUID string, status st
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -222,6 +233,8 @@ func (s service) finalizeCheckout(c context.Context, basketUID string, status st
 	if err != nil {
 		return "", myerrors.NewInternalError(fmt.Errorf("error adjusting url: %s", err))
 	}
+
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect (done): Checkout completed for basket %s -> %s", basketUID, status)
 
 	return adjustedReturnURL, nil
 }
