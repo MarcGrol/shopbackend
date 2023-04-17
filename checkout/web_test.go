@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -242,14 +242,14 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower, *mypubsub.MockPublisher) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[checkoutmodel.CheckoutContext](c)
 	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	queuer := myqueue.NewMockTaskQueuer(ctrl)
 	payer := NewMockPayer(ctrl)
-	publisher := mypubsub.NewMockPublisher(ctrl)
+	publisher := mypublisher.NewMockPublisher(ctrl)
 
 	sut, _ := NewService(Config{
 		Environment:     "Test",

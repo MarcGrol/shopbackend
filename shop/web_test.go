@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -189,12 +190,12 @@ func TestBasketService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypubsub.MockPublisher) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[shopmodel.Basket](c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
-	publisher := mypubsub.NewMockPublisher(ctrl)
+	publisher := mypublisher.NewMockPublisher(ctrl)
 	sut := NewService(storer, nower, uuider, publisher)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)

@@ -13,7 +13,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -26,7 +26,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and ease testing
-func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, pub mypubsub.Publisher) *webService {
+func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) *webService {
 	logger := mylog.New("basket")
 	return &webService{
 		logger:  logger,
@@ -46,6 +46,8 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 
 	// Checkout component will call this endpoint to update the status of the checkout
 	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutFinalStatusWebhook()).Methods("PUT")
+
+	router.HandleFunc("/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
 	return s.service.subscribe(c)
 }
@@ -158,6 +160,24 @@ func (s webService) checkoutFinalStatusWebhook() http.HandlerFunc {
 
 		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Final checkout status successfully processed",
+		})
+	}
+}
+
+func (s webService) handleEventEnvelope() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		envelope, err := mypublisher.ParseEventEnvelope(r.Body)
+		if err != nil {
+			return
+		}
+
+		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", envelope)
+
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+			Message: "Successfully processed token update",
 		})
 	}
 }

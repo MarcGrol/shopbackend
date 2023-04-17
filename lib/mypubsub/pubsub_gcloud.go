@@ -1,19 +1,12 @@
-package gpubsub
+package mypubsub
 
 import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"cloud.google.com/go/pubsub"
 )
-
-func init() {
-	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
-		New = newGcloudPubSub
-	}
-}
 
 type gcloudPubSub struct {
 	client *pubsub.Client
@@ -49,10 +42,6 @@ func (ps *gcloudPubSub) Subscribe(c context.Context, topicName string, urlToPost
 		PushConfig: pubsub.PushConfig{
 			Endpoint: urlToPostTo,
 		},
-		AckDeadline:                   time.Second * 10,
-		RetentionDuration:             time.Hour * 24,
-		ExpirationPolicy:              time.Duration(0),
-		TopicMessageRetentionDuration: time.Hour * 24,
 	})
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic %s: %s", topicName, err)
@@ -75,6 +64,7 @@ func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
 	if err != nil {
 		return fmt.Errorf("error creating topic %s: %s", topicName, err)
 	}
+	ps.topics[topicName] = topic
 
 	return nil
 }

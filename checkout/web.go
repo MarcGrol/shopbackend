@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
@@ -18,11 +17,12 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 
 //go:embed templates
@@ -48,7 +48,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, pub mypubsub.Publisher) (*webService, error) {
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkout")
 	s, err := newService(cfg, payer, checkoutStore, vault, queuer, nower, logger, pub)
 	if err != nil {
@@ -75,6 +75,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 
 	// Listen for token refresh
 	router.HandleFunc("/checkout/token/update", s.authTokenUpdate()).Methods("POST")
+	router.HandleFunc("/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
 	err := s.service.subscribe(context.Background())
 	if err != nil {
@@ -202,6 +203,24 @@ func (s webService) authTokenUpdate() http.HandlerFunc {
 			errorWriter.WriteError(c, w, 1, err)
 			return
 		}
+
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+			Message: "Successfully processed token update",
+		})
+	}
+}
+
+func (s webService) handleEventEnvelope() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		envelope, err := mypublisher.ParseEventEnvelope(r.Body)
+		if err != nil {
+			return
+		}
+
+		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", envelope)
 
 		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Successfully processed token update",

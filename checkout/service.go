@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -28,11 +31,11 @@ type service struct {
 	queue           myqueue.TaskQueuer
 	nower           mytime.Nower
 	logger          mylog.Logger
-	publisher       mypubsub.Publisher
+	publisher       mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger, pub mypubsub.Publisher) (*service, error) {
+func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger, pub mypublisher.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -49,17 +52,21 @@ func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmo
 }
 
 func (s service) subscribe(c context.Context) error {
-	// projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	// client, err := pubsub.NewClient(c, projectId)
-	// if err != nil {
-	// 	return fmt.Errorf("error creating client: %s", err)
-	// }
-	// defer client.Close()
+	client, cleanup, err := mypubsub.New(c)
+	if err != nil {
+		return fmt.Errorf("error creating client: %s", err)
+	}
+	defer cleanup()
 
-	// _, err = client.CreateTopic(c, TopicName)
-	// if err != nil {
-	// 	return fmt.Errorf("error creating topic %s: %s", TopicName, err)
-	// }
+	err = client.CreateTopic(c, checkoutevents.TopicName)
+	if err != nil {
+		return fmt.Errorf("error creating topic %s: %s", checkoutevents.TopicName, err)
+	}
+
+	err = client.Subscribe(c, oauthevents.TopicName, "https://www.marcgrolconsultancy.nl/checkout/event")
+	if err != nil {
+		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
+	}
 
 	return nil
 }
@@ -114,7 +121,7 @@ func (s service) startCheckout(c context.Context, basketUID string, req checkout
 			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
 		}
 
-		err = s.publisher.Publish(c, TopicName, CheckoutStarted{
+		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutStarted{
 			CheckoutUID:   basketUID,
 			AmountInCents: req.Amount.Value,
 			Currency:      req.Amount.Currency,
@@ -291,7 +298,7 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 		}
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Successfully forwarded status change for basket %s", basketUID)
 
-		err = s.publisher.Publish(c, TopicName, CheckoutCompleted{
+		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
 			CheckoutUID:   basketUID,
 			Status:        item.NotificationRequestItem.EventCode,
 			Success:       item.NotificationRequestItem.Success == "true",

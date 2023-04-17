@@ -1,4 +1,4 @@
-package mypubsub
+package mypublisher
 
 import (
 	"context"
@@ -9,6 +9,7 @@ type EventEnvelope struct {
 	UID           string
 	CreatedAt     time.Time
 	Topic         string
+	AggregateUID  string
 	EventTypeName string
 	EventPayload  string `datastore:",noindex"`
 	Published     bool
@@ -16,13 +17,10 @@ type EventEnvelope struct {
 
 type Event interface {
 	GetEventTypeName() string
+	GetAggregateName() string
 }
 
-//go:generate mockgen -source=api.go -package mypubsub -destination publisher_mock.go Publisher
+//go:generate mockgen -source=publisher_api.go -package mypubsub -destination publisher_mock.go Publisher
 type Publisher interface {
 	Publish(c context.Context, topic string, env Event) error
-}
-
-type Subscriber interface {
-	Subscribe(ctx context.Context, topic string, urlToPostTo string)
 }

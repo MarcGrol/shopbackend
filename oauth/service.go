@@ -7,11 +7,13 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
 )
 
 const (
@@ -26,10 +28,10 @@ type service struct {
 	uuider      myuuid.UUIDer
 	logger      mylog.Logger
 	oauthClient OauthClient
-	publisher   mypubsub.Publisher
+	publisher   mypublisher.Publisher
 }
 
-func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *service {
+func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypublisher.Publisher) *service {
 	return &service{
 		clientID:    clientID,
 		storer:      storer,
@@ -43,17 +45,16 @@ func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 }
 
 func (s service) subscribe(c context.Context) error {
-	// projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	// client, err := pubsub.NewClient(c, projectId)
-	// if err != nil {
-	// 	return fmt.Errorf("error creating client: %s", err)
-	// }
-	// defer client.Close()
+	client, cleanup, err := mypubsub.New(c)
+	if err != nil {
+		return fmt.Errorf("error creating client: %s", err)
+	}
+	defer cleanup()
 
-	// _, err = client.CreateTopic(c, TopicName)
-	// if err != nil {
-	// 	return fmt.Errorf("error creating topic %s: %s", TopicName, err)
-	// }
+	err = client.CreateTopic(c, oauthevents.TopicName)
+	if err != nil {
+		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
+	}
 
 	return nil
 }
@@ -95,7 +96,7 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 			return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
 		}
 
-		err = s.publisher.Publish(c, TopicName, OAuthSessionSetupStarted{
+		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupStarted{
 			SessionUID: sessionUID,
 			ClientID:   s.clientID,
 			Scopes:     exampleScopes,
@@ -167,7 +168,7 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 
 		s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
 
-		err = s.publisher.Publish(c, TopicName, OAuthSessionSetupCompleted{
+		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupCompleted{
 			SessionUID: sessionUID,
 			Success:    true,
 		})
@@ -221,7 +222,7 @@ func (s service) refreshToken(c context.Context) error {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}
 
-		err = s.publisher.Publish(c, TopicName, OAuthTokenRefreshCompleted{
+		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthTokenRefreshCompleted{
 			ClientID: currentToken.ClientID,
 			Success:  true,
 		})

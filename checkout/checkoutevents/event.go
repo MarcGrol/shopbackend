@@ -1,4 +1,4 @@
-package checkout
+package checkoutevents
 
 const (
 	TopicName = "checkout"
@@ -12,8 +12,12 @@ type CheckoutStarted struct {
 	MerchantUID   string
 }
 
-func (CheckoutStarted) GetEventTypeName() string {
+func (e CheckoutStarted) GetEventTypeName() string {
 	return "checkout.started"
+}
+
+func (e CheckoutStarted) GetAggregateName() string {
+	return e.CheckoutUID
 }
 
 type CheckoutCompleted struct {
@@ -23,6 +27,10 @@ type CheckoutCompleted struct {
 	Success       bool
 }
 
-func (CheckoutCompleted) GetEventTypeName() string {
+func (e CheckoutCompleted) GetEventTypeName() string {
 	return "checkout.completed"
+}
+
+func (e CheckoutCompleted) GetAggregateName() string {
+	return e.CheckoutUID
 }

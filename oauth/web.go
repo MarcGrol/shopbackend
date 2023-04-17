@@ -11,7 +11,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -23,7 +23,7 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypubsub.Publisher) *webService {
+func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypublisher.Publisher) *webService {
 	return &webService{
 		service: newService(clientID, storer, vault, nower, uuider, oauthClient, pub),
 		logger:  mylog.New("oauth"),

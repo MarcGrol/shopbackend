@@ -6,11 +6,14 @@ import (
 	"sort"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
 	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
@@ -32,19 +35,21 @@ func newService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuide
 }
 
 func (s service) subscribe(c context.Context) error {
-	// projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	// client, err := pubsub.NewClient(c, projectId)
-	// if err != nil {
-	// 	return fmt.Errorf("error creating client: %s", err)
-	// }
-	// defer client.Close()
+	client, cleanup, err := mypubsub.New(c)
+	if err != nil {
+		return fmt.Errorf("error creating client: %s", err)
+	}
+	defer cleanup()
 
-	// _, err = client.CreateSubscription(c, checkout.TopicName, pubsub.SubscriptionConfig{
-	// 	N
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("error creating subscription %s: %s", checkout.TopicName, err)
-	// }
+	err = client.CreateTopic(c, checkoutevents.TopicName)
+	if err != nil {
+		return fmt.Errorf("error creating topic %s: %s", checkoutevents.TopicName, err)
+	}
+
+	err = client.Subscribe(c, oauthevents.TopicName, "https://www.marcgrolconsultancy.nl/basket/event")
+	if err != nil {
+		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
+	}
 
 	return nil
 }

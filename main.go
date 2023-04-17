@@ -11,7 +11,7 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout"
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -34,7 +34,7 @@ func main() {
 	}
 	defer queueCleanup()
 
-	eventPublisher, eventPublisherCleanup, err := mypubsub.New(c, queue, nower, uuider)
+	eventPublisher, eventPublisherCleanup, err := mypublisher.New(c, queue, nower)
 	if err != nil {
 		log.Fatalf("Error creating event publisher: %s", err)
 	}
@@ -60,7 +60,7 @@ func main() {
 }
 
 func createShopService(c context.Context, router *mux.Router, nower mytime.Nower,
-	uuider myuuid.UUIDer, pub mypubsub.Publisher) func() {
+	uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
 
 	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
 	if err != nil {
@@ -73,7 +73,7 @@ func createShopService(c context.Context, router *mux.Router, nower mytime.Nower
 	return basketstoreCleanup
 }
 
-func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, pub mypubsub.Publisher) func() {
+func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
 
 	const (
 		clientIDVarname      = "OAUTH_CLIENT_ID"
@@ -114,7 +114,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	return sessionStoreCleanup
 }
 
-func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, queue myqueue.TaskQueuer, nower mytime.Nower, pub mypubsub.Publisher) func() {
+func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, queue myqueue.TaskQueuer, nower mytime.Nower, pub mypublisher.Publisher) func() {
 
 	const (
 		merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"

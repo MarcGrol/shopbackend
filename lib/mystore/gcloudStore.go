@@ -165,14 +165,16 @@ func (s *gcloudStore[T]) List(c context.Context) ([]T, error) {
 	return objectsToFetch, nil
 }
 
-func (s *gcloudStore[T]) Query(c context.Context, field string, compare string, value any, orderByField string) ([]T, error) {
+func (s *gcloudStore[T]) Query(c context.Context, filters []Filter, orderByField string) ([]T, error) {
 	objectsToFetch := []T{}
 
 	transaction := c.Value(ctxTransactionKey{})
 
-	q := datastore.NewQuery(s.kind).
-		FilterField(field, compare, value).
-		Order(orderByField)
+	q := datastore.NewQuery(s.kind)
+	for _, f := range filters {
+		q = q.FilterField(f.Field, f.Compare, f.Value)
+	}
+	q.Order(orderByField)
 
 	if transaction != nil {
 		q = q.Transaction(transaction.(*datastore.Transaction))

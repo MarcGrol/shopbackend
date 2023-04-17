@@ -1,4 +1,4 @@
-package gpubsub
+package mypubsub
 
 import (
 	"context"
