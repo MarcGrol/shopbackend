@@ -34,7 +34,7 @@ https://marcsexperiment.ew.r.appspot.com/
         client_id=123
         &code_challenge=n-Sg2fMz4TCQdOn6HBdocaISVYzRlNGTWu-a3zxK5cQ
         &code_challenge_method=S256
-        &redirect_uri=http%3A%2F%2Flocalhost%3A8082%2Foauth%2Fdone
+        &redirect_uri=https%3A%2F%2Flocalhost%3A8082%2Foauth%2Fdone
         &response_type=code
         &scope=psp.onlinepayment%3Awrite+psp.accountsettings%3Awrite+psp.webhook%3Awrite
         &state=3147fa78-1168-4732-901a-185d2295ebc4
@@ -49,6 +49,6 @@ https://marcsexperiment.ew.r.appspot.com/
         &code=mycode
         &code_verifier=exampleHash
         &grant_type=authorization_code
-        &redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Foauth%2Fdone
+        &redirect_uri=https%3A%2F%2Flocalhost%3A8080%2Foauth%2Fdone
 
 
