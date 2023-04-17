@@ -60,7 +60,7 @@ func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmod
 	}, nil
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
+func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	// TODO: subscribe to receive access-token updates
 
 	// Endpoints that compose the user-interface
@@ -75,6 +75,13 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 
 	// Listen for token refresh
 	router.HandleFunc("/checkout/token/update", s.authTokenUpdate()).Methods("POST")
+
+	err := s.service.subscribe(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // startCheckoutPage starts a checkout session on the Adyen platform

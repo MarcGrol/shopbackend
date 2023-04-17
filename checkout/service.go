@@ -49,6 +49,22 @@ func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmo
 	}, nil
 }
 
+func (s service) subscribe(c context.Context) error {
+	// projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	// client, err := pubsub.NewClient(c, projectId)
+	// if err != nil {
+	// 	return fmt.Errorf("error creating client: %s", err)
+	// }
+	// defer client.Close()
+
+	// _, err = client.CreateTopic(c, TopicName)
+	// if err != nil {
+	// 	return fmt.Errorf("error creating topic %s: %s", TopicName, err)
+	// }
+
+	return nil
+}
+
 // startCheckout starts a checkout session on the Adyen platform
 func (s service) startCheckout(c context.Context, basketUID string, req checkout.CreateCheckoutSessionRequest, returnURL string) (*checkoutmodel.CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)

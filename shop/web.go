@@ -34,7 +34,7 @@ func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuide
 	}
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
+func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	// Endpoints that compose the userinterface
 	router.HandleFunc("/", s.basketListPage()).Methods("GET")
 	router.HandleFunc("/basket", s.basketListPage()).Methods("GET")
@@ -46,6 +46,8 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 
 	// Checkout component will call this endpoint to update the status of the checkout
 	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutFinalStatusWebhook()).Methods("PUT")
+
+	return s.service.subscribe(c)
 }
 
 //go:embed templates

@@ -42,6 +42,22 @@ func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 	}
 }
 
+func (s service) subscribe(c context.Context) error {
+	// projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	// client, err := pubsub.NewClient(c, projectId)
+	// if err != nil {
+	// 	return fmt.Errorf("error creating client: %s", err)
+	// }
+	// defer client.Close()
+
+	// _, err = client.CreateTopic(c, TopicName)
+	// if err != nil {
+	// 	return fmt.Errorf("error creating topic %s: %s", TopicName, err)
+	// }
+
+	return nil
+}
+
 func (s service) start(c context.Context, originalReturnURL string, hostname string) (string, error) {
 
 	codeVerifier, err := codeverifier.NewVerifier()

@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+
+	"cloud.google.com/go/pubsub"
+	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
@@ -14,7 +18,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
-	"github.com/gorilla/mux"
 )
 
 type enveloper struct {
@@ -45,9 +48,10 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 }
 
 type publisher struct {
-	outbox    mystore.Store[EventEnvelope]
-	queue     myqueue.TaskQueuer
-	enveloper enveloper
+	outbox       mystore.Store[EventEnvelope]
+	queue        myqueue.TaskQueuer
+	enveloper    enveloper
+	pubsubClient *pubsub.Client
 }
 
 func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower, uuider myuuid.UUIDer) (*publisher, func(), error) {
@@ -55,11 +59,24 @@ func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower, uuider
 	if err != nil {
 		return nil, nil, err
 	}
+
+	projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	client, err := pubsub.NewClient(c, projectId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cleanup := func() {
+		client.Close()
+		storeCleanup()
+	}
+
 	return &publisher{
-		outbox:    store,
-		queue:     queue,
-		enveloper: newEnveloper(nower, uuider),
-	}, storeCleanup, nil
+		outbox:       store,
+		queue:        queue,
+		enveloper:    newEnveloper(nower, uuider),
+		pubsubClient: client,
+	}, cleanup, nil
 }
 
 func (p publisher) RegisterEndpoints(c context.Context, router *mux.Router) {
@@ -119,11 +136,16 @@ func (p publisher) processTrigger(c context.Context, uid string) error {
 
 		for _, envelope := range envelopes {
 			log.Printf("Publishing event %s", envelope.UID)
-			// TODO Use pubsub to publish event
+
+			topic := p.pubsubClient.Topic(envelope.Topic)
+			_, err := topic.Publish(c, &pubsub.Message{Data: []byte(envelope.EventPayload)}).Get(c)
+			if err != nil {
+				return fmt.Errorf("error publishing event: %s", err)
+			}
 
 			// mark as published
 			envelope.Published = true
-			err := p.outbox.Put(c, envelope.UID, envelope)
+			err = p.outbox.Put(c, envelope.UID, envelope)
 			if err != nil {
 				return fmt.Errorf("error store envelope: %s", err)
 			}

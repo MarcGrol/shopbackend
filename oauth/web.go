@@ -30,10 +30,17 @@ func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 	}
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
+func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/oauth/start", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
 	router.HandleFunc("/oauth/refresh", s.refreshTokenPage()).Methods("GET")
+
+	err := s.service.subscribe(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s webService) startPage() http.HandlerFunc {

@@ -31,6 +31,24 @@ func newService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuide
 	}
 }
 
+func (s service) subscribe(c context.Context) error {
+	// projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	// client, err := pubsub.NewClient(c, projectId)
+	// if err != nil {
+	// 	return fmt.Errorf("error creating client: %s", err)
+	// }
+	// defer client.Close()
+
+	// _, err = client.CreateSubscription(c, checkout.TopicName, pubsub.SubscriptionConfig{
+	// 	N
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("error creating subscription %s: %s", checkout.TopicName, err)
+	// }
+
+	return nil
+}
+
 func (s service) listBaskets(c context.Context) ([]shopmodel.Basket, error) {
 	s.logger.Log(c, "", mylog.SeverityInfo, "Fetch all baskets")
 
