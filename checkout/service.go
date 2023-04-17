@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 
@@ -75,48 +74,61 @@ func (s service) startCheckout(c context.Context, basketUID string, req checkout
 		return nil, myerrors.NewInvalidInputError(err)
 	}
 
-	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
-	if err != nil || !exist {
-		s.payer.UseApiKey(s.apiKey)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
-	} else {
-		s.payer.UseToken(accessToken.AccessToken)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-	}
+	now := s.nower.Now()
 
-	// Initiate a checkout session on the Adyen platform
-	checkoutSessionResp, err := s.payer.Sessions(c, req)
-	if err != nil {
-		return nil, myerrors.NewInternalError(fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
-	}
+	var paymentMethodsResp checkout.PaymentMethodsResponse
+	var checkoutSessionResp checkout.CreateCheckoutSessionResponse
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
 
-	// Ask the Adyen platform to return payment methods that are allowed for this merchant
-	paymentMethodsResp, err := s.payer.PaymentMethods(c, checkoutToPaymentMethodsRequest(req))
-	if err != nil {
-		return nil, myerrors.NewInternalError(fmt.Errorf("error fetching payment methods for checkout %s: %s", basketUID, err))
-	}
+		accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+		if err != nil || !exist {
+			s.payer.UseApiKey(s.apiKey)
+			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
+		} else {
+			s.payer.UseToken(accessToken.AccessToken)
+			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+		}
 
-	// Store checkout context because we need it later again
-	err = s.checkoutStore.Put(c, basketUID, checkoutmodel.CheckoutContext{
-		BasketUID:         basketUID,
-		CreatedAt:         s.nower.Now(),
-		OriginalReturnURL: returnURL,
-		ID:                checkoutSessionResp.Id,
-		SessionData:       checkoutSessionResp.SessionData,
+		// Initiate a checkout session on the Adyen platform
+		checkoutSessionResp, err = s.payer.Sessions(c, req)
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
+		}
+
+		// Ask the Adyen platform to return payment methods that are allowed for this merchant
+		paymentMethodsResp, err = s.payer.PaymentMethods(c, checkoutToPaymentMethodsRequest(req))
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error fetching payment methods for checkout %s: %s", basketUID, err))
+		}
+
+		// Store checkout context because we need it later again
+		err = s.checkoutStore.Put(c, basketUID, checkoutmodel.CheckoutContext{
+			BasketUID:         basketUID,
+			CreatedAt:         now,
+			OriginalReturnURL: returnURL,
+			ID:                checkoutSessionResp.Id,
+			SessionData:       checkoutSessionResp.SessionData,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
+		}
+
+		err = s.publisher.Publish(c, TopicName, CheckoutStarted{
+			CheckoutUID:   basketUID,
+			AmountInCents: req.Amount.Value,
+			Currency:      req.Amount.Currency,
+			ShopperUID:    req.ShopperEmail,
+			MerchantUID:   req.MerchantAccount,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		return nil
 	})
 	if err != nil {
-		return nil, myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
-	}
-
-	err = s.publisher.Publish(c, TopicName, CheckoutStarted{
-		CheckoutUID:   basketUID,
-		AmountInCents: req.Amount.Value,
-		Currency:      req.Amount.Currency,
-		ShopperUID:    req.ShopperEmail,
-		MerchantUID:   req.MerchantAccount,
-	})
-	if err != nil {
-		return nil, myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		return nil, err
 	}
 
 	return &checkoutmodel.CheckoutPageInfo{
@@ -172,6 +184,8 @@ func (s service) resumeCheckout(c context.Context, basketUID string) (*checkoutm
 func (s service) finalizeCheckout(c context.Context, basketUID string, status string) (string, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout completed for basket %s -> %s", basketUID, status)
 
+	now := s.nower.Now()
+
 	var checkoutContext checkoutmodel.CheckoutContext
 	var found bool
 	var err error
@@ -187,7 +201,7 @@ func (s service) finalizeCheckout(c context.Context, basketUID string, status st
 		}
 
 		checkoutContext.Status = status
-		checkoutContext.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
+		checkoutContext.LastModified = &now
 
 		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
 		if err != nil {
@@ -240,6 +254,8 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received on basket %s: %+v", item.NotificationRequestItem.MerchantReference, item)
 
+	now := s.nower.Now()
+
 	var checkoutContext checkoutmodel.CheckoutContext
 	var found bool
 	var err error
@@ -256,39 +272,39 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
 		checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
 		checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
-		checkoutContext.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
+		checkoutContext.LastModified = &now
 
 		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
 
+		// Asynchronously inform basket service
+		err = s.queue.Enqueue(c, myqueue.Task{
+			UID: basketUID,
+			WebhookURLPath: fmt.Sprintf("/api/basket/%s/status/%s/%s", basketUID,
+				item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success),
+			Payload: []byte{},
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
+		}
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Successfully forwarded status change for basket %s", basketUID)
+
+		err = s.publisher.Publish(c, TopicName, CheckoutCompleted{
+			CheckoutUID:   basketUID,
+			Status:        item.NotificationRequestItem.EventCode,
+			Success:       item.NotificationRequestItem.Success == "true",
+			PaymentMethod: checkoutContext.PaymentMethod,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
 		return nil
 	})
 	if err != nil {
 		return err
-	}
-
-	// Asynchronously inform basket service
-	err = s.queue.Enqueue(c, myqueue.Task{
-		UID: basketUID,
-		WebhookURLPath: fmt.Sprintf("/api/basket/%s/status/%s/%s", basketUID,
-			item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success),
-		Payload: []byte{},
-	})
-	if err != nil {
-		return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
-	}
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Successfully forwarded status change for basket %s", basketUID)
-
-	err = s.publisher.Publish(c, TopicName, CheckoutCompleted{
-		CheckoutUID:   basketUID,
-		Status:        item.NotificationRequestItem.EventCode,
-		Success:       item.NotificationRequestItem.Success == "true",
-		PaymentMethod: checkoutContext.PaymentMethod,
-	})
-	if err != nil {
-		return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
 	}
 
 	return nil

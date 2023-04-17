@@ -97,10 +97,13 @@ func (s service) getBasket(c context.Context, basketUID string) (shopmodel.Baske
 func (s service) checkoutFinalized(c context.Context, basketUID string, status string) (shopmodel.Basket, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout finalized for basket %s -> %s", basketUID, status)
 
+	now := s.nower.Now()
+
 	var basket shopmodel.Basket
 	var found bool
 	var err error
 	err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
 
 		basket, found, err = s.basketStore.Get(c, basketUID)
 		if err != nil {
@@ -111,7 +114,7 @@ func (s service) checkoutFinalized(c context.Context, basketUID string, status s
 		}
 
 		basket.InitialPaymentStatus = status
-		basket.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
+		basket.LastModified = &now
 
 		err = s.basketStore.Put(c, basketUID, basket)
 		if err != nil {
@@ -130,6 +133,8 @@ func (s service) checkoutFinalized(c context.Context, basketUID string, status s
 func (s service) checkoutFinalStatusWebhook(c context.Context, basketUID string, eventCode string, status string) error {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %s", basketUID, eventCode, status)
 
+	now := s.nower.Now()
+
 	var basket shopmodel.Basket
 	var found bool
 	var err error
@@ -146,7 +151,7 @@ func (s service) checkoutFinalStatusWebhook(c context.Context, basketUID string,
 		// Final codes matter!
 		basket.FinalPaymentEvent = eventCode
 		basket.FinalPaymentStatus = status
-		basket.LastModified = func() *time.Time { t := s.nower.Now(); return &t }()
+		basket.LastModified = &now
 
 		err = s.basketStore.Put(c, basketUID, basket)
 		if err != nil {

@@ -66,6 +66,7 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 	}
 	codeVerifierValue := codeVerifier.GetValue()
 
+	now := s.nower.Now()
 	sessionUID := s.uuider.Create()
 
 	authURL := ""
@@ -78,7 +79,7 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 			Scopes:    exampleScopes,
 			ReturnURL: originalReturnURL,
 			Verifier:  codeVerifierValue,
-			CreatedAt: s.nower.Now(),
+			CreatedAt: now,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing: %s", err))
@@ -115,10 +116,13 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 }
 
 func (s service) done(c context.Context, sessionUID string, code string, hostname string) (string, error) {
+	now := s.nower.Now()
+
 	returnURL := ""
 	tokenResp := GetTokenResponse{}
-
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
+
 		session, exist, err := s.storer.Get(c, sessionUID)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error fetching session: %s", err))
@@ -139,8 +143,6 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 		}
 
 		s.logger.Log(c, sessionUID, mylog.SeverityDebug, "token-resp: %+v", tokenResp)
-
-		now := s.nower.Now()
 
 		// Update session
 		session.TokenData = &tokenResp

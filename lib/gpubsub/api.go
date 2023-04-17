@@ -1,0 +1,12 @@
+package gpubsub
+
+import "context"
+
+//go:generate mockgen -source=api.go -package gpubsub -destination pubsub_mock.go PubSub
+type PubSub interface {
+	Publish(c context.Context, topic string, data string) error
+	CreateTopic(c context.Context, topic string) error
+	Subscribe(c context.Context, topic string, urlToPostTo string) error
+}
+
+var New func(c context.Context) (PubSub, func(), error)

@@ -22,3 +22,7 @@ type Event interface {
 type Publisher interface {
 	Publish(c context.Context, topic string, env Event) error
 }
+
+type Subscriber interface {
+	Subscribe(ctx context.Context, topic string, urlToPostTo string)
+}
