@@ -171,6 +171,7 @@ func (s webService) handleEventEnvelope() http.HandlerFunc {
 
 		envelope, err := mypublisher.ParseEventEnvelope(r.Body)
 		if err != nil {
+			errorWriter.WriteError(c, w, 4, myerrors.NewInternalError(err))
 			return
 		}
 

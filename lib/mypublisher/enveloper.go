@@ -27,6 +27,7 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 	}
 	envelope := EventEnvelope{
 		Topic:         topic,
+		AggregateUID:  event.GetAggregateName(),
 		EventTypeName: event.GetEventTypeName(),
 		EventPayload:  string(jsonPayload),
 		Published:     false,
