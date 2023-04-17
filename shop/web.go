@@ -47,7 +47,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	// Checkout component will call this endpoint to update the status of the checkout
 	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutFinalStatusWebhook()).Methods("PUT")
 
-	router.HandleFunc("/checkout/event", s.handleEventEnvelope()).Methods("POST")
+	router.HandleFunc("/basket/event", s.handleEventEnvelope()).Methods("POST")
 
 	return s.service.subscribe(c)
 }
