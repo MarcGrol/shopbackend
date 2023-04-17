@@ -40,7 +40,7 @@ func (s *gcloudStore[T]) RunInTransaction(c context.Context, f func(c context.Co
 	var err error
 	// retry 3 times
 	for i := 1; i <= 3; i++ {
-		log.Printf("Attempt %d to run logic transaction", i)
+		//log.Printf("Attempt %d to run logic transaction", i)
 		err = s.runInTransaction(c, f)
 		if err != nil {
 			if err == datastore.ErrConcurrentTransaction {
@@ -62,7 +62,7 @@ func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Co
 		return fmt.Errorf("error creating transaction: %s", err)
 	}
 
-	log.Printf("Start transaction %p", t)
+	//log.Printf("Start transaction %p", t)
 
 	ctx := context.WithValue(c, ctxTransactionKey{}, t)
 
@@ -86,7 +86,7 @@ func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Co
 		return fmt.Errorf("error committing transaction: %s", err)
 	}
 
-	log.Printf("Committed transaction %p", t)
+	//log.Printf("Committed transaction %p", t)
 
 	return nil
 }

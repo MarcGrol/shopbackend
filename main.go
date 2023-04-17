@@ -50,7 +50,7 @@ func main() {
 	oauthServiceCleanup := createOAuthService(c, router, vault, nower, uuider, eventPublisher)
 	defer oauthServiceCleanup()
 
-	checkoutServiceCleanup := createCheckoutService(c, router, vault, queue, nower, eventPublisher)
+	checkoutServiceCleanup := createCheckoutService(c, router, vault, nower, eventPublisher)
 	defer checkoutServiceCleanup()
 
 	shopServiceCleanup := createShopService(c, router, nower, uuider, eventPublisher)
@@ -114,7 +114,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	return sessionStoreCleanup
 }
 
-func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, queue myqueue.TaskQueuer, nower mytime.Nower, pub mypublisher.Publisher) func() {
+func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) func() {
 
 	const (
 		merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"
@@ -156,7 +156,7 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 
 	payer := checkout.NewPayer(environment, apiKey)
 
-	checkoutService, err := checkout.NewService(cfg, payer, checkoutStore, vault, queue, nower, pub)
+	checkoutService, err := checkout.NewService(cfg, payer, checkoutStore, vault, nower, pub)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}

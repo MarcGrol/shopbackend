@@ -44,9 +44,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	// Checkout component will redirect to this endpoint after checkout has finalized
 	router.HandleFunc("/basket/{basketUID}/checkout/completed", s.checkoutFinalized()).Methods("GET")
 
-	// Checkout component will call this endpoint to update the status of the checkout
-	router.HandleFunc("/api/basket/{basketUID}/status/{eventCode}/{status}", s.checkoutFinalStatusWebhook()).Methods("PUT")
-
+	// Subsriptions arrive here as events
 	router.HandleFunc("/api/basket/event", s.handleEventEnvelope()).Methods("POST")
 
 	return s.service.subscribe(c)
@@ -141,29 +139,6 @@ func (s webService) checkoutFinalized() http.HandlerFunc {
 	}
 }
 
-func (s webService) checkoutFinalStatusWebhook() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
-
-		basketUID := mux.Vars(r)["basketUID"]
-		eventCode := mux.Vars(r)["eventCode"]
-		status := mux.Vars(r)["status"]
-
-		err := s.service.checkoutFinalStatusWebhook(c, basketUID, eventCode, status)
-		if err != nil {
-			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
-			return
-		}
-
-		// This could be the place where a basket is being converted into an order
-
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
-			Message: "Final checkout status successfully processed",
-		})
-	}
-}
-
 func (s webService) handleEventEnvelope() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
@@ -175,7 +150,13 @@ func (s webService) handleEventEnvelope() http.HandlerFunc {
 			return
 		}
 
-		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", envelope)
+		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %+v", envelope)
+
+		err = s.service.handleEvent(c, envelope)
+		if err != nil {
+			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
+			return
+		}
 
 		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Successfully processed token update",

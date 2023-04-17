@@ -15,7 +15,6 @@ import (
 
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
-	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
@@ -72,7 +71,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, payer, _, nower, publisher := setup(ctrl)
+		ctx, router, storer, vault, payer, nower, publisher := setup(ctrl)
 
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
@@ -110,7 +109,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
@@ -149,7 +148,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _, nower, _ := setup(ctrl)
+		ctx, router, storer, _, _, nower, _ := setup(ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -185,11 +184,10 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, queuer, nower, publisher := setup(ctrl)
+		ctx, router, storer, _, _, nower, publisher := setup(ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
-		queuer.EXPECT().Enqueue(gomock.Any(), gomock.Any()).Return(nil)
 		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil) // TODO: check event
 
 		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
@@ -242,12 +240,11 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *myqueue.MockTaskQueuer, *mytime.MockNower, *mypublisher.MockPublisher) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[checkoutmodel.CheckoutContext](c)
 	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
-	queuer := myqueue.NewMockTaskQueuer(ctrl)
 	payer := NewMockPayer(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
 
@@ -256,9 +253,9 @@ func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store
 		MerchantAccount: "MyMerchantAccount",
 		ClientKey:       "my_client_key",
 		ApiKey:          "my_api_key",
-	}, payer, storer, vault, queuer, nower, publisher)
+	}, payer, storer, vault, nower, publisher)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, vault, payer, queuer, nower, publisher
+	return c, router, storer, vault, payer, nower, publisher
 }

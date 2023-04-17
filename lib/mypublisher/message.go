@@ -7,12 +7,14 @@ import (
 )
 
 type PushRequest struct {
-	Message struct {
-		Attributes map[string]string
-		Data       []byte
-		ID         string `json:"message_id"`
-	}
+	Message      PushMessage
 	Subscription string
+}
+
+type PushMessage struct {
+	Attributes map[string]string
+	Data       []byte
+	ID         string `json:"message_id"`
 }
 
 func ParseEventEnvelope(r io.Reader) (EventEnvelope, error) {

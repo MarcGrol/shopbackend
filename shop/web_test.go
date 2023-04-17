@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 
 	"github.com/golang/mock/gomock"
@@ -21,8 +22,8 @@ import (
 )
 
 var (
-	basket1 = shopmodel.Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentStatus: ""}
-	basket2 = shopmodel.Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentStatus: "AUTHORISATION=true"}
+	basket1 = shopmodel.Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: ""}
+	basket2 = shopmodel.Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: "AUTHORISATION", FinalPaymentStatus: true}
 	baskets = []shopmodel.Basket{basket1, basket2}
 )
 
@@ -159,25 +160,13 @@ func TestBasketService(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 
 		// when
-		request, err := http.NewRequest(http.MethodPut, "/api/basket/123/status/AUTHORISATION/true", strings.NewReader(`{
-   "live":"false",
-   "notificationItems":[
-      {
-         "NotificationRequestItem":{
-            "eventCode":"AUTHORISATION",
-            "success":"true",
-            "eventDate":"2019-06-28T18:03:50+01:00",
-            "merchantAccountCode":"YOUR_MERCHANT_ACCOUNT",
-            "pspReference": "7914073381342284",
-            "merchantReference": "456",
-            "amount": {
-                "value":200,
-                "currency":"EUR"
-            }
-         }
-      }
-   ]
-}`))
+		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(mypublisher.CreatePubsubMessage(
+			checkoutevents.CheckoutCompleted{
+				CheckoutUID:   "123",
+				PaymentMethod: "ideal",
+				Status:        "AUTHORIZED",
+				Success:       true,
+			})))
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
@@ -185,8 +174,6 @@ func TestBasketService(t *testing.T) {
 
 		// then
 		assert.Equal(t, 200, response.Code)
-		got := response.Body.String()
-		assert.Contains(t, got, "Final checkout status successfully processed")
 	})
 }
 

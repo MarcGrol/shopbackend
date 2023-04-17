@@ -1,7 +1,11 @@
 package oauthevents
 
 const (
-	TopicName = "oauth"
+	TopicName                       = "oauth"
+	OAuthSessionSetupStartedName    = TopicName + ".sessionSetup.started"
+	OAuthSessionSetupCompletedName  = TopicName + ".sessionSetup.completed"
+	OAuthTokenCreationCompletedName = TopicName + ".tokenCreation.completed"
+	OAuthTokenRefreshCompletedName  = TopicName + ".tokenRefresh.completed"
 )
 
 type OAuthSessionSetupStarted struct {
@@ -11,7 +15,7 @@ type OAuthSessionSetupStarted struct {
 }
 
 func (e OAuthSessionSetupStarted) GetEventTypeName() string {
-	return "oauth.sessionSetup.started"
+	return OAuthSessionSetupStartedName
 }
 
 func (e OAuthSessionSetupStarted) GetAggregateName() string {
@@ -26,7 +30,7 @@ type OAuthSessionSetupCompleted struct {
 }
 
 func (e OAuthSessionSetupCompleted) GetEventTypeName() string {
-	return "oauth.sessionSetup.completed"
+	return OAuthSessionSetupCompletedName
 }
 
 func (e OAuthSessionSetupCompleted) GetAggregateName() string {
@@ -41,7 +45,7 @@ type OAuthTokenCreationCompleted struct {
 }
 
 func (e OAuthTokenCreationCompleted) GetEventTypeName() string {
-	return "oauth.tokenCreation.completed"
+	return OAuthTokenCreationCompletedName
 }
 
 func (e OAuthTokenCreationCompleted) GetAggregateName() string {
@@ -55,7 +59,7 @@ type OAuthTokenRefreshCompleted struct {
 }
 
 func (e OAuthTokenRefreshCompleted) GetEventTypeName() string {
-	return "oauth.tokenRefresh.completed"
+	return OAuthTokenRefreshCompletedName
 }
 
 func (e OAuthTokenRefreshCompleted) GetAggregateName() string {

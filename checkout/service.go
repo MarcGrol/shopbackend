@@ -2,6 +2,7 @@ package checkout
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
@@ -28,14 +28,13 @@ type service struct {
 	payer           Payer
 	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
 	vault           myvault.VaultReader
-	queue           myqueue.TaskQueuer
 	nower           mytime.Nower
 	logger          mylog.Logger
 	publisher       mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, logger mylog.Logger, pub mypublisher.Publisher) (*service, error) {
+func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, pub mypublisher.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -44,7 +43,6 @@ func newService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmo
 		payer:           payer,
 		checkoutStore:   checkoutStorer,
 		vault:           vault,
-		queue:           queuer,
 		nower:           nower,
 		logger:          logger,
 		publisher:       pub,
@@ -286,18 +284,6 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 			return myerrors.NewInternalError(err)
 		}
 
-		// Asynchronously inform basket service
-		err = s.queue.Enqueue(c, myqueue.Task{
-			UID: basketUID,
-			WebhookURLPath: fmt.Sprintf("/api/basket/%s/status/%s/%s", basketUID,
-				item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success),
-			Payload: []byte{},
-		})
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error queueing notification to basket %s: %s", basketUID, err))
-		}
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Successfully forwarded status change for basket %s", basketUID)
-
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
 			CheckoutUID:   basketUID,
 			Status:        item.NotificationRequestItem.EventCode,
@@ -312,6 +298,35 @@ func (s service) processNotificationItem(c context.Context, item checkoutmodel.N
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s service) handleEvent(c context.Context, envelope mypublisher.EventEnvelope) error {
+
+	if envelope.EventTypeName == oauthevents.OAuthTokenCreationCompletedName {
+		event := oauthevents.OAuthTokenCreationCompleted{}
+		err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling event %s: %s", envelope.EventTypeName, err)
+		}
+		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", event)
+
+		// TODO
+
+	} else if envelope.EventTypeName == oauthevents.OAuthTokenRefreshCompletedName {
+		event := oauthevents.OAuthTokenRefreshCompleted{}
+		err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling event %s: %s", envelope.EventTypeName, err)
+		}
+		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", event)
+
+		// TODO
+
+	} else {
+		s.logger.Log(c, "", mylog.SeverityInfo, "Ignore event %+s", envelope.EventTypeName)
 	}
 
 	return nil

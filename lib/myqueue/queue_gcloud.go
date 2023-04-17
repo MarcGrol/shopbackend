@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	grpcCodes "google.golang.org/grpc/codes"
 	grpcStatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type gcloudTaskQueue struct {
@@ -39,8 +41,8 @@ func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 	_, err := q.client.CreateTask(c, &taskspb.CreateTaskRequest{
 		Parent: composeQueueName(),
 		Task: &taskspb.Task{
-			Name: taskUID, // de-duplicate
-			//ScheduleTime: timestamppb.New(time.Now().Add(time.Second * 1)), // delay to give shop some time for redirect
+			Name:         taskUID,                                          // de-duplicate
+			ScheduleTime: timestamppb.New(time.Now().Add(time.Second * 5)), // delay to give shop some time for redirect
 			MessageType: &taskspb.Task_AppEngineHttpRequest{
 				AppEngineHttpRequest: &taskspb.AppEngineHttpRequest{
 					HttpMethod:  taskspb.HttpMethod_PUT,

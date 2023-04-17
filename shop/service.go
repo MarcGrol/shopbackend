@@ -2,6 +2,7 @@ package shop
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -135,33 +137,54 @@ func (s service) checkoutFinalized(c context.Context, basketUID string, status s
 	return basket, nil
 }
 
-func (s service) checkoutFinalStatusWebhook(c context.Context, basketUID string, eventCode string, status string) error {
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %s", basketUID, eventCode, status)
+func (s service) handleEvent(c context.Context, envelope mypublisher.EventEnvelope) error {
+
+	s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", envelope)
+
+	if envelope.EventTypeName == checkoutevents.CheckoutCompletedName {
+		var event checkoutevents.CheckoutCompleted
+		err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling event %s: %s", envelope.EventTypeName, err)
+		}
+		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", event)
+
+		err = s.handleCheckoutCompletedEvent(c, event)
+		if err != nil {
+			return fmt.Errorf("error processing %s: %s", envelope.EventTypeName, err)
+		}
+	} else {
+		s.logger.Log(c, "", mylog.SeverityInfo, "Ignore event %+s", envelope.EventTypeName)
+	}
+
+	return nil
+}
+
+func (s service) handleCheckoutCompletedEvent(c context.Context, event checkoutevents.CheckoutCompleted) error {
+	s.logger.Log(c, event.CheckoutUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %v", event.CheckoutUID, event.Status, event.Status)
 
 	now := s.nower.Now()
 
-	var basket shopmodel.Basket
-	var found bool
-	var err error
-	err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
+	err := s.basketStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
-		basket, found, err = s.basketStore.Get(c, basketUID)
+		basket, found, err := s.basketStore.Get(c, event.CheckoutUID)
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
 		if !found {
-			return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID))
+			return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", event.CheckoutUID))
 		}
 
 		// Final codes matter!
-		basket.FinalPaymentEvent = eventCode
-		basket.FinalPaymentStatus = status
+		basket.FinalPaymentEvent = event.Status
+		basket.FinalPaymentStatus = event.Success
 		basket.LastModified = &now
 
-		err = s.basketStore.Put(c, basketUID, basket)
+		err = s.basketStore.Put(c, event.CheckoutUID, basket)
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
+
 		return nil
 	})
 	if err != nil {

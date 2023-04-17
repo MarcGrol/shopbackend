@@ -1,7 +1,9 @@
 package checkoutevents
 
 const (
-	TopicName = "checkout"
+	TopicName             = "checkout"
+	CheckoutStartedName   = TopicName + ".started"
+	CheckoutCompletedName = TopicName + ".completed"
 )
 
 type CheckoutStarted struct {
@@ -13,7 +15,7 @@ type CheckoutStarted struct {
 }
 
 func (e CheckoutStarted) GetEventTypeName() string {
-	return "checkout.started"
+	return CheckoutStartedName
 }
 
 func (e CheckoutStarted) GetAggregateName() string {
@@ -28,7 +30,7 @@ type CheckoutCompleted struct {
 }
 
 func (e CheckoutCompleted) GetEventTypeName() string {
-	return "checkout.completed"
+	return CheckoutCompletedName
 }
 
 func (e CheckoutCompleted) GetAggregateName() string {

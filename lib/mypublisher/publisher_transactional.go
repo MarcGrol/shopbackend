@@ -72,6 +72,8 @@ func (p transactionalPublisher) Publish(c context.Context, topic string, event E
 		return fmt.Errorf("error queueing publication-trigger %s: %s", envelope.UID, err)
 	}
 
+	log.Printf("Enqueued event %s.%s on topic %s", envelope.EventTypeName, envelope.AggregateUID, envelope.Topic)
+
 	return nil
 }
 
@@ -94,6 +96,7 @@ func (p transactionalPublisher) processTriggerPage() http.HandlerFunc {
 		})
 	}
 }
+
 func (p transactionalPublisher) processTrigger(c context.Context, topicName string, uid string) error {
 	// fetch all envelopes that are not yet published
 	err := p.outbox.RunInTransaction(c, func(c context.Context) error {

@@ -90,7 +90,5 @@ func (ps *gcloudPubSub) Publish(c context.Context, topicName string, data string
 		return fmt.Errorf("error publishing event on topic %s: %s", topicName, err)
 	}
 
-	log.Printf("*** Published event to topic %s", topicName)
-
 	return nil
 }

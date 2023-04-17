@@ -18,7 +18,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
-	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
@@ -48,9 +47,9 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, queuer myqueue.TaskQueuer, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
+func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkout")
-	s, err := newService(cfg, payer, checkoutStore, vault, queuer, nower, logger, pub)
+	s, err := newService(cfg, payer, checkoutStore, vault, nower, logger, pub)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +73,6 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 
 	// Listen for token refresh
-	router.HandleFunc("/checkout/token/update", s.authTokenUpdate()).Methods("POST")
 	router.HandleFunc("/api/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
 	err := s.service.subscribe(context.Background())
@@ -186,30 +184,6 @@ func (s webService) webhookNotification() http.HandlerFunc {
 	}
 }
 
-func (s webService) authTokenUpdate() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
-
-		event := checkoutmodel.AuthTokenUpdateEvent{}
-		err := json.NewDecoder(r.Body).Decode(&event)
-		if err != nil {
-			errorWriter.WriteError(c, w, 1, fmt.Errorf("error token-refresh-request webhook notification event:%s", err))
-			return
-		}
-
-		err = s.service.authTokenUpdate(c, event)
-		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
-			return
-		}
-
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
-			Message: "Successfully processed token update",
-		})
-	}
-}
-
 func (s webService) handleEventEnvelope() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
@@ -217,11 +191,17 @@ func (s webService) handleEventEnvelope() http.HandlerFunc {
 
 		envelope, err := mypublisher.ParseEventEnvelope(r.Body)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
 			return
 		}
 
-		s.logger.Log(c, "", mylog.SeverityInfo, "Got event %+v", envelope)
+		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %+v", envelope)
+
+		err = s.service.handleEvent(c, envelope)
+		if err != nil {
+			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
+			return
+		}
 
 		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Successfully processed token update",

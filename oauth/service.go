@@ -105,13 +105,13 @@ func (s service) start(c context.Context, originalReturnURL string, hostname str
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
 		}
 
-		s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Start oauth session-setup %s", sessionUID)
-
 		return nil
 	})
 	if err != nil {
 		return "", err
 	}
+
+	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Started oauth session-setup %s", sessionUID)
 
 	return authURL, nil
 }
@@ -166,8 +166,6 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 			return myerrors.NewInternalError(fmt.Errorf("error storing token in vault: %s", err))
 		}
 
-		s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Complete oauth session-setup %s", sessionUID)
-
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupCompleted{
 			SessionUID: sessionUID,
 			Success:    true,
@@ -181,6 +179,8 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 	if err != nil {
 		return "", err
 	}
+
+	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Completed oauth session-setup %s", sessionUID)
 
 	return returnURL, nil
 }
