@@ -8,11 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
-	"github.com/MarcGrol/shopbackend/services/shop/shopmodel"
-
-	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
@@ -24,9 +22,9 @@ import (
 )
 
 var (
-	basket1 = shopmodel.Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: ""}
-	basket2 = shopmodel.Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: "AUTHORISATION", FinalPaymentStatus: true}
-	baskets = []shopmodel.Basket{basket1, basket2}
+	basket1 = Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: ""}
+	basket2 = Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: "AUTHORISATION", FinalPaymentStatus: true}
+	baskets = []Basket{basket1, basket2}
 )
 
 func TestBasketService(t *testing.T) {
@@ -181,9 +179,9 @@ func TestBasketService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
 	c := context.TODO()
-	storer, _, _ := mystore.New[shopmodel.Basket](c)
+	storer, _, _ := mystore.New[Basket](c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)

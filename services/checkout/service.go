@@ -6,7 +6,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
 )
 
 type service struct {
@@ -15,7 +14,7 @@ type service struct {
 	clientKey       string
 	apiKey          string
 	payer           Payer
-	checkoutStore   mystore.Store[checkoutmodel.CheckoutContext]
+	checkoutStore   mystore.Store[CheckoutContext]
 	vault           myvault.VaultReader
 	nower           mytime.Nower
 	logger          mylog.Logger
@@ -23,7 +22,7 @@ type service struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, pub mypublisher.Publisher) (*service, error) {
+func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, pub mypublisher.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,

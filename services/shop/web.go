@@ -7,10 +7,8 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/shop/shopmodel"
-
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 
 	"github.com/gorilla/mux"
 
@@ -29,7 +27,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and ease testing
-func NewService(store mystore.Store[shopmodel.Basket], nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) *webService {
+func NewService(store mystore.Store[Basket], nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) *webService {
 	logger := mylog.New("basket")
 	return &webService{
 		logger:  logger,

@@ -6,14 +6,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/shop/shopmodel"
-
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 )
 
-func (s *service) listBaskets(c context.Context) ([]shopmodel.Basket, error) {
+func (s *service) listBaskets(c context.Context) ([]Basket, error) {
 	s.logger.Log(c, "", mylog.SeverityInfo, "Fetch all baskets")
 
 	baskets, err := s.basketStore.List(c)
@@ -27,7 +25,7 @@ func (s *service) listBaskets(c context.Context) ([]shopmodel.Basket, error) {
 	return baskets, nil
 }
 
-func (s *service) createNewBasket(c context.Context, hostname string) (shopmodel.Basket, error) {
+func (s *service) createNewBasket(c context.Context, hostname string) (Basket, error) {
 
 	uid := s.uuider.Create()
 	createdAt := s.nower.Now()
@@ -38,32 +36,32 @@ func (s *service) createNewBasket(c context.Context, hostname string) (shopmodel
 	basket := createBasket(uid, createdAt, returnURL)
 	err := s.basketStore.Put(c, uid, basket)
 	if err != nil {
-		return shopmodel.Basket{}, myerrors.NewInternalError(err)
+		return Basket{}, myerrors.NewInternalError(err)
 	}
 
 	return basket, nil
 }
 
-func (s service) getBasket(c context.Context, basketUID string) (shopmodel.Basket, error) {
+func (s service) getBasket(c context.Context, basketUID string) (Basket, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Fetch details of basket uid %s", basketUID)
 
 	basket, found, err := s.basketStore.Get(c, basketUID)
 	if err != nil {
-		return shopmodel.Basket{}, myerrors.NewInternalError(err)
+		return Basket{}, myerrors.NewInternalError(err)
 	}
 	if !found {
-		return shopmodel.Basket{}, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID))
+		return Basket{}, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID))
 	}
 
 	return basket, nil
 }
 
-func (s *service) checkoutFinalized(c context.Context, basketUID string, status string) (shopmodel.Basket, error) {
+func (s *service) checkoutFinalized(c context.Context, basketUID string, status string) (Basket, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Redirect: Checkout finalized for basket %s -> %s", basketUID, status)
 
 	now := s.nower.Now()
 
-	var basket shopmodel.Basket
+	var basket Basket
 	var found bool
 	var err error
 	err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
@@ -88,7 +86,7 @@ func (s *service) checkoutFinalized(c context.Context, basketUID string, status 
 		return nil
 	})
 	if err != nil {
-		return shopmodel.Basket{}, err
+		return Basket{}, err
 	}
 
 	return basket, nil
@@ -129,15 +127,15 @@ func (s *service) handleCheckoutCompletedEvent(c context.Context, event checkout
 	return nil
 }
 
-func createBasket(uid string, createdAt time.Time, returnURL string) shopmodel.Basket {
-	return shopmodel.Basket{
+func createBasket(uid string, createdAt time.Time, returnURL string) Basket {
+	return Basket{
 		UID:        uid,
 		CreatedAt:  createdAt,
 		Shop:       getCurrentShop(),
 		Shopper:    getCurrentShopper(uid),
 		TotalPrice: 51000,
 		Currency:   "EUR",
-		SelectedProducts: []shopmodel.SelectedProduct{
+		SelectedProducts: []SelectedProduct{
 			{
 				UID:         "product_tennis_racket",
 				Description: "Tennis racket",
@@ -158,8 +156,8 @@ func createBasket(uid string, createdAt time.Time, returnURL string) shopmodel.B
 	}
 }
 
-func getCurrentShop() shopmodel.Shop {
-	return shopmodel.Shop{
+func getCurrentShop() Shop {
+	return Shop{
 		UID:      "shop_evas_shop",
 		Name:     "Eva's shop",
 		Country:  "NL",
@@ -168,13 +166,13 @@ func getCurrentShop() shopmodel.Shop {
 	}
 }
 
-func getCurrentShopper(uid string) shopmodel.Shopper {
-	return shopmodel.Shopper{
+func getCurrentShopper(uid string) Shopper {
+	return Shopper{
 		UID:         "shopper_marc_grol",
 		FirstName:   "Marc",
 		LastName:    "Grol",
 		DateOfBirth: func() *time.Time { t := time.Date(1971, time.February, 27, 0, 0, 0, 0, time.UTC); return &t }(),
-		Address: shopmodel.Address{
+		Address: Address{
 			City:              "De Bilt",
 			Country:           "NL",
 			HouseNumberOrName: "79",

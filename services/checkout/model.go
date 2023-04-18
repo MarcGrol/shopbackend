@@ -1,4 +1,4 @@
-package checkoutmodel
+package checkout
 
 import (
 	"fmt"

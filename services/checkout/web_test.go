@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
-
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
@@ -113,7 +111,7 @@ func TestCheckoutService(t *testing.T) {
 		ctx, router, storer, _, _, _, _ := setup(ctrl)
 
 		// given
-		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
+		storer.Put(ctx, "123", CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -153,7 +151,7 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
+		storer.Put(ctx, "123", CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -191,7 +189,7 @@ func TestCheckoutService(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
 		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil) // TODO: check event
 
-		storer.Put(ctx, "123", checkoutmodel.CheckoutContext{
+		storer.Put(ctx, "123", CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -241,9 +239,9 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutmodel.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypublisher.MockPublisher) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypublisher.MockPublisher) {
 	c := context.TODO()
-	storer, _, _ := mystore.New[checkoutmodel.CheckoutContext](c)
+	storer, _, _ := mystore.New[CheckoutContext](c)
 	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	payer := NewMockPayer(ctrl)

@@ -8,11 +8,8 @@ import (
 	"os"
 
 	checkout2 "github.com/MarcGrol/shopbackend/services/checkout"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
 	oauth2 "github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/shop"
-	"github.com/MarcGrol/shopbackend/services/shop/shopmodel"
-
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
@@ -63,7 +60,7 @@ func main() {
 func createShopService(c context.Context, router *mux.Router, nower mytime.Nower,
 	uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
 
-	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
+	basketStore, basketstoreCleanup, err := mystore.New[shop.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}
@@ -144,7 +141,7 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 		log.Fatalf("missing env-var %s", clientKeyVarname)
 	}
 
-	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutmodel.CheckoutContext](c)
+	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkout2.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}

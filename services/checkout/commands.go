@@ -6,8 +6,6 @@ import (
 	"net/url"
 
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
-
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
@@ -32,7 +30,7 @@ func (s *service) CreateTopics(c context.Context) error {
 }
 
 // startCheckout starts a checkout session on the Adyen platform
-func (s *service) startCheckout(c context.Context, basketUID string, req checkout.CreateCheckoutSessionRequest, returnURL string) (*checkoutmodel.CheckoutPageInfo, error) {
+func (s *service) startCheckout(c context.Context, basketUID string, req checkout.CreateCheckoutSessionRequest, returnURL string) (*CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
 	req.MerchantAccount = s.merchantAccount
@@ -70,7 +68,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 		}
 
 		// Store checkout context because we need it later again
-		err = s.checkoutStore.Put(c, basketUID, checkoutmodel.CheckoutContext{
+		err = s.checkoutStore.Put(c, basketUID, CheckoutContext{
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,
@@ -98,12 +96,12 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 		return nil, err
 	}
 
-	return &checkoutmodel.CheckoutPageInfo{
+	return &CheckoutPageInfo{
 		Environment:     s.environment,
 		ClientKey:       s.clientKey,
 		MerchantAccount: s.merchantAccount,
 		BasketUID:       basketUID,
-		Amount: checkoutmodel.Amount{
+		Amount: Amount{
 			Currency: req.Amount.Currency,
 			Value:    req.Amount.Value,
 		},
@@ -127,10 +125,10 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 }
 
 // resumeCheckout is called when the shopper has finished the checkout process
-func (s *service) resumeCheckout(c context.Context, basketUID string) (*checkoutmodel.CheckoutPageInfo, error) {
+func (s *service) resumeCheckout(c context.Context, basketUID string) (*CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
 
-	checkoutContext := checkoutmodel.CheckoutContext{}
+	checkoutContext := CheckoutContext{}
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
@@ -148,7 +146,7 @@ func (s *service) resumeCheckout(c context.Context, basketUID string) (*checkout
 		return nil, err
 	}
 
-	return &checkoutmodel.CheckoutPageInfo{
+	return &CheckoutPageInfo{
 		Environment:     s.environment,
 		MerchantAccount: s.merchantAccount,
 		ClientKey:       s.clientKey,
@@ -163,7 +161,7 @@ func (s *service) finalizeCheckout(c context.Context, basketUID string, status s
 
 	now := s.nower.Now()
 
-	var checkoutContext checkoutmodel.CheckoutContext
+	var checkoutContext CheckoutContext
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
@@ -212,7 +210,7 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *service) webhookNotification(c context.Context, username, password string, event checkoutmodel.WebhookNotification) error {
+func (s *service) webhookNotification(c context.Context, username, password string, event WebhookNotification) error {
 
 	// TODO check username+password to make sure notification originates from Adyen
 
@@ -229,14 +227,14 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 	return nil
 }
 
-func (s *service) processNotificationItem(c context.Context, item checkoutmodel.NotificationItem) error {
+func (s *service) processNotificationItem(c context.Context, item NotificationItem) error {
 	basketUID := item.NotificationRequestItem.MerchantReference
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received on basket %s: %+v", item.NotificationRequestItem.MerchantReference, item)
 
 	now := s.nower.Now()
 
-	var checkoutContext checkoutmodel.CheckoutContext
+	var checkoutContext CheckoutContext
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
@@ -49,7 +48,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
+func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkout")
 	s, err := newCommandService(cfg, payer, checkoutStore, vault, nower, logger, pub)
 	if err != nil {
@@ -172,7 +171,7 @@ func (s webService) webhookNotification() http.HandlerFunc {
 
 		username, password, _ := r.BasicAuth()
 
-		event := checkoutmodel.WebhookNotification{}
+		event := WebhookNotification{}
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, fmt.Errorf("error parsing webhook notification event:%s", err))
@@ -181,12 +180,12 @@ func (s webService) webhookNotification() http.HandlerFunc {
 
 		err = s.service.webhookNotification(c, username, password, event)
 		if err != nil {
-			errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
+			errorWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
 				Status: err.Error(),
 			})
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, checkoutmodel.WebhookNotificationResponse{
+		errorWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
 			Status: "[accepted]", // Body containing "[accepted]" is the signal that message has been succesfully processed
 		})
 	}
