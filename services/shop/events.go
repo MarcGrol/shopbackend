@@ -52,11 +52,15 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 			return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", event.CheckoutUID))
 		}
 
-		// Final codes matter!
+		if basket.Done {
+			return nil
+		}
+
 		basket.FinalPaymentEvent = event.Status
 		basket.FinalPaymentStatus = event.Success
 		basket.LastModified = &now
 		basket.PaymentMethod = event.PaymentMethod
+		basket.Done = true
 
 		err = s.basketStore.Put(c, event.CheckoutUID, basket)
 		if err != nil {
