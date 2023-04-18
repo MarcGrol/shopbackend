@@ -37,6 +37,18 @@ func newGcloudStore[T any](c context.Context) (*gcloudStore[T], func(), error) {
 }
 
 func (s *gcloudStore[T]) RunInTransaction(c context.Context, f func(c context.Context) error) error {
+	_, err := s.client.RunInTransaction(c, func(tx *datastore.Transaction) error {
+		ctx := context.WithValue(c, ctxTransactionKey{}, tx)
+		return f(ctx)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *gcloudStore[T]) originalRunInTransaction(c context.Context, f func(c context.Context) error) error {
 	var err error
 	// retry 3 times
 	for i := 1; i <= 3; i++ {
