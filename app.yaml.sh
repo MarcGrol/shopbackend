@@ -4,6 +4,9 @@ cat << Done
 runtime: go120
 service: default
 
+inbound_services:
+- warmup
+
 env_variables:
   LOCATION_ID: "europe-west1"
   QUEUE_NAME: "default"

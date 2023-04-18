@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/services/warmup"
 	"log"
 	"net/http"
 	"os"
@@ -53,6 +54,8 @@ func main() {
 
 	shopServiceCleanup := createShopService(c, router, nower, uuider, eventPublisher)
 	defer shopServiceCleanup()
+
+	createWarmupService(c, router, vault)
 
 	startWebServerBlocking(router)
 }
@@ -161,6 +164,11 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 	checkoutService.RegisterEndpoints(c, router)
 
 	return checkoutStoreCleanup
+}
+
+func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader) {
+	warmupService := warmup.NewService(vault)
+	warmupService.RegisterEndpoints(c, router)
 }
 
 func startWebServerBlocking(router *mux.Router) {
