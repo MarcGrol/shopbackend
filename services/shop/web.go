@@ -7,18 +7,17 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/MarcGrol/shopbackend/lib/mypublisher"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 )
 
 type webService struct {

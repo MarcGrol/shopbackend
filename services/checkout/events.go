@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
-
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 )
 
 func (s *service) Subscribe(c context.Context) error {

@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/MarcGrol/shopbackend/lib/myevents"
-
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
+	"github.com/MarcGrol/shopbackend/lib/myevents"
 )
 
 const (

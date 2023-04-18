@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"os"
 
-	checkout2 "github.com/MarcGrol/shopbackend/services/checkout"
-	oauth2 "github.com/MarcGrol/shopbackend/services/oauth"
-	"github.com/MarcGrol/shopbackend/services/shop"
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
@@ -18,6 +15,9 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/checkout"
+	"github.com/MarcGrol/shopbackend/services/oauth"
+	"github.com/MarcGrol/shopbackend/services/shop"
 )
 
 func main() {
@@ -80,7 +80,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		tokenHostnameVarname = "OAUTH_TOKEN_HOSTNAME"
 	)
 
-	sessionStore, sessionStoreCleanup, err := mystore.New[oauth2.OAuthSessionSetup](c)
+	sessionStore, sessionStoreCleanup, err := mystore.New[oauth.OAuthSessionSetup](c)
 	if err != nil {
 		log.Fatalf("Error creating oauth-session store: %s", err)
 	}
@@ -104,8 +104,8 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		log.Fatalf("missing env-var %s", tokenHostnameVarname)
 	}
 
-	tokenGetter := oauth2.NewOAuthClient(clientID, clientSecret, authHostname, tokenHostname)
-	oauthService := oauth2.NewService(clientID, sessionStore, vault, nower, uuider, tokenGetter, pub)
+	tokenGetter := oauth.NewOAuthClient(clientID, clientSecret, authHostname, tokenHostname)
+	oauthService := oauth.NewService(clientID, sessionStore, vault, nower, uuider, tokenGetter, pub)
 
 	oauthService.RegisterEndpoints(c, router)
 
@@ -141,20 +141,20 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 		log.Fatalf("missing env-var %s", clientKeyVarname)
 	}
 
-	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkout2.CheckoutContext](c)
+	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkout.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
-	cfg := checkout2.Config{
+	cfg := checkout.Config{
 		Environment:     environment,
 		MerchantAccount: merchantAccount,
 		ClientKey:       clientKey,
 		ApiKey:          apiKey,
 	}
 
-	payer := checkout2.NewPayer(environment, apiKey)
+	payer := checkout.NewPayer(environment, apiKey)
 
-	checkoutService, err := checkout2.NewWebService(cfg, payer, checkoutStore, vault, nower, pub)
+	checkoutService, err := checkout.NewWebService(cfg, payer, checkoutStore, vault, nower, pub)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}

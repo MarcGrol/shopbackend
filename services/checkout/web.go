@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
-
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
 
@@ -23,6 +21,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 )
 
 //go:embed templates

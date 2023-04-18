@@ -8,17 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/lib/mypublisher"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
-
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
 var (

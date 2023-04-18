@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
-	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
-
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
 func (s *service) Subscribe(c context.Context) error {

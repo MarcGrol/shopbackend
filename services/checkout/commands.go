@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 )
 
 func (s *service) CreateTopics(c context.Context) error {
