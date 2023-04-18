@@ -41,6 +41,10 @@ func (s *service) getOauthStatus(c context.Context) (OAuthStatus, error) {
 		return OAuthStatus{}, myerrors.NewInternalError(err)
 	}
 
+	return tokenToStatus(token, exists), nil
+}
+
+func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 	return OAuthStatus{
 		ClientID:     token.ClientID,
 		SessionUID:   token.SessionUID,
@@ -49,7 +53,7 @@ func (s *service) getOauthStatus(c context.Context) (OAuthStatus, error) {
 		LastModified: token.LastModified,
 		Status:       exists,
 		ValidUntil:   token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn)),
-	}, nil
+	}
 }
 
 func (s *service) start(c context.Context, originalReturnURL string, hostname string) (string, error) {
@@ -185,11 +189,12 @@ func createCompletionURL(hostname string) string {
 	return fmt.Sprintf("%s/oauth/done", hostname)
 }
 
-func (s *service) refreshToken(c context.Context) error {
+func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 
 	now := s.nower.Now()
 	uid := s.uuider.Create()
 
+	newToken := myvault.Token{}
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
 		currentToken, exists, err := s.vault.Get(c, myvault.CurrentToken)
 		if err != nil {
@@ -210,8 +215,7 @@ func (s *service) refreshToken(c context.Context) error {
 
 		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", newTokenResp)
 
-		// Update token
-		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+		newToken = myvault.Token{
 			ClientID:     currentToken.ClientID,
 			SessionUID:   currentToken.SessionUID,
 			Scopes:       currentToken.Scopes,
@@ -220,7 +224,9 @@ func (s *service) refreshToken(c context.Context) error {
 			AccessToken:  newTokenResp.AccessToken,
 			RefreshToken: newTokenResp.RefreshToken,
 			ExpiresIn:    newTokenResp.ExpiresIn,
-		})
+		}
+		// Update token
+		err = s.vault.Put(c, myvault.CurrentToken, newToken)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}
@@ -239,8 +245,8 @@ func (s *service) refreshToken(c context.Context) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return newToken, err
 	}
 
-	return nil
+	return newToken, nil
 }

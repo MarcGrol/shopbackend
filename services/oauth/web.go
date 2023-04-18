@@ -129,20 +129,14 @@ func (s *webService) refreshTokenPage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		err := s.service.refreshToken(c)
+		token, err := s.service.refreshToken(c)
 		if err != nil {
 			errorWriter.WriteError(c, w, 4, err)
 			return
 		}
 
-		oauthStatus, err := s.service.getOauthStatus(c)
-		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
-			return
-		}
-
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		err = adminPageTemplate.Execute(w, oauthStatus)
+		err = adminPageTemplate.Execute(w, tokenToStatus(token, true))
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
