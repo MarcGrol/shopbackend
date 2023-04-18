@@ -135,6 +135,17 @@ func (s *webService) refreshTokenPage() http.HandlerFunc {
 			return
 		}
 
-		s.adminPage()
+		oauthStatus, err := s.service.getOauthStatus(c)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		err = adminPageTemplate.Execute(w, oauthStatus)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			return
+		}
 	}
 }
