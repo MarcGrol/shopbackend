@@ -44,6 +44,7 @@ func (s *gcloudStore[T]) RunInTransaction(c context.Context, f func(c context.Co
 		err = s.runInTransaction(c, f)
 		if err != nil {
 			if err == datastore.ErrConcurrentTransaction {
+				log.Printf("Concurrent transaction error, retrying (%d of %d): %s", i, 3, err)
 				// force retry: this approach requires idempotency of the business logic
 				continue
 			}
@@ -59,7 +60,8 @@ func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Co
 	// Start transaction
 	t, err := s.client.NewTransaction(c)
 	if err != nil {
-		return fmt.Errorf("error creating transaction: %s", err)
+		fmt.Printf("error creating transaction: %s", err)
+		return err
 	}
 
 	//log.Printf("Start transaction %p", t)
@@ -74,7 +76,8 @@ func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Co
 		// Rollback
 		rollbackError := t.Rollback()
 		if rollbackError != nil {
-			return fmt.Errorf("error rolling-back transaction: %s", rollbackError)
+			fmt.Printf("error rolling-back transaction %p: %s", t, rollbackError)
+			return err
 		}
 
 		return err
@@ -83,7 +86,8 @@ func (s *gcloudStore[T]) runInTransaction(c context.Context, f func(c context.Co
 	// Commit
 	_, err = t.Commit()
 	if err != nil {
-		return fmt.Errorf("error committing transaction: %s", err)
+		fmt.Printf("error committing transaction %p: %s", t, err)
+		return err
 	}
 
 	//log.Printf("Committed transaction %p", t)

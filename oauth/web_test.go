@@ -130,7 +130,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(ctrl)
+		ctx, router, storer, vault, nower, uuider, oauthClient, publisher := setup(ctrl)
 
 		// given
 		storer.Put(ctx, "abcdef", OAuthSessionSetup{
@@ -165,7 +165,9 @@ func TestOauth(t *testing.T) {
 			RefreshToken: "rst456new",
 		}, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		uuider.EXPECT().Create().Return("xyz")
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+			UID:          "xyz",
 			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
 			AccessToken:  "abc123new",
@@ -173,6 +175,7 @@ func TestOauth(t *testing.T) {
 			ExpiresIn:    123456,
 		}).Return(nil)
 		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthTokenRefreshCompleted{
+			UID:      "xyz",
 			ClientID: "client12345",
 			Success:  true,
 		}).Return(nil)
