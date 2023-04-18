@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
+
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
 
@@ -47,12 +49,13 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
+func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[checkoutmodel.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkout")
-	s, err := newService(cfg, payer, checkoutStore, vault, nower, logger, pub)
+	s, err := newCommandService(cfg, payer, checkoutStore, vault, nower, logger, pub)
 	if err != nil {
 		return nil, err
 	}
+
 	return &webService{
 		logger:  logger,
 		service: s,
@@ -72,10 +75,15 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	// Final notification called by Adyen at a later time
 	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 
+	err := s.service.CreateTopics(c)
+	if err != nil {
+		return err
+	}
+
 	// Listen for token refresh
 	router.HandleFunc("/api/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
-	err := s.service.subscribe(context.Background())
+	err = s.service.Subscribe(context.Background())
 	if err != nil {
 		return err
 	}
@@ -189,22 +197,14 @@ func (s webService) handleEventEnvelope() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		envelope, err := mypublisher.ParseEventEnvelope(r.Body)
+		err := oauthevents.DispatchEvent(c, r.Body, s.service)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
-			return
-		}
-
-		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %s: %+v", envelope.String(), envelope.EventPayload)
-
-		err = s.service.handleEvent(c, envelope)
-		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
+			errorWriter.WriteError(c, w, 4, err)
 			return
 		}
 
 		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
-			Message: "Successfully processed token update",
+			Message: "Successfully processed event",
 		})
 	}
 }

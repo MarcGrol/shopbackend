@@ -1,10 +1,57 @@
 package checkoutevents
 
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+
+	"github.com/MarcGrol/shopbackend/lib/myevents"
+
+	"github.com/MarcGrol/shopbackend/lib/myerrors"
+)
+
 const (
 	TopicName             = "checkout"
-	CheckoutStartedName   = TopicName + ".started"
-	CheckoutCompletedName = TopicName + ".completed"
+	checkoutStartedName   = TopicName + ".started"
+	checkoutCompletedName = TopicName + ".completed"
 )
+
+type CheckoutEventService interface {
+	Subscribe(c context.Context) error
+	OnCheckoutStarted(c context.Context, topic string, event CheckoutStarted) error
+	OnCheckoutCompleted(c context.Context, topic string, event CheckoutCompleted) error
+}
+
+func DispatchEvent(c context.Context, reader io.Reader, service CheckoutEventService) error {
+	envelope, err := myevents.ParseEventEnvelope(reader)
+	if err != nil {
+		return myerrors.NewInvalidInputError(err)
+	}
+
+	switch envelope.EventTypeName {
+	case checkoutStartedName:
+		{
+			event := CheckoutStarted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnCheckoutStarted(c, envelope.Topic, event)
+		}
+	case checkoutCompletedName:
+		{
+			event := CheckoutCompleted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnCheckoutCompleted(c, envelope.Topic, event)
+		}
+	default:
+		return myerrors.NewNotImplementedError(fmt.Errorf(envelope.EventTypeName))
+	}
+}
 
 type CheckoutStarted struct {
 	CheckoutUID   string
@@ -15,7 +62,7 @@ type CheckoutStarted struct {
 }
 
 func (e CheckoutStarted) GetEventTypeName() string {
-	return CheckoutStartedName
+	return checkoutStartedName
 }
 
 func (e CheckoutStarted) GetAggregateName() string {
@@ -30,7 +77,7 @@ type CheckoutCompleted struct {
 }
 
 func (e CheckoutCompleted) GetEventTypeName() string {
-	return CheckoutCompletedName
+	return checkoutCompletedName
 }
 
 func (e CheckoutCompleted) GetAggregateName() string {

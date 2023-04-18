@@ -2,7 +2,7 @@ package mypubsub
 
 import "context"
 
-//go:generate mockgen -source=api.go -package gpubsub -destination pubsub_mock.go PubSub
+//go:generate mockgen -source=pubsub_api.go -package mypubsub -destination pubsub_mock.go PubSub
 type PubSub interface {
 	Publish(c context.Context, topic string, data string) error
 	CreateTopic(c context.Context, topic string) error

@@ -1,4 +1,4 @@
-package mypublisher
+package myevents
 
 import (
 	"encoding/json"

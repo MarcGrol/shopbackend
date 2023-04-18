@@ -32,14 +32,14 @@ func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 	}
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
+func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/oauth/admin", s.adminPage()).Methods("GET")
 
 	router.HandleFunc("/oauth/start", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
 	router.HandleFunc("/oauth/refresh", s.refreshTokenPage()).Methods("GET")
 
-	err := s.service.subscribe(context.Background())
+	err := s.service.CreateTopics(context.Background())
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func init() {
 	adminPageTemplate = template.Must(template.ParseFS(templateFolder, "templates/admin.html"))
 }
 
-func (s webService) adminPage() http.HandlerFunc {
+func (s *webService) adminPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -76,7 +76,7 @@ func (s webService) adminPage() http.HandlerFunc {
 		}
 	}
 }
-func (s webService) startPage() http.HandlerFunc {
+func (s *webService) startPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -97,7 +97,7 @@ func (s webService) startPage() http.HandlerFunc {
 	}
 }
 
-func (s webService) donePage() http.HandlerFunc {
+func (s *webService) donePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -124,7 +124,7 @@ func (s webService) donePage() http.HandlerFunc {
 	}
 }
 
-func (s webService) refreshTokenPage() http.HandlerFunc {
+func (s *webService) refreshTokenPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)

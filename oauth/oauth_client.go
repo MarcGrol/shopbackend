@@ -35,7 +35,7 @@ type GetTokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-//go:generate mockgen -source=oauthClient.go -package oauth -destination oauthClient_mock.go OauthClient
+//go:generate mockgen -source=oauth_client.go -package oauth -destination oauth_client_mock.go OauthClient
 type OauthClient interface {
 	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)

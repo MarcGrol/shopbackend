@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/MarcGrol/shopbackend/lib/myevents"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 )
 
@@ -20,12 +21,12 @@ func newEnveloper(nower mytime.Nower) enveloper {
 	}
 }
 
-func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
+func (e enveloper) do(topic string, event myevents.Event) (myevents.EventEnvelope, error) {
 	jsonPayload, err := json.Marshal(event)
 	if err != nil {
-		return EventEnvelope{}, fmt.Errorf("error marshalling request-payload: %s", err)
+		return myevents.EventEnvelope{}, fmt.Errorf("error marshalling request-payload: %s", err)
 	}
-	envelope := EventEnvelope{
+	envelope := myevents.EventEnvelope{
 		Topic:         topic,
 		AggregateUID:  event.GetAggregateName(),
 		EventTypeName: event.GetEventTypeName(),
@@ -36,7 +37,7 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 	// In order to be idempotent, we do NOT use an uuid to identify the event
 	envelope.UID, err = checksum(envelope)
 	if err != nil {
-		return EventEnvelope{}, fmt.Errorf("error checksumming request-payload: %s", err)
+		return myevents.EventEnvelope{}, fmt.Errorf("error checksumming request-payload: %s", err)
 	}
 	// In order to be idempotent, we exclude timestamp from the checksum
 	envelope.CreatedAt = e.nower.Now()
@@ -44,7 +45,7 @@ func (e enveloper) do(topic string, event Event) (EventEnvelope, error) {
 	return envelope, nil
 }
 
-func checksum(envlp EventEnvelope) (string, error) {
+func checksum(envlp myevents.EventEnvelope) (string, error) {
 	asJson, err := json.Marshal(envlp)
 	if err != nil {
 		return "", err

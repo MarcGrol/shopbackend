@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/MarcGrol/shopbackend/lib/myevents"
+
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
@@ -19,14 +21,14 @@ import (
 )
 
 type transactionalPublisher struct {
-	outbox    mystore.Store[EventEnvelope]
+	outbox    mystore.Store[myevents.EventEnvelope]
 	queue     myqueue.TaskQueuer
 	enveloper enveloper
 	pubsub    mypubsub.PubSub
 }
 
 func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower) (*transactionalPublisher, func(), error) {
-	store, storeCleanup, err := mystore.New[EventEnvelope](c)
+	store, storeCleanup, err := mystore.New[myevents.EventEnvelope](c)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,7 +55,7 @@ func (p transactionalPublisher) RegisterEndpoints(c context.Context, router *mux
 	router.HandleFunc("/pubsub/{topic}/{uid}", p.processTriggerPage()).Methods("PUT")
 }
 
-func (p transactionalPublisher) Publish(c context.Context, topic string, event Event) error {
+func (p transactionalPublisher) Publish(c context.Context, topic string, event myevents.Event) error {
 	envelope, err := p.enveloper.do(topic, event)
 	if err != nil {
 		return fmt.Errorf("error creating envelope: %s", err)

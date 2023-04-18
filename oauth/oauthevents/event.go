@@ -1,12 +1,79 @@
 package oauthevents
 
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+
+	"github.com/MarcGrol/shopbackend/lib/myevents"
+
+	"github.com/MarcGrol/shopbackend/lib/myerrors"
+)
+
 const (
 	TopicName                       = "oauth"
-	OAuthSessionSetupStartedName    = TopicName + ".sessionSetup.started"
-	OAuthSessionSetupCompletedName  = TopicName + ".sessionSetup.completed"
-	OAuthTokenCreationCompletedName = TopicName + ".tokenCreation.completed"
-	OAuthTokenRefreshCompletedName  = TopicName + ".tokenRefresh.completed"
+	oauthSessionSetupStartedName    = TopicName + ".sessionSetup.started"
+	oauthSessionSetupCompletedName  = TopicName + ".sessionSetup.completed"
+	oauthTokenCreationCompletedName = TopicName + ".tokenCreation.completed"
+	oauthTokenRefreshCompletedName  = TopicName + ".tokenRefresh.completed"
 )
+
+type OAuthEventService interface {
+	Subscribe(c context.Context) error
+	OnOAuthSessionSetupStarted(c context.Context, topic string, event OAuthSessionSetupStarted) error
+	OnOAuthSessionSetupCompleted(c context.Context, topic string, event OAuthSessionSetupCompleted) error
+	OnOAuthTokenCreationCompleted(c context.Context, topic string, event OAuthTokenCreationCompleted) error
+	OnOAuthTokenRefreshCompleted(c context.Context, topic string, event OAuthTokenRefreshCompleted) error
+}
+
+func DispatchEvent(c context.Context, reader io.Reader, service OAuthEventService) error {
+	envelope, err := myevents.ParseEventEnvelope(reader)
+	if err != nil {
+		return myerrors.NewInvalidInputError(err)
+	}
+
+	switch envelope.EventTypeName {
+	case oauthSessionSetupStartedName:
+		{
+			event := OAuthSessionSetupStarted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnOAuthSessionSetupStarted(c, envelope.Topic, event)
+		}
+	case oauthSessionSetupCompletedName:
+		{
+			event := OAuthSessionSetupCompleted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnOAuthSessionSetupCompleted(c, envelope.Topic, event)
+		}
+	case oauthTokenCreationCompletedName:
+		{
+			event := OAuthTokenCreationCompleted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnOAuthTokenCreationCompleted(c, envelope.Topic, event)
+		}
+	case oauthTokenRefreshCompletedName:
+		{
+			event := OAuthTokenRefreshCompleted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnOAuthTokenRefreshCompleted(c, envelope.Topic, event)
+		}
+	default:
+		return myerrors.NewNotImplementedError(fmt.Errorf(envelope.EventTypeName))
+	}
+}
 
 type OAuthSessionSetupStarted struct {
 	ClientID   string
@@ -15,7 +82,7 @@ type OAuthSessionSetupStarted struct {
 }
 
 func (e OAuthSessionSetupStarted) GetEventTypeName() string {
-	return OAuthSessionSetupStartedName
+	return oauthSessionSetupStartedName
 }
 
 func (e OAuthSessionSetupStarted) GetAggregateName() string {
@@ -30,7 +97,7 @@ type OAuthSessionSetupCompleted struct {
 }
 
 func (e OAuthSessionSetupCompleted) GetEventTypeName() string {
-	return OAuthSessionSetupCompletedName
+	return oauthSessionSetupCompletedName
 }
 
 func (e OAuthSessionSetupCompleted) GetAggregateName() string {
@@ -45,7 +112,7 @@ type OAuthTokenCreationCompleted struct {
 }
 
 func (e OAuthTokenCreationCompleted) GetEventTypeName() string {
-	return OAuthTokenCreationCompletedName
+	return oauthTokenCreationCompletedName
 }
 
 func (e OAuthTokenCreationCompleted) GetAggregateName() string {
@@ -60,7 +127,7 @@ type OAuthTokenRefreshCompleted struct {
 }
 
 func (e OAuthTokenRefreshCompleted) GetEventTypeName() string {
-	return OAuthTokenRefreshCompletedName
+	return oauthTokenRefreshCompletedName
 }
 
 func (e OAuthTokenRefreshCompleted) GetAggregateName() string {

@@ -248,7 +248,7 @@ func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store
 	payer := NewMockPayer(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
 
-	sut, _ := NewService(Config{
+	sut, _ := NewWebService(Config{
 		Environment:     "Test",
 		MerchantAccount: "MyMerchantAccount",
 		ClientKey:       "my_client_key",

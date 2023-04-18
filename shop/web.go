@@ -7,13 +7,14 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
+
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
@@ -47,7 +48,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	// Subsriptions arrive here as events
 	router.HandleFunc("/api/basket/event", s.handleEventEnvelope()).Methods("POST")
 
-	return s.service.subscribe(c)
+	return s.service.Subscribe(c)
 }
 
 //go:embed templates
@@ -62,7 +63,7 @@ func init() {
 	basketDetailPageTemplate = template.Must(template.ParseFS(templateFolder, "templates/basket_detail.html"))
 }
 
-func (s webService) basketListPage() http.HandlerFunc {
+func (s *webService) basketListPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -82,7 +83,7 @@ func (s webService) basketListPage() http.HandlerFunc {
 	}
 }
 
-func (s webService) createNewBasketPage() http.HandlerFunc {
+func (s *webService) createNewBasketPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -98,7 +99,7 @@ func (s webService) createNewBasketPage() http.HandlerFunc {
 	}
 }
 
-func (s webService) basketDetailsPage() http.HandlerFunc {
+func (s *webService) basketDetailsPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -120,7 +121,7 @@ func (s webService) basketDetailsPage() http.HandlerFunc {
 	}
 }
 
-func (s webService) checkoutFinalized() http.HandlerFunc {
+func (s *webService) checkoutFinalized() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -139,27 +140,19 @@ func (s webService) checkoutFinalized() http.HandlerFunc {
 	}
 }
 
-func (s webService) handleEventEnvelope() http.HandlerFunc {
+func (s *webService) handleEventEnvelope() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		envelope, err := mypublisher.ParseEventEnvelope(r.Body)
+		err := checkoutevents.DispatchEvent(c, r.Body, s.service)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
-			return
-		}
-
-		s.logger.Log(c, envelope.AggregateUID, mylog.SeverityInfo, "Received event envelope %s: %+v", envelope.String(), envelope.EventPayload)
-
-		err = s.service.handleEvent(c, envelope)
-		if err != nil {
-			errorWriter.WriteError(c, w, 4, myerrors.NewInvalidInputError(err))
+			errorWriter.WriteError(c, w, 4, err)
 			return
 		}
 
 		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
-			Message: "Successfully processed token update",
+			Message: "Successfully processed event",
 		})
 	}
 }

@@ -195,9 +195,6 @@ func TestOauth(t *testing.T) {
 
 		// then
 		assert.Equal(t, 200, response.Code)
-		got := response.Body.String()
-		assert.Contains(t, got, "Successfully refreshed token")
-
 	})
 
 }

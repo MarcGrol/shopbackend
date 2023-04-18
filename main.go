@@ -156,7 +156,7 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 
 	payer := checkout.NewPayer(environment, apiKey)
 
-	checkoutService, err := checkout.NewService(cfg, payer, checkoutStore, vault, nower, pub)
+	checkoutService, err := checkout.NewWebService(cfg, payer, checkoutStore, vault, nower, pub)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}
