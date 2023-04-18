@@ -49,7 +49,7 @@
             </tbody>
         </table>
         {{if .IsNotPaid}}
-        <form action="/checkout/{{.UID}}" method="POST">
+        <form action="/services/checkout/{{.UID}}" method="POST">
             <input type="hidden" name="returnUrl" value="{{.ReturnURL}}"/>
             <input type="hidden" name="amount" value="{{.TotalPrice}}"/>
             <input type="hidden" name="currency" value="{{.Currency}}"/>

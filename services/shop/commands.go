@@ -6,10 +6,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/shop/shopmodel"
+
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/shop/shopmodel"
 )
 
 func (s *service) listBaskets(c context.Context) ([]shopmodel.Basket, error) {

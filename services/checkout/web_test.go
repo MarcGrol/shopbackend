@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
+
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"

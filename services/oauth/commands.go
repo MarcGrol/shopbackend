@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
 )
 
 const (

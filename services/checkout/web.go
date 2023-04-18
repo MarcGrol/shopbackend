@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/oauth/oauthevents"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
 
-	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"

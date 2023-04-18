@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutmodel"
+
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 
-	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/checkout/checkoutmodel"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"

@@ -113,17 +113,17 @@
     function handleServerResponse(result) {
         switch (result.resultCode) {
             case "Authorised":
-                window.location.href = "/checkout/{{.BasketUID}}/status/success";
+                window.location.href = "../{{.BasketUID}}/status/success";
                 break;
             case "Pending":
             case "Received":
-                window.location.href = "/checkout/{{.BasketUID}}/status/pending";
+                window.location.href = "../{{.BasketUID}}/status/pending";
                 break;
             case "Refused":
-                window.location.href = "/checkout/{{.BasketUID}}/status/failed";
+                window.location.href = "../{{.BasketUID}}/status/failed";
                 break;
             default:
-                window.location.href = "/checkout/{{.BasketUID}}/status/error";
+                window.location.href = "../{{.BasketUID}}/status/error";
                 break;
         }
     }

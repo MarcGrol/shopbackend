@@ -3,7 +3,8 @@ package mypublisher
 import (
 	"encoding/json"
 
-	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+
 	"github.com/MarcGrol/shopbackend/lib/myevents"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 )
