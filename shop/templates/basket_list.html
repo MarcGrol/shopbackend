@@ -10,9 +10,8 @@
 <div class="container">
     <h1>My webshop</h1>
     <div class="row">
-        <form action="/oauth/start" method="GET">
-            <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
-            <button type="submit" class="btn btn-secondary">Start oauth session-setup</button>
+        <form action="/oauth/admin" method="GET">
+            <button type="submit" class="btn btn-secondary">Oauth admin</button>
         </form>
     </div>
 
@@ -30,6 +29,7 @@
         <th scope="col">TotalPrice</th>
         <th scope="col">Initial status</th>
         <th scope="col">Final status</th>
+        <th scope="col">Payment method</th>
     </tr>
     </thead>
     <tbody>
@@ -40,6 +40,7 @@
             <td>{{.GetPriceInCurrency}}</td>
             <td>{{.InitialPaymentStatus}}</td>
             <td>{{.FinalPaymentEvent}}={{.FinalPaymentStatus}} </td>
+            <td>{{.PaymentMethod}} </td>
         </tr>
     {{end}}
 </tbody>

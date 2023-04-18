@@ -42,6 +42,10 @@
                     <td>Final status</td>
                     <td>{{.FinalPaymentEvent}}={{.FinalPaymentStatus}}</td>
                 </tr>
+                <tr>
+                    <td>Payment method</td>
+                    <td>{{.PaymentMethod}}</td>
+                </tr>
             </tbody>
         </table>
         {{if .IsNotPaid}}

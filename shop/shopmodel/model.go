@@ -46,6 +46,7 @@ type Basket struct {
 	InitialPaymentStatus string
 	FinalPaymentEvent    string
 	FinalPaymentStatus   bool
+	PaymentMethod        string
 	ReturnURL            string
 }
 

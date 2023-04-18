@@ -34,7 +34,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -59,7 +59,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		ctx, router, storer, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -82,7 +82,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		_, router, _, _, _, _ := setup(ctrl)
+		_, router, _, _, _ := setup(ctrl)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
@@ -100,7 +100,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, uuider, _ := setup(ctrl)
+		ctx, router, storer, nower, uuider := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -131,7 +131,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, _ := setup(ctrl)
+		ctx, router, storer, nower, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -153,7 +153,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, _ := setup(ctrl)
+		ctx, router, storer, nower, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -177,15 +177,14 @@ func TestBasketService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[shopmodel.Basket](c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
-	publisher := mypublisher.NewMockPublisher(ctrl)
-	sut := NewService(storer, nower, uuider, publisher)
+	sut := NewService(storer, nower, uuider)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, nower, uuider, publisher
+	return c, router, storer, nower, uuider
 }

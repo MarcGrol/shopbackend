@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"context"
-
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -77,8 +76,8 @@ func TestOauth(t *testing.T) {
 
 		// given
 		storer.Put(ctx, "abcdef", OAuthSessionSetup{
-			UID:       "abcdef",
 			ClientID:  "client12345",
+			UID:       "abcdef",
 			Scopes:    exampleScopes,
 			ReturnURL: "http://localhost:8888/basket",
 			Verifier:  "exampleHash",
@@ -92,8 +91,11 @@ func TestOauth(t *testing.T) {
 		}).Return(exampleResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
-			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
+			SessionUID:   "abcdef",
+			Scopes:       exampleScopes,
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
 			ExpiresIn:    12345,
@@ -149,8 +151,10 @@ func TestOauth(t *testing.T) {
 			},
 		})
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken).Return(myvault.Token{
-			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
+			SessionUID:   "xyz",
+			Scopes:       exampleScopes,
+			CreatedAt:    mytime.ExampleTime,
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
 			ExpiresIn:    12345,
@@ -167,9 +171,11 @@ func TestOauth(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("xyz")
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
-			UID:          "xyz",
-			CreatedAt:    mytime.ExampleTime,
 			ClientID:     "client12345",
+			SessionUID:   "xyz",
+			Scopes:       exampleScopes,
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
 			AccessToken:  "abc123new",
 			RefreshToken: "rst456new",
 			ExpiresIn:    123456,

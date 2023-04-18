@@ -2,7 +2,9 @@ package oauth
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -31,6 +33,8 @@ func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 }
 
 func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
+	router.HandleFunc("/oauth/admin", s.adminPage()).Methods("GET")
+
 	router.HandleFunc("/oauth/start", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
 	router.HandleFunc("/oauth/refresh", s.refreshTokenPage()).Methods("GET")
@@ -43,6 +47,35 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	return nil
 }
 
+//go:embed templates
+var templateFolder embed.FS
+var (
+	adminPageTemplate *template.Template
+)
+
+func init() {
+	adminPageTemplate = template.Must(template.ParseFS(templateFolder, "templates/admin.html"))
+}
+
+func (s webService) adminPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		oauthStatus, err := s.service.getOauthStatus(c)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		err = adminPageTemplate.Execute(w, oauthStatus)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			return
+		}
+	}
+}
 func (s webService) startPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)

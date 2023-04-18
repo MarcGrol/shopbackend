@@ -13,3 +13,13 @@ type OAuthSessionSetup struct {
 	TokenData    *GetTokenResponse
 	Done         bool
 }
+
+type OAuthStatus struct {
+	ClientID     string
+	SessionUID   string
+	Scopes       string
+	CreatedAt    time.Time
+	LastModified *time.Time
+	ValidUntil   time.Time
+	Status       bool
+}

@@ -10,9 +10,11 @@ const (
 )
 
 type Token struct {
-	UID          string
-	CreatedAt    time.Time
 	ClientID     string
+	SessionUID   string
+	Scopes       string
+	CreatedAt    time.Time
+	LastModified *time.Time
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int

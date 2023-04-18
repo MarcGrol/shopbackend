@@ -179,6 +179,7 @@ func (s service) handleCheckoutCompletedEvent(c context.Context, event checkoute
 		basket.FinalPaymentEvent = event.Status
 		basket.FinalPaymentStatus = event.Success
 		basket.LastModified = &now
+		basket.PaymentMethod = event.PaymentMethod
 
 		err = s.basketStore.Put(c, event.CheckoutUID, basket)
 		if err != nil {

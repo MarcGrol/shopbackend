@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
@@ -57,6 +58,25 @@ func (s service) subscribe(c context.Context) error {
 	}
 
 	return nil
+}
+
+func (s service) getOauthStatus(c context.Context) (OAuthStatus, error) {
+	s.logger.Log(c, "", mylog.SeverityInfo, "Get oauth status")
+
+	token, exists, err := s.vault.Get(c, myvault.CurrentToken)
+	if err != nil {
+		return OAuthStatus{}, myerrors.NewInternalError(err)
+	}
+
+	return OAuthStatus{
+		ClientID:     token.ClientID,
+		SessionUID:   token.SessionUID,
+		Scopes:       token.Scopes,
+		CreatedAt:    token.CreatedAt,
+		LastModified: token.LastModified,
+		Status:       exists,
+		ValidUntil:   token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn)),
+	}, nil
 }
 
 func (s service) start(c context.Context, originalReturnURL string, hostname string) (string, error) {
@@ -156,8 +176,11 @@ func (s service) done(c context.Context, sessionUID string, code string, hostnam
 
 		// Store token in vault
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
-			CreatedAt:    now,
 			ClientID:     session.ClientID,
+			SessionUID:   session.UID,
+			Scopes:       session.Scopes,
+			CreatedAt:    session.CreatedAt,
+			LastModified: session.LastModified,
 			AccessToken:  tokenResp.AccessToken,
 			RefreshToken: tokenResp.RefreshToken,
 			ExpiresIn:    tokenResp.ExpiresIn,
@@ -216,9 +239,11 @@ func (s service) refreshToken(c context.Context) error {
 
 		// Update token
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
-			UID:          uid,
-			CreatedAt:    now,
 			ClientID:     currentToken.ClientID,
+			SessionUID:   currentToken.SessionUID,
+			Scopes:       currentToken.Scopes,
+			CreatedAt:    currentToken.CreatedAt,
+			LastModified: &now,
 			AccessToken:  newTokenResp.AccessToken,
 			RefreshToken: newTokenResp.RefreshToken,
 			ExpiresIn:    newTokenResp.ExpiresIn,
