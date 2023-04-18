@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/shop/shopevents"
+
 	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 
@@ -34,7 +36,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -59,7 +61,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		ctx, router, storer, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -82,7 +84,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		_, router, _, _, _ := setup(ctrl)
+		_, router, _, _, _, _ := setup(ctrl)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
@@ -100,7 +102,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, uuider := setup(ctrl)
+		ctx, router, storer, nower, uuider, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -131,7 +133,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _ := setup(ctrl)
+		ctx, router, storer, nower, _, _ := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -153,11 +155,13 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _ := setup(ctrl)
+		ctx, router, storer, nower, _, publisher := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName,
+			shopevents.BasketFinalized{BasketUID: basket1.UID})
 
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(mypublisher.CreatePubsubMessage(
@@ -177,14 +181,15 @@ func TestBasketService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer) {
+func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[shopmodel.Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[shopmodel.Basket](c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
-	sut := NewService(storer, nower, uuider)
+	publisher := mypublisher.NewMockPublisher(ctrl)
+	sut := NewService(storer, nower, uuider, publisher)
 	router := mux.NewRouter()
 	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, nower, uuider
+	return c, router, storer, nower, uuider, publisher
 }

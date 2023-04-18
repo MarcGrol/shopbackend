@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MarcGrol/shopbackend/shop/shopevents"
+
 	"github.com/MarcGrol/shopbackend/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
@@ -18,9 +20,9 @@ func (s *service) Subscribe(c context.Context) error {
 	}
 	defer cleanup()
 
-	err = client.CreateTopic(c, checkoutevents.TopicName)
+	err = client.CreateTopic(c, shopevents.TopicName)
 	if err != nil {
-		return fmt.Errorf("error creating topic %s: %s", checkoutevents.TopicName, err)
+		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
 	}
 
 	err = client.Subscribe(c, oauthevents.TopicName, "https://www.marcgrolconsultancy.nl/basket/event")
@@ -61,6 +63,12 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 			return myerrors.NewInternalError(err)
 		}
 
+		err = s.publisher.Publish(c, shopevents.TopicName, shopevents.BasketFinalized{
+			BasketUID: event.CheckoutUID},
+		)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
 		return nil
 	})
 	if err != nil {

@@ -53,21 +53,21 @@ func main() {
 	checkoutServiceCleanup := createCheckoutService(c, router, vault, nower, eventPublisher)
 	defer checkoutServiceCleanup()
 
-	shopServiceCleanup := createShopService(c, router, nower, uuider)
+	shopServiceCleanup := createShopService(c, router, nower, uuider, eventPublisher)
 	defer shopServiceCleanup()
 
 	startWebServerBlocking(router)
 }
 
 func createShopService(c context.Context, router *mux.Router, nower mytime.Nower,
-	uuider myuuid.UUIDer) func() {
+	uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
 
 	basketStore, basketstoreCleanup, err := mystore.New[shopmodel.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}
 
-	basketService := shop.NewService(basketStore, nower, uuider)
+	basketService := shop.NewService(basketStore, nower, uuider, pub)
 	basketService.RegisterEndpoints(c, router)
 
 	return basketstoreCleanup
