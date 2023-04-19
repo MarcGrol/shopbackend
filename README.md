@@ -19,7 +19,7 @@ Example app that demonstrates how Adyen OAuth and drop-in checkout works
     cp app_example.yaml app.yaml # and set env-vars to the right values
     
     # Perform the actual deployment
-    gcloud app deploy app.yaml --version version1 --quiet
+    gcloud app deploy app.yaml index.yaml cron.yaml --quiet
 
 ## Overview of architecture
 
