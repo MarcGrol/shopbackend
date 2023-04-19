@@ -3,13 +3,13 @@ package shop
 import (
 	"context"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 	"sort"
 	"time"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
 func (s *service) listBaskets(c context.Context) ([]Basket, error) {
