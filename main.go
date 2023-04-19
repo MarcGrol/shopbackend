@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/services/warmup"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/MarcGrol/shopbackend/services/checkout"
 	"github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/shop"
+	"github.com/MarcGrol/shopbackend/services/warmup"
 )
 
 func main() {
