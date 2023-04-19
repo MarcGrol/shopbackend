@@ -51,7 +51,7 @@ func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 		CreatedAt:    token.CreatedAt,
 		LastModified: token.LastModified,
 		Status:       exists,
-		ValidUntil:   token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn)),
+		ValidUntil:   token.LastModified.Add(time.Second * time.Duration(token.ExpiresIn)),
 	}
 }
 
@@ -71,12 +71,13 @@ func (s *service) start(c context.Context, originalReturnURL string, hostname st
 
 		// Create new sessionx
 		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
-			UID:       sessionUID,
-			ClientID:  s.clientID,
-			Scopes:    exampleScopes,
-			ReturnURL: originalReturnURL,
-			Verifier:  codeVerifierValue,
-			CreatedAt: now,
+			UID:          sessionUID,
+			ClientID:     s.clientID,
+			Scopes:       exampleScopes,
+			ReturnURL:    originalReturnURL,
+			Verifier:     codeVerifierValue,
+			CreatedAt:    now,
+			LastModified: &now,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing: %s", err))
