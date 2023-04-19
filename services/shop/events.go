@@ -66,7 +66,7 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 			return myerrors.NewInternalError(err)
 		}
 
-		err = s.publisher.Publish(c, shopevents.TopicName, shopevents.BasketFinalized{
+		err = s.publisher.Publish(c, shopevents.TopicName, shopevents.BasketPaymentCompleted{
 			BasketUID: event.CheckoutUID},
 		)
 		if err != nil {

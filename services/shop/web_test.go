@@ -99,12 +99,13 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, uuider, _ := setup(ctrl)
+		ctx, router, storer, nower, uuider, publisher := setup(ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("123")
+		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName, shopevents.BasketCreated{BasketUID: "123"})
 
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/basket", nil)
@@ -158,7 +159,7 @@ func TestBasketService(t *testing.T) {
 		storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName,
-			shopevents.BasketFinalized{BasketUID: basket1.UID})
+			shopevents.BasketPaymentCompleted{BasketUID: basket1.UID})
 
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(mypublisher.CreatePubsubMessage(

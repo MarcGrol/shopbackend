@@ -34,8 +34,16 @@ type Address struct {
 	Street            string
 }
 
+type BasketState int
+
+const (
+	BasketStateIdle BasketState = iota
+	BasketStatePaymentCompleted
+)
+
 type Basket struct {
 	UID                  string
+	State                BasketState
 	CreatedAt            time.Time
 	LastModified         *time.Time
 	Shop                 Shop
@@ -61,6 +69,13 @@ func (b Basket) GetPriceInCurrency() string {
 
 func (b Basket) IsNotPaid() bool {
 	return b.InitialPaymentStatus == "open" || b.InitialPaymentStatus == "error" || b.InitialPaymentStatus == "failed"
+}
+
+func (b *Basket) Execute(event any) error {
+	switch b.State {
+
+	}
+	return nil
 }
 
 type SelectedProduct struct {

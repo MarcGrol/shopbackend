@@ -55,7 +55,7 @@ func main() {
 	shopServiceCleanup := createShopService(c, router, nower, uuider, eventPublisher)
 	defer shopServiceCleanup()
 
-	createWarmupService(c, router, vault)
+	createWarmupService(c, router, vault, uuider, eventPublisher)
 
 	startWebServerBlocking(router)
 }
@@ -166,8 +166,8 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 	return checkoutStoreCleanup
 }
 
-func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader) {
-	warmupService := warmup.NewService(vault)
+func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader, uuider myuuid.UUIDer, pub mypublisher.Publisher) {
+	warmupService := warmup.NewService(vault, uuider, pub)
 	warmupService.RegisterEndpoints(c, router)
 }
 

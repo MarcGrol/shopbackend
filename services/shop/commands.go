@@ -3,6 +3,7 @@ package shop
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 	"sort"
 	"time"
 
@@ -19,6 +20,7 @@ func (s *service) listBaskets(c context.Context) ([]Basket, error) {
 		return nil, myerrors.NewInternalError(err)
 	}
 
+	// TODO sort in database
 	sort.Slice(baskets, func(i, j int) bool {
 		return baskets[i].CreatedAt.After(baskets[j].CreatedAt)
 	})
@@ -27,16 +29,30 @@ func (s *service) listBaskets(c context.Context) ([]Basket, error) {
 
 func (s *service) createNewBasket(c context.Context, hostname string) (Basket, error) {
 
-	uid := s.uuider.Create()
+	basketUID := s.uuider.Create()
 	createdAt := s.nower.Now()
-	returnURL := fmt.Sprintf("%s/basket/%s/checkout/completed", hostname, uid)
+	returnURL := fmt.Sprintf("%s/basket/%s/checkout/completed", hostname, basketUID)
+	basket := createBasket(basketUID, createdAt, returnURL)
 
-	s.logger.Log(c, uid, mylog.SeverityInfo, "Creating new basket with uid %s", uid)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Creating new basket with uid %s", basketUID)
 
-	basket := createBasket(uid, createdAt, returnURL)
-	err := s.basketStore.Put(c, uid, basket)
+	err := s.basketStore.RunInTransaction(c, func(c context.Context) error {
+		err := s.basketStore.Put(c, basketUID, basket)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+
+		err = s.publisher.Publish(c, shopevents.TopicName, shopevents.BasketCreated{
+			BasketUID: basketUID},
+		)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return Basket{}, myerrors.NewInternalError(err)
+		return Basket{}, err
 	}
 
 	return basket, nil
