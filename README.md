@@ -4,7 +4,7 @@ Example app that demonstrates how Adyen OAuth and drop-in checkout works
 
 ## Play around with the app
 
-[https://marcsexperiment.ew.r.appspot.com/](https://www.marcgrolconsultancy.nl/)
+[https://www.marcgrolconsultancy.nl](https://www.marcgrolconsultancy.nl/)
 
 ## Manual deployment on Google Appengine
 
