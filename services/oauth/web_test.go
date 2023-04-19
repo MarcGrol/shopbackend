@@ -56,7 +56,7 @@ func TestOauth(t *testing.T) {
 		assert.Equal(t, "http://localhost:8888/basket", session.ReturnURL)
 		assert.NotEmpty(t, session.Verifier)
 		assert.Equal(t, "2023-02-27T23:58:59", session.CreatedAt.Format("2006-01-02T15:04:05"))
-		assert.Nil(t, session.LastModified)
+		assert.Equal(t, "2023-02-27T23:58:59", session.LastModified.Format("2006-01-02T15:04:05"))
 	})
 
 	t.Run("Done oauth", func(t *testing.T) {
