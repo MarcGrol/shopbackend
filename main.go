@@ -107,8 +107,11 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		log.Fatalf("missing env-var %s", tokenHostnameVarname)
 	}
 
-	tokenGetter := oauth.NewOAuthClient(clientID, clientSecret, authHostname, tokenHostname)
-	oauthService := oauth.NewService(clientID, sessionStore, vault, nower, uuider, tokenGetter, pub)
+	oauthClient, err := oauth.NewOAuthClient("adyen", clientID, clientSecret, authHostname, tokenHostname)
+	if err != nil {
+		log.Fatalf("error creating oauth client: %s", err)
+	}
+	oauthService := oauth.NewService(clientID, sessionStore, vault, nower, uuider, oauthClient, pub)
 
 	oauthService.RegisterEndpoints(c, router)
 

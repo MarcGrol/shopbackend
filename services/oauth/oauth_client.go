@@ -43,28 +43,28 @@ type OauthClient interface {
 }
 
 type oauthClient struct {
-	clientID      string
-	clientSecret  string
-	authHostname  string
-	tokenHostname string
+	clientID         string
+	clientSecret     string
+	authEndpointURL  string
+	tokenEndpointURL string
 }
 
-func NewOAuthClient(clientId string, clientSecret string, authHostname string, tokenHostname string) *oauthClient {
-	return &oauthClient{
-		clientID:      clientId,
-		clientSecret:  clientSecret,
-		authHostname:  authHostname,
-		tokenHostname: tokenHostname,
+func NewOAuthClient(oauthServerName string, clientId string, clientSecret string, authHostname string, tokenHostname string) (*oauthClient, error) {
+	server, found := servers[oauthServerName]
+	if !found {
+		return nil, fmt.Errorf("unknown oauth server: %s", oauthServerName)
 	}
+	return &oauthClient{
+
+		clientID:         clientId,
+		clientSecret:     clientSecret,
+		authEndpointURL:  fmt.Sprintf("%s%s", authHostname, server.AuthURL),
+		tokenEndpointURL: fmt.Sprintf("%s%s", tokenHostname, server.TokenURL),
+	}, nil
 }
 
-const (
-	authURL  = "/ca/ca/oauth/connect.shtml"
-	tokenURL = "/v1/token"
-)
-
-func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
-	u, err := url.Parse(g.authHostname + authURL)
+func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
+	u, err := url.Parse(oc.authEndpointURL)
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest
 	method, challenge := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
 
 	u.RawQuery = url.Values{
-		"client_id":             []string{g.clientID},
+		"client_id":             []string{oc.clientID},
 		"code_challenge":        []string{challenge},
 		"code_challenge_method": []string{method},
 		"redirect_uri":          []string{req.CompletionURL},
@@ -84,7 +84,7 @@ func (g oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest
 	return u.String(), nil
 }
 
-func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (GetTokenResponse, error) {
+func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error) {
 	requestBody := url.Values{
 		"grant_type":    {"authorization_code"},
 		"redirect_uri":  {req.RedirectUri},
@@ -92,8 +92,8 @@ func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (G
 		"code_verifier": {req.CodeVerifier},
 	}.Encode()
 
-	httpClient := newHttpClient(g.clientID, g.clientSecret)
-	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, g.tokenHostname+tokenURL, []byte(requestBody))
+	httpClient := newHttpClient(oc.clientID, oc.clientSecret)
+	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, oc.tokenEndpointURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
 	}
@@ -111,14 +111,14 @@ func (g oauthClient) GetAccessToken(ctx context.Context, req GetTokenRequest) (G
 	return resp, nil
 }
 
-func (g oauthClient) RefreshAccessToken(ctx context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
+func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
 	requestBody := url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {req.RefreshToken},
 	}.Encode()
 
-	httpClient := newHttpClient(g.clientID, g.clientSecret)
-	httpRespCode, respBody, err := httpClient.Send(ctx, http.MethodPost, g.tokenHostname+tokenURL, []byte(requestBody))
+	httpClient := newHttpClient(oc.clientID, oc.clientSecret)
+	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, oc.tokenEndpointURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %s", err)
 	}

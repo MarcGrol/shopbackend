@@ -35,7 +35,7 @@ func TestOauth(t *testing.T) {
 			ClientID:   "client12345",
 			Scopes:     "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write",
 		}).Return(nil)
-		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return(authURL, nil)
+		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return(servers["adyen"].AuthURL, nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/start?returnURL=http://localhost:8888/basket", nil)
@@ -47,7 +47,7 @@ func TestOauth(t *testing.T) {
 		// then
 		assert.Equal(t, 303, response.Code)
 		redirectURL := response.Header().Get("Location")
-		assert.Equal(t, authURL, redirectURL)
+		assert.Equal(t, servers["adyen"].AuthURL, redirectURL)
 
 		session, exists, err := storer.Get(ctx, "abcdef")
 		assert.NoError(t, err)

@@ -19,7 +19,7 @@ func RunGetAccessTokenServer(t *testing.T,
 	mux := http.NewServeMux()
 	ts := httptest.NewServer(mux)
 
-	mux.HandleFunc(tokenURL, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(servers["adyen"].TokenURL, func(w http.ResponseWriter, r *http.Request) {
 		req := unserializer(t, r)
 		verifier(t, r, req)
 		resp := responder(t, req)
@@ -33,7 +33,8 @@ func RunGetAccessTokenServer(t *testing.T,
 func TestOAuthClient(t *testing.T) {
 	t.Run("Compose auth url", func(t *testing.T) {
 
-		oauthClient := NewOAuthClient("123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
+		oauthClient, err := NewOAuthClient("adyen", "123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
+		assert.NoError(t, err)
 		url, err := oauthClient.ComposeAuthURL(context.TODO(), ComposeAuthURLRequest{
 			CompletionURL: "http://localhost:8888/oauth/done",
 			Scope:         exampleScopes,
@@ -70,8 +71,9 @@ func TestOAuthClient(t *testing.T) {
 		ts, cleanup := RunGetAccessTokenServer(t, unserializeGetTokenRequest, verifier, responder, serializeGetTokenResponse)
 		defer cleanup()
 
-		client := NewOAuthClient("123", "456", ts.URL, ts.URL)
-		_, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
+		client, err := NewOAuthClient("adyen", "123", "456", ts.URL, ts.URL)
+		assert.NoError(t, err)
+		_, err = client.GetAccessToken(context.TODO(), GetTokenRequest{
 			RedirectUri:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
 			CodeVerifier: "exampleHash",
@@ -91,7 +93,7 @@ func TestOAuthClient(t *testing.T) {
 			Scope:        exampleScopes,
 			RefreshToken: "rst456",
 		}
-		mux.HandleFunc(tokenURL, func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc(servers["adyen"].TokenURL, func(w http.ResponseWriter, r *http.Request) {
 			// request validation logic
 			assert.Equal(t, "/v1/token", r.RequestURI)
 			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
@@ -115,7 +117,8 @@ func TestOAuthClient(t *testing.T) {
 			assert.NoError(t, err)
 		})
 
-		client := NewOAuthClient("123", "456", ts.URL, ts.URL)
+		client, err := NewOAuthClient("adyen", "123", "456", ts.URL, ts.URL)
+		assert.NoError(t, err)
 		resp, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
 			RedirectUri:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
@@ -137,7 +140,7 @@ func TestOAuthClient(t *testing.T) {
 			Scope:        exampleScopes,
 			RefreshToken: "newrst456",
 		}
-		mux.HandleFunc(tokenURL, func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc(servers["adyen"].TokenURL, func(w http.ResponseWriter, r *http.Request) {
 			// request validation logic
 			assert.Equal(t, "/v1/token", r.RequestURI)
 			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
@@ -159,7 +162,8 @@ func TestOAuthClient(t *testing.T) {
 			assert.NoError(t, err)
 		})
 
-		client := NewOAuthClient("123", "456", ts.URL, ts.URL)
+		client, err := NewOAuthClient("adyen", "123", "456", ts.URL, ts.URL)
+		assert.NoError(t, err)
 		resp, err := client.RefreshAccessToken(context.TODO(), RefreshTokenRequest{
 			RefreshToken: "r999",
 		})
