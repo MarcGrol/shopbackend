@@ -1,4 +1,4 @@
-# Example of drop-in interacting with the Adyen payment platform
+# Example of doing payments with the Adyen platform
 
 Example app that demonstrates how Adyen OAuth and drop-in checkout works
 
