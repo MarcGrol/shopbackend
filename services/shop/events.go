@@ -3,6 +3,7 @@ package shop
 import (
 	"context"
 	"fmt"
+
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
@@ -19,7 +20,7 @@ func (s *service) Subscribe(c context.Context) error {
 		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
 	}
 
-	err = s.pubsub.Subscribe(c, checkoutevents.TopicName, myhttp.GuessHostnameWithScheme()+"/basket/event")
+	err = s.pubsub.Subscribe(c, checkoutevents.TopicName, myhttp.GuessHostnameWithScheme()+"/api/basket/event")
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
 	}

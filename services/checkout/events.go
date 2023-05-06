@@ -3,6 +3,7 @@ package checkout
 import (
 	"context"
 	"fmt"
+
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
@@ -10,7 +11,7 @@ import (
 )
 
 func (s *service) Subscribe(c context.Context) error {
-	err := s.subscriber.Subscribe(c, oauthevents.TopicName, myhttp.GuessHostnameWithScheme()+"/checkout/event")
+	err := s.subscriber.Subscribe(c, oauthevents.TopicName, myhttp.GuessHostnameWithScheme()+"/api/checkout/event")
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
 	}

@@ -2,9 +2,7 @@ package checkout
 
 import (
 	"context"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,9 +15,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 )
 
 var (
@@ -262,7 +263,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 
 	// These are called by the following call to RegisterEndpoints
 	publisher.EXPECT().CreateTopic(c, checkoutevents.TopicName).Return(nil)
-	subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/checkout/event").Return(nil)
+	subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/api/checkout/event").Return(nil)
 
 	err = sut.RegisterEndpoints(c, router)
 	assert.NoError(t, err)

@@ -2,12 +2,13 @@ package shop
 
 import (
 	"context"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
@@ -193,7 +194,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 
 	// These are called by the following call to RegisterEndpoints()
 	subscriber.EXPECT().CreateTopic(c, shopevents.TopicName).Return(nil)
-	subscriber.EXPECT().Subscribe(c, checkoutevents.TopicName, "http://localhost:8080/basket/event").Return(nil)
+	subscriber.EXPECT().Subscribe(c, checkoutevents.TopicName, "http://localhost:8080/api/basket/event").Return(nil)
 
 	err := sut.RegisterEndpoints(c, router)
 	assert.NoError(t, err)
