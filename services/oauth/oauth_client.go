@@ -46,17 +46,17 @@ type OauthClient interface {
 }
 
 type oauthClient struct {
-	providers OauthProviders
+	providers *OAuthProviders
 }
 
-func NewOAuthClient(providers OauthProviders) *oauthClient {
+func NewOAuthClient(providers *OAuthProviders) *oauthClient {
 	return &oauthClient{
 		providers: providers,
 	}
 }
 
 func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
-	provider, err := GetProviderDetails(req.ProviderName)
+	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
 		return "", fmt.Errorf("Provider with name %s not known", req.ProviderName)
 	}
@@ -83,7 +83,7 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 }
 
 func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error) {
-	provider, err := GetProviderDetails(req.ProviderName)
+	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("Provider with name '%s' not known", req.ProviderName)
 	}
@@ -117,7 +117,7 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 }
 
 func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
-	provider, err := GetProviderDetails(req.ProviderName)
+	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("Provider with name '%s' not known", req.ProviderName)
 	}

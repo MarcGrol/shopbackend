@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
@@ -87,17 +87,24 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		log.Fatalf("Error creating oauth-session store: %s", err)
 	}
 
-	clientID := getenvOrAbort("OAUTH_CLIENT_ID")
-	clientSecret := getenvOrAbort("OAUTH_CLIENT_SECRET")
-	authHostname := getenvWithDefault("OAUTH_AUTH_HOSTNAME", "")
-	tokenHostname := getenvWithDefault("OAUTH_TOKEN_HOSTNAME", "")
+	providers := oauth.NewProviders()
 
-	providers, err := oauth.ConfigureProvider("adyen", clientID, clientSecret, authHostname, tokenHostname)
-	if err != nil {
-		log.Fatalf("Error configuring oauth client: %s", err)
+	{
+		clientID := getenvOrAbort("OAUTH_CLIENT_ID")
+		clientSecret := getenvOrAbort("OAUTH_CLIENT_SECRET")
+		authHostname := getenvWithDefault("OAUTH_AUTH_HOSTNAME", "")
+		tokenHostname := getenvWithDefault("OAUTH_TOKEN_HOSTNAME", "")
+		providers.Set("adyen", clientID, clientSecret, authHostname, tokenHostname)
 	}
+
+	{
+		stripeOAuthClientID := getenvOrAbort("STRIPE_OAUTH_CLIENT_ID")
+		stripeOAuthClientSecret := getenvOrAbort("STRIPE_OAUTH_CLIENT_SECRET")
+		providers.Set("stripe", stripeOAuthClientID, stripeOAuthClientSecret, "", "")
+	}
+
 	oauthClient := oauth.NewOAuthClient(providers)
-	oauthService := oauth.NewService(clientID, sessionStore, vault, nower, uuider, oauthClient, pub)
+	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, oauthClient, pub, providers)
 
 	oauthService.RegisterEndpoints(c, router)
 

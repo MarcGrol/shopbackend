@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -19,6 +18,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
@@ -61,7 +61,7 @@ func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[Checkout
 	}, nil
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
+func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	// TODO: subscribe to receive access-token updates
 
 	// Endpoints that compose the user-interface
@@ -91,7 +91,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 }
 
 // startCheckoutPage starts a checkout session on the Adyen platform
-func (s webService) startCheckoutPage() http.HandlerFunc {
+func (s *webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -120,7 +120,7 @@ func (s webService) startCheckoutPage() http.HandlerFunc {
 }
 
 // resumeCheckoutPage is called halfway the checkout process
-func (s webService) resumeCheckoutPage() http.HandlerFunc {
+func (s *webService) resumeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
@@ -163,7 +163,7 @@ func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 }
 
 // webhookNotification received a json-formatted notification message with the definitive checkout status
-func (s webService) webhookNotification() http.HandlerFunc {
+func (s *webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		c := mycontext.ContextFromHTTPRequest(r)
@@ -191,7 +191,7 @@ func (s webService) webhookNotification() http.HandlerFunc {
 	}
 }
 
-func (s webService) handleEventEnvelope() http.HandlerFunc {
+func (s *webService) handleEventEnvelope() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)

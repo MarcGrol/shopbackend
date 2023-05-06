@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
-
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 )

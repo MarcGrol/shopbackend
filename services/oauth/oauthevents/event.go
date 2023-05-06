@@ -90,6 +90,7 @@ func (e OAuthSessionSetupStarted) GetAggregateName() string {
 }
 
 type OAuthSessionSetupCompleted struct {
+	ProviderName string
 	ClientID     string
 	SessionUID   string
 	Success      bool
@@ -121,8 +122,8 @@ func (e OAuthTokenCreationCompleted) GetAggregateName() string {
 }
 
 type OAuthTokenRefreshCompleted struct {
-	UID          string
 	ProviderName string
+	UID          string
 	ClientID     string
 	Success      bool
 	ErrorMessage string
@@ -134,4 +135,12 @@ func (e OAuthTokenRefreshCompleted) GetEventTypeName() string {
 
 func (e OAuthTokenRefreshCompleted) GetAggregateName() string {
 	return e.ClientID
+}
+
+type OAuthTokenRefreshFailed struct {
+	ProviderName string
+	UID          string
+	ClientID     string
+	Success      bool
+	ErrorMessage string
 }

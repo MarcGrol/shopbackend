@@ -10,7 +10,6 @@ import (
 )
 
 type service struct {
-	clientID    string
 	storer      mystore.Store[OAuthSessionSetup]
 	vault       myvault.VaultReadWriter
 	nower       mytime.Nower
@@ -18,11 +17,11 @@ type service struct {
 	logger      mylog.Logger
 	oauthClient OauthClient
 	publisher   mypublisher.Publisher
+	providers   OAuthProvider
 }
 
-func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypublisher.Publisher) *service {
+func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypublisher.Publisher, providers OAuthProvider) *service {
 	return &service{
-		clientID:    clientID,
 		storer:      storer,
 		vault:       vault,
 		nower:       nower,
@@ -30,5 +29,6 @@ func newService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 		oauthClient: oauthClient,
 		logger:      mylog.New("oauth"),
 		publisher:   pub,
+		providers:   providers,
 	}
 }

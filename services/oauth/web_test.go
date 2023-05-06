@@ -32,8 +32,8 @@ func TestOauth(t *testing.T) {
 		uuider.EXPECT().Create().Return("abcdef")
 		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthSessionSetupStarted{
 			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
 			SessionUID:   "abcdef",
-			ClientID:     "client12345",
 			Scopes:       "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write",
 		}).Return(nil)
 		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return("http://my_url.com", nil)
@@ -78,7 +78,7 @@ func TestOauth(t *testing.T) {
 		// given
 		storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			ProviderName: "adyen",
-			ClientID:     "client12345",
+			ClientID:     "adyen_client_id",
 			UID:          "abcdef",
 			Scopes:       adyenExampleScopes,
 			ReturnURL:    "http://localhost:8888/basket",
@@ -95,7 +95,7 @@ func TestOauth(t *testing.T) {
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
 			ProviderName: "adyen",
-			ClientID:     "client12345",
+			ClientID:     "adyen_client_id",
 			SessionUID:   "abcdef",
 			Scopes:       adyenExampleScopes,
 			CreatedAt:    mytime.ExampleTime,
@@ -105,8 +105,10 @@ func TestOauth(t *testing.T) {
 			ExpiresIn:    12345,
 		}).Return(nil)
 		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthSessionSetupCompleted{
-			SessionUID: "abcdef",
-			Success:    true,
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			SessionUID:   "abcdef",
+			Success:      true,
 		}).Return(nil)
 
 		// when
@@ -130,7 +132,6 @@ func TestOauth(t *testing.T) {
 		assert.True(t, session.Done)
 
 	})
-
 	t.Run("Refresh token", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -142,7 +143,7 @@ func TestOauth(t *testing.T) {
 		storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:          "abcdef",
 			ProviderName: "adyen",
-			ClientID:     "client12345",
+			ClientID:     "adyen_client_id",
 			Scopes:       adyenExampleScopes,
 			ReturnURL:    "http://localhost:8888/basket",
 			Verifier:     "exampleHash",
@@ -157,7 +158,7 @@ func TestOauth(t *testing.T) {
 		})
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken).Return(myvault.Token{
 			ProviderName: "adyen",
-			ClientID:     "client12345",
+			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
 			Scopes:       adyenExampleScopes,
 			CreatedAt:    mytime.ExampleTime,
@@ -179,7 +180,7 @@ func TestOauth(t *testing.T) {
 		uuider.EXPECT().Create().Return("xyz")
 		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
 			ProviderName: "adyen",
-			ClientID:     "client12345",
+			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
 			Scopes:       adyenExampleScopes,
 			CreatedAt:    mytime.ExampleTime,
@@ -191,7 +192,7 @@ func TestOauth(t *testing.T) {
 		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthTokenRefreshCompleted{
 			ProviderName: "adyen",
 			UID:          "xyz",
-			ClientID:     "client12345",
+			ClientID:     "adyen_client_id",
 			Success:      true,
 		}).Return(nil)
 
@@ -206,7 +207,6 @@ func TestOauth(t *testing.T) {
 		assert.Equal(t, 303, response.Code)
 		assert.Equal(t, "/oauth/admin", response.Header().Get("Location"))
 	})
-
 }
 
 func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *MockOauthClient, *mypublisher.MockPublisher) {
@@ -218,7 +218,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
-	sut := NewService("client12345", storer, vault, nower, uuider, oauthClient, publisher)
+	sut := NewService(storer, vault, nower, uuider, oauthClient, publisher, NewProviders())
 
 	publisher.EXPECT().CreateTopic(c, oauthevents.TopicName).Return(nil)
 

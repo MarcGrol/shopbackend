@@ -3,7 +3,6 @@ package mylog
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -24,5 +23,5 @@ func newStandardLogger(componentName string) Logger {
 }
 
 func (l standardLogger) Log(ctx context.Context, traceLabel string, severity Severity, format string, a ...interface{}) {
-	log.Printf("%s - %s - %s - %s", l.componentName, traceLabel, string(severity), fmt.Sprintf(format, a...))
+	fmt.Fprintf(os.Stderr, "\n%s - %s - %s - %s\n", l.componentName, traceLabel, string(severity), fmt.Sprintf(format, a...))
 }

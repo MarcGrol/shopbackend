@@ -52,6 +52,11 @@ func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 
 func (s *service) start(c context.Context, providerName string, requestedScopes string, originalReturnURL string, currentHostname string) (string, error) {
 
+	provider, err := s.providers.Get(providerName)
+	if err != nil {
+		return "", myerrors.NewInvalidInputError(fmt.Errorf("provider with name '%s' not known", providerName))
+	}
+
 	codeVerifier, err := codeverifier.NewVerifier()
 	if err != nil {
 		return "", myerrors.NewInternalError(fmt.Errorf("error creating verifier: %s", err))
@@ -69,7 +74,7 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
 			UID:          sessionUID,
 			ProviderName: providerName,
-			ClientID:     s.clientID,
+			ClientID:     provider.ClientID,
 			Scopes:       requestedScopes,
 			ReturnURL:    originalReturnURL,
 			Verifier:     codeVerifierValue,
@@ -93,7 +98,7 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupStarted{
 			ProviderName: providerName,
-			ClientID:     s.clientID,
+			ClientID:     provider.ClientID,
 			SessionUID:   sessionUID,
 			Scopes:       requestedScopes,
 		})
@@ -125,7 +130,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 			return myerrors.NewInternalError(fmt.Errorf("error fetching session: %s", err))
 		}
 		if !exist {
-			return myerrors.NewNotFoundError(fmt.Errorf("OAuthSessionSetup with uid %s not found", sessionUID))
+			return myerrors.NewNotFoundError(fmt.Errorf("Session with uid %s not found", sessionUID))
 		}
 		returnURL = session.ReturnURL
 
@@ -169,6 +174,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupCompleted{
 			ProviderName: session.ProviderName,
+			ClientID:     session.ClientID,
 			SessionUID:   sessionUID,
 			Success:      true,
 		})
