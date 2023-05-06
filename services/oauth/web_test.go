@@ -203,7 +203,8 @@ func TestOauth(t *testing.T) {
 		router.ServeHTTP(response, request)
 
 		// then
-		assert.Equal(t, 200, response.Code)
+		assert.Equal(t, 303, response.Code)
+		assert.Equal(t, "/oauth/admin", response.Header().Get("Location"))
 	})
 
 }
