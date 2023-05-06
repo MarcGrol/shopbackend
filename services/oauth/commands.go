@@ -168,8 +168,9 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		}
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupCompleted{
-			SessionUID: sessionUID,
-			Success:    true,
+			ProviderName: session.ProviderName,
+			SessionUID:   sessionUID,
+			Success:      true,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))

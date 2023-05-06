@@ -53,7 +53,13 @@
             <input type="hidden" name="scopes" value="psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"/>
             <button type="submit" class="btn btn-secondary">OAuth connect with Adyen</button>
         </form>
-        </div>
+        <form action="/oauth/start/stripe" method="GET">
+            <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
+            <input type="hidden" name="scopes" value="read_write"/>
+            <button type="submit" class="btn btn-secondary">OAuth connect with Stripe</button>
+        </form>
+
+    </div>
         <div class="col">
             <form action="/oauth/refresh" method="GET">
                 <button type="submit" class="btn btn-secondary">Refresh token</button>
