@@ -35,7 +35,7 @@ func NewService(clientID string, storer mystore.Store[OAuthSessionSetup], vault 
 func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/oauth/admin", s.adminPage()).Methods("GET")
 
-	router.HandleFunc("/oauth/start", s.startPage()).Methods("GET")
+	router.HandleFunc("/oauth/start/{providerName}", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
 	router.HandleFunc("/oauth/refresh", s.refreshTokenPage()).Methods("GET")
 
@@ -76,10 +76,22 @@ func (s *webService) adminPage() http.HandlerFunc {
 		}
 	}
 }
+
 func (s *webService) startPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
+
+		providerName := mux.Vars(r)["providerName"]
+		if providerName == "" {
+			providerName = "adyen"
+		}
+
+		requestedScopes := r.URL.Query().Get("scopes")
+		if requestedScopes == "" {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing scopes")))
+			return
+		}
 
 		originalReturnURL := r.URL.Query().Get("returnURL")
 		if originalReturnURL == "" {
@@ -87,7 +99,7 @@ func (s *webService) startPage() http.HandlerFunc {
 			return
 		}
 
-		authenticationURL, err := s.service.start(c, originalReturnURL, myhttp.HostnameWithScheme(r))
+		authenticationURL, err := s.service.start(c, providerName, requestedScopes, originalReturnURL, myhttp.HostnameWithScheme(r))
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return

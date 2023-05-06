@@ -8,23 +8,12 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 )
 
-const (
-	exampleScopes = "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"
-)
-
 func (s *service) CreateTopics(c context.Context) error {
-	client, cleanup, err := mypubsub.New(c)
-	if err != nil {
-		return fmt.Errorf("error creating client: %s", err)
-	}
-	defer cleanup()
-
-	err = client.CreateTopic(c, oauthevents.TopicName)
+	err := s.publisher.CreateTopic(c, oauthevents.TopicName)
 	if err != nil {
 		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
 	}
@@ -45,17 +34,23 @@ func (s *service) getOauthStatus(c context.Context) (OAuthStatus, error) {
 
 func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 	return OAuthStatus{
+		ProviderName: token.ProviderName,
 		ClientID:     token.ClientID,
 		SessionUID:   token.SessionUID,
 		Scopes:       token.Scopes,
 		CreatedAt:    token.CreatedAt,
 		LastModified: token.LastModified,
 		Status:       exists,
-		ValidUntil:   token.LastModified.Add(time.Second * time.Duration(token.ExpiresIn)),
+		ValidUntil: func() time.Time {
+			if token.LastModified != nil {
+				return token.LastModified.Add(time.Second * time.Duration(token.ExpiresIn))
+			}
+			return token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn))
+		}(),
 	}
 }
 
-func (s *service) start(c context.Context, originalReturnURL string, hostname string) (string, error) {
+func (s *service) start(c context.Context, providerName string, requestedScopes string, originalReturnURL string, currentHostname string) (string, error) {
 
 	codeVerifier, err := codeverifier.NewVerifier()
 	if err != nil {
@@ -68,12 +63,14 @@ func (s *service) start(c context.Context, originalReturnURL string, hostname st
 
 	authURL := ""
 	err = s.storer.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
 
-		// Create new sessionx
+		// Create new session
 		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
 			UID:          sessionUID,
+			ProviderName: providerName,
 			ClientID:     s.clientID,
-			Scopes:       exampleScopes,
+			Scopes:       requestedScopes,
 			ReturnURL:    originalReturnURL,
 			Verifier:     codeVerifierValue,
 			CreatedAt:    now,
@@ -84,8 +81,9 @@ func (s *service) start(c context.Context, originalReturnURL string, hostname st
 		}
 
 		authURL, err = s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
-			CompletionURL: createCompletionURL(hostname), // Be called back here when authorisation has completed
-			Scope:         exampleScopes,
+			ProviderName:  providerName,
+			CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
+			Scope:         requestedScopes,
 			State:         sessionUID,
 			CodeVerifier:  codeVerifierValue,
 		})
@@ -94,9 +92,10 @@ func (s *service) start(c context.Context, originalReturnURL string, hostname st
 		}
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupStarted{
-			SessionUID: sessionUID,
-			ClientID:   s.clientID,
-			Scopes:     exampleScopes,
+			ProviderName: providerName,
+			ClientID:     s.clientID,
+			SessionUID:   sessionUID,
+			Scopes:       requestedScopes,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
@@ -113,7 +112,7 @@ func (s *service) start(c context.Context, originalReturnURL string, hostname st
 	return authURL, nil
 }
 
-func (s *service) done(c context.Context, sessionUID string, code string, hostname string) (string, error) {
+func (s *service) done(c context.Context, sessionUID string, code string, currentHostname string) (string, error) {
 	now := s.nower.Now()
 
 	returnURL := ""
@@ -132,7 +131,8 @@ func (s *service) done(c context.Context, sessionUID string, code string, hostna
 
 		// Get token
 		tokenResp, err = s.oauthClient.GetAccessToken(c, GetTokenRequest{
-			RedirectUri:  createCompletionURL(hostname),
+			ProviderName: session.ProviderName,
+			RedirectUri:  createCompletionURL(currentHostname),
 			Code:         code,
 			CodeVerifier: session.Verifier,
 		})
@@ -153,6 +153,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, hostna
 
 		// Store token in vault
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+			ProviderName: session.ProviderName,
 			ClientID:     session.ClientID,
 			SessionUID:   session.UID,
 			Scopes:       session.Scopes,
@@ -207,6 +208,7 @@ func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 		}
 
 		newTokenResp, err := s.oauthClient.RefreshAccessToken(c, RefreshTokenRequest{
+			ProviderName: currentToken.ProviderName,
 			RefreshToken: currentToken.RefreshToken,
 		})
 		if err != nil {
@@ -216,6 +218,7 @@ func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", newTokenResp)
 
 		newToken = myvault.Token{
+			ProviderName: currentToken.ProviderName,
 			ClientID:     currentToken.ClientID,
 			SessionUID:   currentToken.SessionUID,
 			Scopes:       currentToken.Scopes,
@@ -232,9 +235,10 @@ func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 		}
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthTokenRefreshCompleted{
-			UID:      uid,
-			ClientID: currentToken.ClientID,
-			Success:  true,
+			ProviderName: currentToken.ProviderName,
+			UID:          uid,
+			ClientID:     currentToken.ClientID,
+			Success:      true,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))

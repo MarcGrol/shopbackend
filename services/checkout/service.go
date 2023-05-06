@@ -3,6 +3,7 @@ package checkout
 import (
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
@@ -18,11 +19,12 @@ type service struct {
 	vault           myvault.VaultReader
 	nower           mytime.Nower
 	logger          mylog.Logger
+	subscriber      mypubsub.PubSub
 	publisher       mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, pub mypublisher.Publisher) (*service, error) {
+func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -33,6 +35,7 @@ func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[Che
 		vault:           vault,
 		nower:           nower,
 		logger:          logger,
-		publisher:       pub,
+		subscriber:      subscriber,
+		publisher:       publisher,
 	}, nil
 }

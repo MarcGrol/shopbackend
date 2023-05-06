@@ -35,6 +35,20 @@ func (m *MockPublisher) EXPECT() *MockPublisherMockRecorder {
 	return m.recorder
 }
 
+// CreateTopic mocks base method.
+func (m *MockPublisher) CreateTopic(ctx context.Context, topicName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTopic", ctx, topicName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateTopic indicates an expected call of CreateTopic.
+func (mr *MockPublisherMockRecorder) CreateTopic(ctx, topicName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTopic", reflect.TypeOf((*MockPublisher)(nil).CreateTopic), ctx, topicName)
+}
+
 // Publish mocks base method.
 func (m *MockPublisher) Publish(c context.Context, topic string, env myevents.Event) error {
 	m.ctrl.T.Helper()

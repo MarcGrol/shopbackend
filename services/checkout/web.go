@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -47,9 +48,9 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) (*webService, error) {
+func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkout")
-	s, err := newCommandService(cfg, payer, checkoutStore, vault, nower, logger, pub)
+	s, err := newCommandService(cfg, payer, checkoutStore, vault, nower, logger, subscriber, publisher)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	// Listen for token refresh
 	router.HandleFunc("/api/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
-	err = s.service.Subscribe(context.Background())
+	err = s.service.Subscribe(c)
 	if err != nil {
 		return err
 	}

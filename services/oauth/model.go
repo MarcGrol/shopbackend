@@ -4,6 +4,7 @@ import "time"
 
 type OAuthSessionSetup struct {
 	UID          string
+	ProviderName string
 	ClientID     string
 	Scopes       string
 	ReturnURL    string
@@ -15,6 +16,7 @@ type OAuthSessionSetup struct {
 }
 
 type OAuthStatus struct {
+	ProviderName string
 	ClientID     string
 	SessionUID   string
 	Scopes       string

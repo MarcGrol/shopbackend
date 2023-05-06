@@ -56,7 +56,7 @@ func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 	if err != nil {
 		rsp, ok := grpcStatus.FromError(err)
 		if ok && rsp.Code() == grpcCodes.AlreadyExists {
-			log.Printf("task with id %s already exists -> ignore\n", taskUID)
+			log.Printf("Task with id %s already exists -> ignore\n", taskUID)
 			// Convert error into success
 			return nil
 		}

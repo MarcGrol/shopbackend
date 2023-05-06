@@ -11,6 +11,7 @@ import (
 )
 
 type ComposeAuthURLRequest struct {
+	ProviderName  string
 	CompletionURL string
 	Scope         string
 	State         string
@@ -18,12 +19,14 @@ type ComposeAuthURLRequest struct {
 }
 
 type GetTokenRequest struct {
+	ProviderName string
 	RedirectUri  string
 	Code         string
 	CodeVerifier string
 }
 
 type RefreshTokenRequest struct {
+	ProviderName string `json:"-"`
 	RefreshToken string `json:"refresh_token"`
 }
 
@@ -43,28 +46,23 @@ type OauthClient interface {
 }
 
 type oauthClient struct {
-	clientID         string
-	clientSecret     string
-	authEndpointURL  string
-	tokenEndpointURL string
+	providers OauthProviders
 }
 
-func NewOAuthClient(oauthServerName string, clientId string, clientSecret string, authHostname string, tokenHostname string) (*oauthClient, error) {
-	server, found := servers[oauthServerName]
-	if !found {
-		return nil, fmt.Errorf("unknown oauth server: %s", oauthServerName)
-	}
+func NewOAuthClient(providers OauthProviders) *oauthClient {
 	return &oauthClient{
-
-		clientID:         clientId,
-		clientSecret:     clientSecret,
-		authEndpointURL:  fmt.Sprintf("%s%s", authHostname, server.AuthURL),
-		tokenEndpointURL: fmt.Sprintf("%s%s", tokenHostname, server.TokenURL),
-	}, nil
+		providers: providers,
+	}
 }
 
 func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
-	u, err := url.Parse(oc.authEndpointURL)
+	provider, err := GetProviderDetails(req.ProviderName)
+	if err != nil {
+		return "", fmt.Errorf("Provider with name %s not known", req.ProviderName)
+	}
+
+	authURL := provider.AuthEndpoint.GetFullURL()
+	u, err := url.Parse(authURL)
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +70,7 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 	method, challenge := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
 
 	u.RawQuery = url.Values{
-		"client_id":             []string{oc.clientID},
+		"client_id":             []string{provider.ClientID},
 		"code_challenge":        []string{challenge},
 		"code_challenge_method": []string{method},
 		"redirect_uri":          []string{req.CompletionURL},
@@ -85,6 +83,13 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 }
 
 func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error) {
+	provider, err := GetProviderDetails(req.ProviderName)
+	if err != nil {
+		return GetTokenResponse{}, fmt.Errorf("Provider with name '%s' not known", req.ProviderName)
+	}
+
+	getTokenURL := provider.TokenEndpoint.GetFullURL()
+
 	requestBody := url.Values{
 		"grant_type":    {"authorization_code"},
 		"redirect_uri":  {req.RedirectUri},
@@ -92,8 +97,8 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 		"code_verifier": {req.CodeVerifier},
 	}.Encode()
 
-	httpClient := newHttpClient(oc.clientID, oc.clientSecret)
-	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, oc.tokenEndpointURL, []byte(requestBody))
+	httpClient := newHttpClient(provider.ClientID, provider.Secret)
+	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, getTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
 	}
@@ -112,13 +117,20 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 }
 
 func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
+	provider, err := GetProviderDetails(req.ProviderName)
+	if err != nil {
+		return GetTokenResponse{}, fmt.Errorf("Provider with name '%s' not known", req.ProviderName)
+	}
+
 	requestBody := url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {req.RefreshToken},
 	}.Encode()
 
-	httpClient := newHttpClient(oc.clientID, oc.clientSecret)
-	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, oc.tokenEndpointURL, []byte(requestBody))
+	refreshTokenURL := provider.TokenEndpoint.GetFullURL()
+
+	httpClient := newHttpClient(provider.ClientID, provider.Secret)
+	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, refreshTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %s", err)
 	}

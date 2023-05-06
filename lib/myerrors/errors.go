@@ -2,7 +2,6 @@ package myerrors
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -32,7 +31,6 @@ func newError(httpCode int, err error) *httpError {
 }
 
 func NewInvalidInputError(err error) *httpError {
-	log.Printf("Returning 400: %s", err.Error())
 	return newError(http.StatusBadRequest, err)
 }
 

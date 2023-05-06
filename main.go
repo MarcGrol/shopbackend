@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"log"
 	"net/http"
 	"os"
@@ -33,7 +34,13 @@ func main() {
 	}
 	defer queueCleanup()
 
-	eventPublisher, eventPublisherCleanup, err := mypublisher.New(c, queue, nower)
+	subscriber, pubsubCleanup, err := mypubsub.New(c)
+	if err != nil {
+		log.Fatalf("Error creating pubsub: %s", err)
+	}
+	defer pubsubCleanup()
+
+	eventPublisher, eventPublisherCleanup, err := mypublisher.New(c, subscriber, queue, nower)
 	if err != nil {
 		log.Fatalf("Error creating event publisher: %s", err)
 	}
@@ -49,10 +56,10 @@ func main() {
 	oauthServiceCleanup := createOAuthService(c, router, vault, nower, uuider, eventPublisher)
 	defer oauthServiceCleanup()
 
-	checkoutServiceCleanup := createCheckoutService(c, router, vault, nower, eventPublisher)
+	checkoutServiceCleanup := createCheckoutService(c, router, vault, nower, subscriber, eventPublisher)
 	defer checkoutServiceCleanup()
 
-	shopServiceCleanup := createShopService(c, router, nower, uuider, eventPublisher)
+	shopServiceCleanup := createShopService(c, router, nower, uuider, subscriber, eventPublisher)
 	defer shopServiceCleanup()
 
 	createWarmupService(c, router, vault, uuider, eventPublisher)
@@ -61,56 +68,35 @@ func main() {
 }
 
 func createShopService(c context.Context, router *mux.Router, nower mytime.Nower,
-	uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
+	uuider myuuid.UUIDer, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) func() {
 
 	basketStore, basketstoreCleanup, err := mystore.New[shop.Basket](c)
 	if err != nil {
 		log.Fatalf("Error creating basket store: %s", err)
 	}
 
-	basketService := shop.NewService(basketStore, nower, uuider, pub)
+	basketService := shop.NewService(basketStore, nower, uuider, subscriber, publisher)
 	basketService.RegisterEndpoints(c, router)
 
 	return basketstoreCleanup
 }
 
 func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
-
-	const (
-		clientIDVarname      = "OAUTH_CLIENT_ID"
-		clientSecretVarname  = "OAUTH_CLIENT_SECRET"
-		authHostnameVarname  = "OAUTH_AUTH_HOSTNAME"
-		tokenHostnameVarname = "OAUTH_TOKEN_HOSTNAME"
-	)
-
 	sessionStore, sessionStoreCleanup, err := mystore.New[oauth.OAuthSessionSetup](c)
 	if err != nil {
 		log.Fatalf("Error creating oauth-session store: %s", err)
 	}
 
-	clientID := os.Getenv(clientIDVarname)
-	if clientID == "" {
-		log.Fatalf("missing env-var %s", clientIDVarname)
-	}
+	clientID := getenvOrAbort("OAUTH_CLIENT_ID")
+	clientSecret := getenvOrAbort("OAUTH_CLIENT_SECRET")
+	authHostname := getenvWithDefault("OAUTH_AUTH_HOSTNAME", "")
+	tokenHostname := getenvWithDefault("OAUTH_TOKEN_HOSTNAME", "")
 
-	clientSecret := os.Getenv(clientSecretVarname)
-	if clientSecret == "" {
-		log.Fatalf("missing env-var %s", clientSecretVarname)
-	}
-
-	authHostname := os.Getenv(authHostnameVarname)
-	if authHostname == "" {
-		log.Fatalf("missing env-var %s", authHostnameVarname)
-	}
-	tokenHostname := os.Getenv(tokenHostnameVarname)
-	if tokenHostname == "" {
-		log.Fatalf("missing env-var %s", tokenHostnameVarname)
-	}
-
-	oauthClient, err := oauth.NewOAuthClient("adyen", clientID, clientSecret, authHostname, tokenHostname)
+	providers, err := oauth.ConfigureProvider("adyen", clientID, clientSecret, authHostname, tokenHostname)
 	if err != nil {
-		log.Fatalf("error creating oauth client: %s", err)
+		log.Fatalf("Error configuring oauth client: %s", err)
 	}
+	oauthClient := oauth.NewOAuthClient(providers)
 	oauthService := oauth.NewService(clientID, sessionStore, vault, nower, uuider, oauthClient, pub)
 
 	oauthService.RegisterEndpoints(c, router)
@@ -118,34 +104,12 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	return sessionStoreCleanup
 }
 
-func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, nower mytime.Nower, pub mypublisher.Publisher) func() {
+func createCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) func() {
 
-	const (
-		merchantAccountVarname = "ADYEN_MERCHANT_ACCOUNT"
-		apiKeyVarname          = "ADYEN_API_KEY"
-		clientKeyVarname       = "ADYEN_CLIENT_KEY"
-		environmentVarname     = "ADYEN_ENVIRONMENT"
-	)
-
-	merchantAccount := os.Getenv(merchantAccountVarname)
-	if merchantAccount == "" {
-		log.Fatalf("missing env-var %s", merchantAccountVarname)
-	}
-
-	environment := os.Getenv(environmentVarname)
-	if environment == "" {
-		log.Fatalf("missing env-var %s", environmentVarname)
-	}
-
-	apiKey := os.Getenv(apiKeyVarname)
-	if apiKey == "" {
-		log.Fatalf("missing env-var %s", apiKeyVarname)
-	}
-
-	clientKey := os.Getenv(clientKeyVarname)
-	if clientKey == "" {
-		log.Fatalf("missing env-var %s", clientKeyVarname)
-	}
+	merchantAccount := getenvOrAbort("ADYEN_MERCHANT_ACCOUNT")
+	environment := getenvOrAbort("ADYEN_ENVIRONMENT")
+	apiKey := getenvOrAbort("ADYEN_API_KEY")
+	clientKey := getenvOrAbort("ADYEN_CLIENT_KEY")
 
 	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkout.CheckoutContext](c)
 	if err != nil {
@@ -160,7 +124,7 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 
 	payer := checkout.NewPayer(environment, apiKey)
 
-	checkoutService, err := checkout.NewWebService(cfg, payer, checkoutStore, vault, nower, pub)
+	checkoutService, err := checkout.NewWebService(cfg, payer, checkoutStore, vault, nower, subscriber, publisher)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}
@@ -175,14 +139,27 @@ func createWarmupService(c context.Context, router *mux.Router, vault myvault.Va
 }
 
 func startWebServerBlocking(router *mux.Router) {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	port := getenvWithDefault("PORT", "8080")
 
 	log.Printf("Starting webserver on port %s (try http://localhost:%s)", port, port)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), router)
 	if err != nil {
 		log.Fatalf("Error starting webserver on port %s: %s", port, err)
 	}
+}
+
+func getenvOrAbort(name string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		log.Fatalf("missing env-var %s", name)
+	}
+	return value
+}
+
+func getenvWithDefault(name string, valueWhenNotSet string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		value = valueWhenNotSet
+	}
+	return value
 }

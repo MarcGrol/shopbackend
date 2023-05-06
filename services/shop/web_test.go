@@ -2,6 +2,7 @@ package shop
 
 import (
 	"context"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -33,7 +34,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _ := setup(t, ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -58,7 +59,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		ctx, router, storer, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _ := setup(t, ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -81,7 +82,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		_, router, _, _, _, _ := setup(ctrl)
+		_, router, _, _, _, _ := setup(t, ctrl)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
@@ -99,7 +100,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, uuider, publisher := setup(ctrl)
+		ctx, router, storer, nower, uuider, publisher := setup(t, ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -131,7 +132,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, _ := setup(ctrl)
+		ctx, router, storer, nower, _, _ := setup(t, ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -153,7 +154,7 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, publisher := setup(ctrl)
+		ctx, router, storer, nower, _, publisher := setup(t, ctrl)
 
 		// given
 		storer.Put(ctx, basket1.UID, basket1)
@@ -179,15 +180,23 @@ func TestBasketService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[Basket](c)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
+	subscriber := mypubsub.NewMockPubSub(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
-	sut := NewService(storer, nower, uuider, publisher)
+
+	sut := NewService(storer, nower, uuider, subscriber, publisher)
 	router := mux.NewRouter()
-	sut.RegisterEndpoints(c, router)
+
+	// These are called by the following call to RegisterEndpoints()
+	subscriber.EXPECT().CreateTopic(c, shopevents.TopicName).Return(nil)
+	subscriber.EXPECT().Subscribe(c, checkoutevents.TopicName, "http://localhost:8080/basket/event").Return(nil)
+
+	err := sut.RegisterEndpoints(c, router)
+	assert.NoError(t, err)
 
 	return c, router, storer, nower, uuider, publisher
 }

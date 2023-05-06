@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"net/http"
@@ -41,13 +40,7 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
 }
 
 func (s *webService) Subscribe(c context.Context) error {
-	client, cleanup, err := mypubsub.New(c)
-	if err != nil {
-		return fmt.Errorf("error creating client: %s", err)
-	}
-	defer cleanup()
-
-	err = client.CreateTopic(c, TopicName)
+	err := s.publisher.CreateTopic(c, TopicName)
 	if err != nil {
 		return fmt.Errorf("error creating topic %s: %s", TopicName, err)
 	}

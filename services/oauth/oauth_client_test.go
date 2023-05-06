@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	adyenExampleScopes = "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"
+)
+
 func RunGetAccessTokenServer(t *testing.T,
 	unserializer func(t *testing.T, r *http.Request) GetTokenRequest,
 	verifier func(t *testing.T, r *http.Request, req GetTokenRequest),
@@ -19,7 +23,7 @@ func RunGetAccessTokenServer(t *testing.T,
 	mux := http.NewServeMux()
 	ts := httptest.NewServer(mux)
 
-	mux.HandleFunc(servers["adyen"].TokenURL, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(oauthProviders["adyen"].TokenEndpoint.Path, func(w http.ResponseWriter, r *http.Request) {
 		req := unserializer(t, r)
 		verifier(t, r, req)
 		resp := responder(t, req)
@@ -33,11 +37,13 @@ func RunGetAccessTokenServer(t *testing.T,
 func TestOAuthClient(t *testing.T) {
 	t.Run("Compose auth url", func(t *testing.T) {
 
-		oauthClient, err := NewOAuthClient("adyen", "123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
+		providers, err := ConfigureProvider("adyen", "123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
 		assert.NoError(t, err)
+		oauthClient := NewOAuthClient(providers)
 		url, err := oauthClient.ComposeAuthURL(context.TODO(), ComposeAuthURLRequest{
+			ProviderName:  "adyen",
 			CompletionURL: "http://localhost:8888/oauth/done",
-			Scope:         exampleScopes,
+			Scope:         adyenExampleScopes,
 			State:         "abcdef",
 			CodeVerifier:  "exampleHash",
 		})
@@ -63,7 +69,7 @@ func TestOAuthClient(t *testing.T) {
 				TokenType:    "bearer",
 				ExpiresIn:    12345,
 				AccessToken:  "abc123",
-				Scope:        exampleScopes,
+				Scope:        adyenExampleScopes,
 				RefreshToken: "rst456",
 			}
 		}
@@ -71,9 +77,11 @@ func TestOAuthClient(t *testing.T) {
 		ts, cleanup := RunGetAccessTokenServer(t, unserializeGetTokenRequest, verifier, responder, serializeGetTokenResponse)
 		defer cleanup()
 
-		client, err := NewOAuthClient("adyen", "123", "456", ts.URL, ts.URL)
+		providers, err := ConfigureProvider("adyen", "123", "456", ts.URL, ts.URL)
 		assert.NoError(t, err)
+		client := NewOAuthClient(providers)
 		_, err = client.GetAccessToken(context.TODO(), GetTokenRequest{
+			ProviderName: "adyen",
 			RedirectUri:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
 			CodeVerifier: "exampleHash",
@@ -90,10 +98,10 @@ func TestOAuthClient(t *testing.T) {
 			TokenType:    "bearer",
 			ExpiresIn:    12345,
 			AccessToken:  "abc123",
-			Scope:        exampleScopes,
+			Scope:        adyenExampleScopes,
 			RefreshToken: "rst456",
 		}
-		mux.HandleFunc(servers["adyen"].TokenURL, func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc(oauthProviders["adyen"].TokenEndpoint.Path, func(w http.ResponseWriter, r *http.Request) {
 			// request validation logic
 			assert.Equal(t, "/v1/token", r.RequestURI)
 			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
@@ -117,9 +125,12 @@ func TestOAuthClient(t *testing.T) {
 			assert.NoError(t, err)
 		})
 
-		client, err := NewOAuthClient("adyen", "123", "456", ts.URL, ts.URL)
+		providers, err := ConfigureProvider("adyen", "123", "456", ts.URL, ts.URL)
 		assert.NoError(t, err)
+
+		client := NewOAuthClient(providers)
 		resp, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
+			ProviderName: "adyen",
 			RedirectUri:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
 			CodeVerifier: "exampleHash",
@@ -137,10 +148,10 @@ func TestOAuthClient(t *testing.T) {
 			TokenType:    "bearer",
 			ExpiresIn:    12345,
 			AccessToken:  "anewbc123",
-			Scope:        exampleScopes,
+			Scope:        adyenExampleScopes,
 			RefreshToken: "newrst456",
 		}
-		mux.HandleFunc(servers["adyen"].TokenURL, func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc(oauthProviders["adyen"].TokenEndpoint.Path, func(w http.ResponseWriter, r *http.Request) {
 			// request validation logic
 			assert.Equal(t, "/v1/token", r.RequestURI)
 			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
@@ -162,9 +173,12 @@ func TestOAuthClient(t *testing.T) {
 			assert.NoError(t, err)
 		})
 
-		client, err := NewOAuthClient("adyen", "123", "456", ts.URL, ts.URL)
+		providers, err := ConfigureProvider("adyen", "123", "456", ts.URL, ts.URL)
 		assert.NoError(t, err)
+
+		client := NewOAuthClient(providers)
 		resp, err := client.RefreshAccessToken(context.TODO(), RefreshTokenRequest{
+			ProviderName: "adyen",
 			RefreshToken: "r999",
 		})
 		assert.NoError(t, err)

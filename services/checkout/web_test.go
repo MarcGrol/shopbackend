@@ -2,6 +2,9 @@ package checkout
 
 import (
 	"context"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
+	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -70,7 +73,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, payer, nower, publisher := setup(ctrl)
+		ctx, router, storer, vault, payer, nower, _, publisher := setup(t, ctrl)
 
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
@@ -108,7 +111,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _, _ := setup(ctrl)
+		ctx, router, storer, _, _, _, _, _ := setup(t, ctrl)
 
 		// given
 		storer.Put(ctx, "123", CheckoutContext{
@@ -147,7 +150,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, nower, _ := setup(ctrl)
+		ctx, router, storer, _, _, nower, _, _ := setup(t, ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -183,7 +186,7 @@ func TestCheckoutService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, nower, publisher := setup(ctrl)
+		ctx, router, storer, _, _, nower, _, publisher := setup(t, ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
@@ -239,22 +242,30 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypubsub.MockPubSub, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[CheckoutContext](c)
 	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	payer := NewMockPayer(ctrl)
+	subscriber := mypubsub.NewMockPubSub(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
 
-	sut, _ := NewWebService(Config{
+	sut, err := NewWebService(Config{
 		Environment:     "Test",
 		MerchantAccount: "MyMerchantAccount",
 		ClientKey:       "my_client_key",
 		ApiKey:          "my_api_key",
-	}, payer, storer, vault, nower, publisher)
+	}, payer, storer, vault, nower, subscriber, publisher)
+	assert.NoError(t, err)
 	router := mux.NewRouter()
-	sut.RegisterEndpoints(c, router)
 
-	return c, router, storer, vault, payer, nower, publisher
+	// These are called by the following call to RegisterEndpoints
+	publisher.EXPECT().CreateTopic(c, checkoutevents.TopicName).Return(nil)
+	subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/checkout/event").Return(nil)
+
+	err = sut.RegisterEndpoints(c, router)
+	assert.NoError(t, err)
+
+	return c, router, storer, vault, payer, nower, subscriber, publisher
 }

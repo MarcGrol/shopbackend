@@ -7,11 +7,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/MarcGrol/shopbackend/lib/myevents"
-
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
+	"github.com/MarcGrol/shopbackend/lib/myevents"
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
@@ -27,19 +26,13 @@ type transactionalPublisher struct {
 	pubsub    mypubsub.PubSub
 }
 
-func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower) (*transactionalPublisher, func(), error) {
+func New(c context.Context, pubsub mypubsub.PubSub, queue myqueue.TaskQueuer, nower mytime.Nower) (*transactionalPublisher, func(), error) {
 	store, storeCleanup, err := mystore.New[myevents.EventEnvelope](c)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pubsub, pubsubCleanup, err := mypubsub.New(c)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	cleanup := func() {
-		pubsubCleanup()
 		storeCleanup()
 	}
 
@@ -51,11 +44,15 @@ func New(c context.Context, queue myqueue.TaskQueuer, nower mytime.Nower) (*tran
 	}, cleanup, nil
 }
 
-func (p transactionalPublisher) RegisterEndpoints(c context.Context, router *mux.Router) {
+func (p *transactionalPublisher) RegisterEndpoints(c context.Context, router *mux.Router) {
 	router.HandleFunc("/pubsub/{topic}/{uid}", p.processTriggerPage()).Methods("PUT")
 }
 
-func (p transactionalPublisher) Publish(c context.Context, topic string, event myevents.Event) error {
+func (p *transactionalPublisher) CreateTopic(c context.Context, topicName string) error {
+	return p.pubsub.CreateTopic(c, topicName)
+}
+
+func (p *transactionalPublisher) Publish(c context.Context, topic string, event myevents.Event) error {
 	envelope, err := p.enveloper.do(topic, event)
 	if err != nil {
 		return fmt.Errorf("error creating envelope: %s", err)
@@ -79,7 +76,7 @@ func (p transactionalPublisher) Publish(c context.Context, topic string, event m
 	return nil
 }
 
-func (p transactionalPublisher) processTriggerPage() http.HandlerFunc {
+func (p *transactionalPublisher) processTriggerPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(mylog.New("transactionalPublisher"))
@@ -99,7 +96,7 @@ func (p transactionalPublisher) processTriggerPage() http.HandlerFunc {
 	}
 }
 
-func (p transactionalPublisher) processTrigger(c context.Context, topicName string, uid string) error {
+func (p *transactionalPublisher) processTrigger(c context.Context, topicName string, uid string) error {
 	// fetch all envelopes that are not yet published
 	err := p.outbox.RunInTransaction(c, func(c context.Context) error {
 

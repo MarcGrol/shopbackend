@@ -9,19 +9,12 @@ import (
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 )
 
 func (s *service) CreateTopics(c context.Context) error {
-	client, cleanup, err := mypubsub.New(c)
-	if err != nil {
-		return fmt.Errorf("error creating client: %s", err)
-	}
-	defer cleanup()
-
-	err = client.CreateTopic(c, checkoutevents.TopicName)
+	err := s.publisher.CreateTopic(c, checkoutevents.TopicName)
 	if err != nil {
 		return fmt.Errorf("error creating topic %s: %s", checkoutevents.TopicName, err)
 	}

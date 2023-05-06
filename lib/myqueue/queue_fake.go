@@ -15,7 +15,7 @@ func init() {
 }
 
 func newFakeQueue(c context.Context) (TaskQueuer, func(), error) {
-	return &gcloudTaskQueue{}, func() {
+	return &fakeTaskQueue{}, func() {
 	}, nil
 }
 

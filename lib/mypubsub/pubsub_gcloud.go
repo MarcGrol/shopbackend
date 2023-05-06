@@ -21,6 +21,7 @@ func init() {
 }
 
 func newGcloudPubSub(c context.Context) (PubSub, func(), error) {
+
 	client, err := pubsub.NewClient(c, os.Getenv("GOOGLE_CLOUD_PROJECT"))
 	if err != nil {
 		return nil, func() {}, err

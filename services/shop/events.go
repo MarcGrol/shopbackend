@@ -3,28 +3,23 @@ package shop
 import (
 	"context"
 	"fmt"
+	"github.com/MarcGrol/shopbackend/lib/myhttp"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
 func (s *service) Subscribe(c context.Context) error {
-	client, cleanup, err := mypubsub.New(c)
-	if err != nil {
-		return fmt.Errorf("error creating client: %s", err)
-	}
-	defer cleanup()
 
-	err = client.CreateTopic(c, shopevents.TopicName)
+	err := s.pubsub.CreateTopic(c, shopevents.TopicName)
 	if err != nil {
 		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
 	}
 
-	err = client.Subscribe(c, oauthevents.TopicName, "https://www.marcgrolconsultancy.nl/basket/event")
+	err = s.pubsub.Subscribe(c, checkoutevents.TopicName, myhttp.GuessHostnameWithScheme()+"/basket/event")
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
 	}

@@ -75,9 +75,10 @@ func DispatchEvent(c context.Context, reader io.Reader, service OAuthEventServic
 }
 
 type OAuthSessionSetupStarted struct {
-	ClientID   string
-	SessionUID string
-	Scopes     string
+	ProviderName string
+	ClientID     string
+	SessionUID   string
+	Scopes       string
 }
 
 func (e OAuthSessionSetupStarted) GetEventTypeName() string {
@@ -104,6 +105,7 @@ func (e OAuthSessionSetupCompleted) GetAggregateName() string {
 }
 
 type OAuthTokenCreationCompleted struct {
+	ProviderName string
 	ClientID     string
 	SessionUID   string
 	Success      bool
@@ -120,6 +122,7 @@ func (e OAuthTokenCreationCompleted) GetAggregateName() string {
 
 type OAuthTokenRefreshCompleted struct {
 	UID          string
+	ProviderName string
 	ClientID     string
 	Success      bool
 	ErrorMessage string

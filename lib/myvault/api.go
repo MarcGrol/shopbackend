@@ -10,6 +10,7 @@ const (
 )
 
 type Token struct {
+	ProviderName string
 	ClientID     string
 	SessionUID   string
 	Scopes       string
