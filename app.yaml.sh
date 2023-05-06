@@ -18,6 +18,8 @@ env_variables:
   OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET_VAR}
   OAUTH_AUTH_HOSTNAME: "https://ca-test.adyen.com"
   OAUTH_TOKEN_HOSTNAME: "https://oauth-test.adyen.com"
+  STRIPE_OAUTH_CLIENT_ID: ${STRIPE_OAUTH_CLIENT_ID_VAR}
+  STRIPE_OAUTH_CLIENT_SECRET: ${STRIPE_OAUTH_CLIENT_SECRET_VAR}
 
 handlers:
   - url: /.*

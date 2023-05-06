@@ -92,9 +92,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	{
 		clientID := getenvOrAbort("OAUTH_CLIENT_ID")
 		clientSecret := getenvOrAbort("OAUTH_CLIENT_SECRET")
-		authHostname := getenvWithDefault("OAUTH_AUTH_HOSTNAME", "")
-		tokenHostname := getenvWithDefault("OAUTH_TOKEN_HOSTNAME", "")
-		providers.Set("adyen", clientID, clientSecret, authHostname, tokenHostname)
+		providers.Set("adyen", clientID, clientSecret, "", "")
 	}
 
 	{
