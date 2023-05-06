@@ -82,7 +82,7 @@ func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
 func (ps *gcloudPubSub) Publish(c context.Context, topicName string, data string) error {
 	topic, found := ps.topics[topicName]
 	if !found {
-		topic := ps.client.Topic(topicName)
+		topic = ps.client.Topic(topicName)
 		ps.topics[topicName] = topic
 	}
 
