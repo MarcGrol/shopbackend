@@ -136,8 +136,19 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 func (s *service) webhookNotification(c context.Context, username, password string, event stripe.Event) error {
 	// TODO check username+password to make sure notification originates from Adyen
 
+	s.logger.Log(c, "", mylog.SeverityInfo, "Webhook: status update event %s: %+v", event.Type, event)
+
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
+	case "payment_intent.created":
+		{
+			var paymentIntent stripe.PaymentIntent
+			err := json.Unmarshal(event.Data.Raw, &paymentIntent)
+			if err != nil {
+				return myerrors.NewInvalidInputError(fmt.Errorf("error parsing webhook %v JSON: %v", event.Type, err))
+			}
+			return s.handlePaymentIntentCreated(c, paymentIntent)
+		}
 	case "payment_intent.succeeded":
 		{
 			var paymentIntent stripe.PaymentIntent
@@ -162,6 +173,10 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 		}
 	}
 	return nil
+}
+
+func (s *service) handlePaymentIntentCreated(c context.Context, paymentIntent stripe.PaymentIntent) error {
+	return myerrors.NewNotImplementedError(fmt.Errorf("unhandled event %+v", paymentIntent))
 }
 
 func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent stripe.PaymentIntent) error {
