@@ -17,7 +17,7 @@ import (
 
 type service struct {
 	basketStore mystore.Store[Basket]
-	pubsub      mypubsub.PubSub
+	subscriber  mypubsub.PubSub
 	publisher   mypublisher.Publisher
 	nower       mytime.Nower
 	uuider      myuuid.UUIDer
@@ -28,12 +28,20 @@ type service struct {
 func newService(store mystore.Store[Basket], nower mytime.Nower, uuider myuuid.UUIDer, logger mylog.Logger, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) *service {
 	return &service{
 		basketStore: store,
-		pubsub:      subscriber,
+		subscriber:  subscriber,
 		publisher:   publisher,
 		nower:       nower,
 		uuider:      uuider,
 		logger:      logger,
 	}
+}
+
+func (s *service) CreateTopics(c context.Context) error {
+	err := s.publisher.CreateTopic(c, shopevents.TopicName)
+	if err != nil {
+		return fmt.Errorf("error creating topic %s: %s", shopevents.TopicName, err)
+	}
+	return nil
 }
 
 func (s *service) listBaskets(c context.Context) ([]Basket, error) {

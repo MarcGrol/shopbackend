@@ -2,12 +2,14 @@ package shop
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/MarcGrol/shopbackend/lib/myevents"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 
 	"github.com/golang/mock/gomock"
@@ -18,14 +20,13 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
 var (
 	basket1 = Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: ""}
 	basket2 = Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: "AUTHORISATION", FinalPaymentStatus: true}
-	baskets = []Basket{basket1, basket2}
 )
 
 func TestBasketService(t *testing.T) {
@@ -164,7 +165,7 @@ func TestBasketService(t *testing.T) {
 			shopevents.BasketPaymentCompleted{BasketUID: basket1.UID})
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(mypublisher.CreatePubsubMessage(
+		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(createPubsubMessage(
 			checkoutevents.CheckoutCompleted{
 				CheckoutUID:   "123",
 				PaymentMethod: "ideal",
@@ -181,6 +182,30 @@ func TestBasketService(t *testing.T) {
 	})
 }
 
+func createPubsubMessage(event checkoutevents.CheckoutCompleted) string {
+	eventBytes, _ := json.Marshal(event)
+	envelope := myevents.EventEnvelope{
+		UID:           "123",
+		CreatedAt:     mytime.ExampleTime,
+		Topic:         "checkout",
+		AggregateUID:  "111",
+		EventTypeName: "checkout.completed",
+		EventPayload:  string(eventBytes),
+	}
+	envelopeBytes, _ := json.Marshal(envelope)
+
+	req := myevents.PushRequest{
+		Message: myevents.PushMessage{
+			Data: envelopeBytes,
+		},
+		Subscription: "checkout",
+	}
+
+	reqBytes, _ := json.Marshal(req)
+
+	return string(reqBytes)
+}
+
 func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[Basket](c)
@@ -193,7 +218,8 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 	router := mux.NewRouter()
 
 	// These are called by the following call to RegisterEndpoints()
-	subscriber.EXPECT().CreateTopic(c, shopevents.TopicName).Return(nil)
+	publisher.EXPECT().CreateTopic(c, shopevents.TopicName).Return(nil)
+	subscriber.EXPECT().CreateTopic(c, checkoutevents.TopicName).Return(nil)
 	subscriber.EXPECT().Subscribe(c, checkoutevents.TopicName, "http://localhost:8080/api/basket/event").Return(nil)
 
 	err := sut.RegisterEndpoints(c, router)

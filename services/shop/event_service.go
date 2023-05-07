@@ -8,19 +8,17 @@ import (
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
-	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
 func (s *service) Subscribe(c context.Context) error {
-
-	err := s.pubsub.CreateTopic(c, shopevents.TopicName)
+	err := s.subscriber.CreateTopic(c, checkoutevents.TopicName)
 	if err != nil {
-		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
+		return fmt.Errorf("error creating topic %s: %s", checkoutevents.TopicName, err)
 	}
 
-	err = s.pubsub.Subscribe(c, checkoutevents.TopicName, myhttp.GuessHostnameWithScheme()+"/api/basket/event")
+	err = s.subscriber.Subscribe(c, checkoutevents.TopicName, myhttp.GuessHostnameWithScheme()+"/api/basket/event")
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
 	}

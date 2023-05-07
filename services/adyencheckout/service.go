@@ -1,4 +1,4 @@
-package checkout
+package adyencheckout
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 

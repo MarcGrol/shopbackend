@@ -4,7 +4,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"html/template"
 	"net/http"
 
@@ -15,10 +14,11 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myhttp"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
+	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 )
 
 type webService struct {
@@ -48,6 +48,10 @@ func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) err
 	// Subsriptions arrive here as events
 	router.HandleFunc("/api/basket/event", s.handleEventEnvelope()).Methods("POST")
 
+	err := s.service.CreateTopics(c)
+	if err != nil {
+		return err
+	}
 	return s.service.Subscribe(c)
 }
 

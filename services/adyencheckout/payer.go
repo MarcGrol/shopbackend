@@ -1,4 +1,4 @@
-package checkout
+package adyencheckout
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/adyen/adyen-go-api-library/v6/src/common"
 )
 
-//go:generate mockgen -source=payer.go -package checkout -destination payer_mock.go Payer
+//go:generate mockgen -source=payer.go -package adyencheckout -destination payer_mock.go Payer
 type Payer interface {
 	UseApiKey(key string)
 	UseToken(accessToken string)
