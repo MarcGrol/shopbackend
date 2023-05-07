@@ -59,7 +59,7 @@ func NewOAuthClient(providers *providers.OAuthProviders) *oauthClient {
 func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
 	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
-		return "", fmt.Errorf("Provider with name %s not known", req.ProviderName)
+		return "", fmt.Errorf("provider with name %s not known", req.ProviderName)
 	}
 
 	authURL := provider.AuthEndpoint.GetFullURL()
@@ -86,7 +86,7 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error) {
 	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
-		return GetTokenResponse{}, fmt.Errorf("Provider with name '%s' not known", req.ProviderName)
+		return GetTokenResponse{}, fmt.Errorf("provider with name '%s' not known", req.ProviderName)
 	}
 
 	getTokenURL := provider.TokenEndpoint.GetFullURL()
@@ -99,6 +99,10 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 	}.Encode()
 
 	httpClient := newHttpClient(provider.ClientID, provider.Secret)
+	if req.ProviderName == "stripe" {
+		httpClient = newHttpClient(provider.Secret, "") // Stripe uses secret as username with empty password
+	}
+
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, getTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
@@ -120,7 +124,7 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error) {
 	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
-		return GetTokenResponse{}, fmt.Errorf("Provider with name '%s' not known", req.ProviderName)
+		return GetTokenResponse{}, fmt.Errorf("provider with name '%s' not known", req.ProviderName)
 	}
 
 	requestBody := url.Values{
@@ -131,6 +135,9 @@ func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequ
 	refreshTokenURL := provider.TokenEndpoint.GetFullURL()
 
 	httpClient := newHttpClient(provider.ClientID, provider.Secret)
+	if req.ProviderName == "stripe" {
+		httpClient = newHttpClient(provider.Secret, "") // Stripe uses secret as username with empty password
+	}
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, refreshTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %s", err)
