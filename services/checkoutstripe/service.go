@@ -14,24 +14,29 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 )
 
 type service struct {
+	apiKey        string
 	logger        mylog.Logger
 	nower         mytime.Nower
 	checkoutStore mystore.Store[checkoutadyen.CheckoutContext]
+	vault         myvault.MockVaultReader
 	publisher     mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(apiKey string, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], publisher mypublisher.Publisher) (*service, error) {
+func newService(apiKey string, logger mylog.Logger, nower mytime.Nower, vault myvault.MockVaultReader, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], publisher mypublisher.Publisher) (*service, error) {
 	stripe.Key = apiKey
 	return &service{
+		apiKey:        apiKey,
 		logger:        logger,
 		nower:         nower,
 		checkoutStore: checkoutStore,
+		vault:         vault,
 		publisher:     publisher,
 	}, nil
 }
@@ -41,6 +46,15 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 	now := s.nower.Now()
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
+
+	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+	if err != nil || !exist && accessToken.ProviderName != "stripe" {
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
+		stripe.Key = s.apiKey
+	} else {
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+		stripe.Key = accessToken.AccessToken
+	}
 
 	session, err := session.New(&params)
 	if err != nil {
@@ -147,7 +161,7 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 func (s *service) webhookNotification(c context.Context, username, password string, event stripe.Event) error {
 	// TODO check username+password to make sure notification originates from Adyen
 
-	s.logger.Log(c, "", mylog.SeverityInfo, "Webhook: status update event %s: %+v", event.Type, event)
+	s.logger.Log(c, event.ID, mylog.SeverityInfo, "Webhook: status update event %s: %+v", event.Type, event)
 
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
@@ -191,9 +205,9 @@ func (s *service) handlePaymentIntentCreated(c context.Context, paymentIntent st
 }
 
 func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent stripe.PaymentIntent) error {
-	basketUID := paymentIntent.ID
+	uid := paymentIntent.ID
 
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received on basket %s", basketUID)
+	s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: status update event received on basket %s", uid)
 
 	now := s.nower.Now()
 
@@ -203,26 +217,30 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
-		checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
+		checkoutContext, found, err = s.checkoutStore.Get(c, uid)
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
 		if !found {
-			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", uid))
 		}
 		checkoutContext.PaymentMethod = "ideal"
 		checkoutContext.WebhookStatus = "ok"
 		checkoutContext.WebhookSuccess = "true"
 		checkoutContext.LastModified = &now
 
-		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
+		err = s.checkoutStore.Put(c, uid, checkoutContext)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+		err = s.checkoutStore.Put(c, checkoutContext.BasketUID, checkoutContext)
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
 			ProviderName:  "adyen",
-			CheckoutUID:   basketUID,
+			CheckoutUID:   checkoutContext.BasketUID,
 			Status:        "payment_intent.succeeded",
 			Success:       true,
 			PaymentMethod: checkoutContext.PaymentMethod,

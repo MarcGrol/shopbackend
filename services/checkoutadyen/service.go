@@ -74,7 +74,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 		// must be idempotent
 
 		accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
-		if err != nil || !exist {
+		if err != nil || !exist || accessToken.ProviderName != "adyen" {
 			s.payer.UseApiKey(s.apiKey)
 			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
 		} else {
