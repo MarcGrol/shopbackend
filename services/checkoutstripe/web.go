@@ -2,6 +2,7 @@ package checkoutstripe
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -40,6 +41,8 @@ func NewWebService(apiKey string, nower mytime.Nower, checkoutStore mystore.Stor
 func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/stripe/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
 	router.HandleFunc("/stripe/checkout/{basketUID}/status/{status}", s.checkoutCompletedPage()).Methods("GET")
+
+	router.HandleFunc("/stripe/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 
 	return nil
 }
@@ -82,6 +85,31 @@ func (s *webService) checkoutCompletedPage() http.HandlerFunc {
 		}
 
 		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+	}
+}
+
+func (s *webService) webhookNotification() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		username, password, _ := r.BasicAuth()
+
+		event := stripe.Event{}
+		err := json.NewDecoder(r.Body).Decode(&event)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, err)
+			return
+		}
+
+		err = s.service.webhookNotification(c, username, password, event)
+		if err != nil {
+			errorWriter.WriteError(c, w, 2, err)
+			return
+		}
+
+		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{})
 	}
 }
 

@@ -183,6 +183,7 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 			errorWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
 				Status: err.Error(),
 			})
+			return
 		}
 
 		errorWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{

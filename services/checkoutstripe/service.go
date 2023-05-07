@@ -2,6 +2,7 @@ package checkoutstripe
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 
@@ -130,4 +131,89 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 	params.Set("status", status)
 	u.RawQuery = params.Encode()
 	return u.String(), nil
+}
+
+func (s *service) webhookNotification(c context.Context, username, password string, event stripe.Event) error {
+	// TODO check username+password to make sure notification originates from Adyen
+
+	// Unmarshal the event data into an appropriate struct depending on its Type
+	switch event.Type {
+	case "payment_intent.succeeded":
+		{
+			var paymentIntent stripe.PaymentIntent
+			err := json.Unmarshal(event.Data.Raw, &paymentIntent)
+			if err != nil {
+				return myerrors.NewInvalidInputError(fmt.Errorf("error parsing webhook %v JSON: %v", event.Type, err))
+			}
+			return s.handlePaymentIntentSucceeded(c, paymentIntent)
+		}
+	case "payment_method.attached":
+		{
+			var paymentMethod stripe.PaymentMethod
+			err := json.Unmarshal(event.Data.Raw, &paymentMethod)
+			if err != nil {
+				return myerrors.NewInvalidInputError(fmt.Errorf("error parsing webhook %v JSON: %v", event.Type, err))
+			}
+			return s.handlePaymentMethodAttached(c, paymentMethod)
+		}
+	default:
+		{
+			fmt.Printf("unhandled event type: %v\n", event.Type)
+		}
+	}
+	return nil
+}
+
+func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent stripe.PaymentIntent) error {
+	basketUID := paymentIntent.ID
+
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event received on basket %s", basketUID)
+
+	now := s.nower.Now()
+
+	var checkoutContext checkoutadyen.CheckoutContext
+	var found bool
+	var err error
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
+
+		checkoutContext, found, err = s.checkoutStore.Get(c, basketUID)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+		if !found {
+			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+		}
+		checkoutContext.PaymentMethod = "ideal"
+		checkoutContext.WebhookStatus = "ok"
+		checkoutContext.WebhookSuccess = "true"
+		checkoutContext.LastModified = &now
+
+		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+
+		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
+			ProviderName:  "adyen",
+			CheckoutUID:   basketUID,
+			Status:        "payment_intent.succeeded",
+			Success:       true,
+			PaymentMethod: checkoutContext.PaymentMethod,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) handlePaymentMethodAttached(c context.Context, paymentMethod stripe.PaymentMethod) error {
+	return myerrors.NewNotImplementedError(fmt.Errorf("unhandled event"))
 }
