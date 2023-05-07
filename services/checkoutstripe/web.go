@@ -16,6 +16,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
 )
 
@@ -25,9 +26,9 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewWebService(apiKey string, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], publisher mypublisher.Publisher) (*webService, error) {
+func NewWebService(apiKey string, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkoutstripe")
-	s, err := newService(apiKey, logger, nower, checkoutStore, publisher)
+	s, err := newService(apiKey, logger, nower, checkoutStore, vault, publisher)
 	if err != nil {
 		return nil, err
 	}

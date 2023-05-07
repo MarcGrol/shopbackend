@@ -24,12 +24,12 @@ type service struct {
 	logger        mylog.Logger
 	nower         mytime.Nower
 	checkoutStore mystore.Store[checkoutadyen.CheckoutContext]
-	vault         myvault.MockVaultReader
+	vault         myvault.VaultReader
 	publisher     mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(apiKey string, logger mylog.Logger, nower mytime.Nower, vault myvault.MockVaultReader, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], publisher mypublisher.Publisher) (*service, error) {
+func newService(apiKey string, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
 	stripe.Key = apiKey
 	return &service{
 		apiKey:        apiKey,
@@ -207,7 +207,7 @@ func (s *service) handlePaymentIntentCreated(c context.Context, paymentIntent st
 func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent stripe.PaymentIntent) error {
 	uid := paymentIntent.ID
 
-	s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: status update event received on basket %s", uid)
+	s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: status update event received on payment %s: %+v", uid, paymentIntent)
 
 	now := s.nower.Now()
 
@@ -224,8 +224,8 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 		if !found {
 			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", uid))
 		}
-		checkoutContext.PaymentMethod = "ideal"
-		checkoutContext.WebhookStatus = "ok"
+		checkoutContext.PaymentMethod = "ideal" // TODO
+		checkoutContext.WebhookStatus = "payment_intent.succeeded"
 		checkoutContext.WebhookSuccess = "true"
 		checkoutContext.LastModified = &now
 
