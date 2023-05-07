@@ -132,12 +132,12 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 	if err != nil {
 		return stripe.CheckoutSessionParams{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount '%s' (%s)", r.Form.Get("amount"), err))
 	}
-	// addressCity := r.Form.Get("shopper.address.city")
-	// addressCountry := r.Form.Get("shopper.address.country")
-	// addressHouseNumber := r.Form.Get("shopper.address.houseNumber")
-	// addressPostalCode := r.Form.Get("shopper.address.postalCode")
-	// addressStateOrProvince := r.Form.Get("shopper.address.state")
-	// addressStreet := r.Form.Get("shopper.address.street")
+	addressCity := r.Form.Get("shopper.address.city")
+	addressCountry := r.Form.Get("shopper.address.country")
+	addressHouseNumber := r.Form.Get("shopper.address.houseNumber")
+	addressPostalCode := r.Form.Get("shopper.address.postalCode")
+	//addressStateOrProvince := r.Form.Get("shopper.address.state")
+	addressStreet := r.Form.Get("shopper.address.street")
 	shopperEmail := r.Form.Get("shopper.email")
 	// companyHomepage := r.Form.Get("company.homepage")
 	// companyName := r.Form.Get("company.name")
@@ -155,14 +155,35 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 	// 	return &t
 	// }()
 	shopperLocale := r.Form.Get("shopper.locale")
-	// shopperFirstName := r.Form.Get("shopper.firstName")
-	// shopperLastName := r.Form.Get("shopper.lastName")
+	shopperFirstName := r.Form.Get("shopper.firstName")
+	shopperLastName := r.Form.Get("shopper.lastName")
 	//shopperUID := r.Form.Get("shopper.uid")
-	// shopperPhoneNumber := r.Form.Get("shopper.phone")
+	shopperPhoneNumber := r.Form.Get("shopper.phone")
 
 	//expiresAt := time.Now().Add(time.Hour * 24)
 
 	return stripe.CheckoutSessionParams{
+		Params: stripe.Params{
+			Metadata: map[string]string{
+				"basketUID": basketUID,
+			},
+		},
+		PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
+			Metadata: map[string]string{
+				"basketUID": basketUID,
+			},
+			Shipping: &stripe.ShippingDetailsParams{
+				Name:           stripe.String(shopperFirstName + " " + shopperLastName),
+				Phone:          stripe.String(shopperPhoneNumber),
+				TrackingNumber: stripe.String(basketUID),
+				Address: &stripe.AddressParams{
+					City:       stripe.String(addressCity),
+					Country:    stripe.String(addressCountry),
+					Line1:      stripe.String(addressStreet + " " + addressHouseNumber),
+					PostalCode: stripe.String(addressPostalCode),
+				},
+			},
+		},
 		SuccessURL:        stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/success", basketUID)),
 		CancelURL:         stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/cancel", basketUID)),
 		ClientReferenceID: stripe.String(basketUID),

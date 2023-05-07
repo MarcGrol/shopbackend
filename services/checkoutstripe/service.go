@@ -47,22 +47,21 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
-	err := s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+	if err != nil || !exist || accessToken.ProviderName != "stripe" {
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
+		stripe.Key = s.apiKey
+	} else {
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+		stripe.Key = accessToken.AccessToken
+	}
 
-		accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
-		if err != nil || !exist || accessToken.ProviderName != "stripe" {
-			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
-			stripe.Key = s.apiKey
-		} else {
-			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-			stripe.Key = accessToken.AccessToken
-		}
+	session, err := session.New(&params)
+	if err != nil {
+		return "", myerrors.NewInvalidInputError(fmt.Errorf("error creating session: %s", err))
+	}
 
-		session, err := session.New(&params)
-		if err != nil {
-			return myerrors.NewInvalidInputError(fmt.Errorf("error creating session: %s", err))
-		}
-
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
 		// Store checkout context on basketUID because we need it for the success/cancel callback
@@ -70,24 +69,11 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,
-			ID:                session.PaymentIntent.ID,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
 		}
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Stored checkout on basket-uid %s", basketUID)
-
-		// Store checkout indexed on sessionID so we can fetch it later when we receive a webhook
-		err = s.checkoutStore.Put(c, session.PaymentIntent.ID, checkoutadyen.CheckoutContext{
-			BasketUID:         basketUID,
-			CreatedAt:         now,
-			OriginalReturnURL: returnURL,
-			ID:                session.PaymentIntent.ID,
-		})
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
-		}
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Stored checkout on stripe-uid %s", session.PaymentIntent.ID)
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutStarted{
 			ProviderName:  "stripe",
@@ -208,7 +194,7 @@ func (s *service) handlePaymentIntentCreated(c context.Context, paymentIntent st
 }
 
 func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent stripe.PaymentIntent) error {
-	uid := paymentIntent.ID
+	uid := paymentIntent.Metadata["basketUID"]
 
 	s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: status update event received on payment %s: %+v", uid, paymentIntent)
 
@@ -235,10 +221,6 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 		checkoutContext.WebhookSuccess = "true"
 		checkoutContext.LastModified = &now
 
-		err = s.checkoutStore.Put(c, uid, checkoutContext)
-		if err != nil {
-			return myerrors.NewInternalError(err)
-		}
 		err = s.checkoutStore.Put(c, checkoutContext.BasketUID, checkoutContext)
 		if err != nil {
 			return myerrors.NewInternalError(err)
