@@ -203,7 +203,7 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 		},
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 		Currency:           stripe.String(currency),
-		Customer:           stripe.String(shopperEmail),
+		CustomerEmail:      stripe.String(shopperEmail),
 		Locale:             stripe.String(shopperLocale),
 		PaymentMethodTypes: stripe.StringSlice([]string{"ideal", "card"}),
 		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
