@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
@@ -13,7 +12,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
-	"github.com/MarcGrol/shopbackend/services/checkout/checkoutevents"
 	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
@@ -132,99 +130,4 @@ func (s *service) checkoutFinalized(c context.Context, basketUID string, status 
 	}
 
 	return basket, nil
-}
-
-func (s *service) handleCheckoutCompletedEvent(c context.Context, event checkoutevents.CheckoutCompleted) error {
-	s.logger.Log(c, event.CheckoutUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %v", event.CheckoutUID, event.Status, event.Status)
-
-	now := s.nower.Now()
-
-	err := s.basketStore.RunInTransaction(c, func(c context.Context) error {
-		// must be idempotent
-		basket, found, err := s.basketStore.Get(c, event.CheckoutUID)
-		if err != nil {
-			return myerrors.NewInternalError(err)
-		}
-		if !found {
-			return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", event.CheckoutUID))
-		}
-
-		// Final codes matter!
-		basket.FinalPaymentEvent = event.Status
-		basket.FinalPaymentStatus = event.Success
-		basket.LastModified = &now
-		basket.PaymentMethod = event.PaymentMethod
-
-		err = s.basketStore.Put(c, event.CheckoutUID, basket)
-		if err != nil {
-			return myerrors.NewInternalError(err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func createBasket(uid string, createdAt time.Time, returnURL string) Basket {
-	return Basket{
-		UID:        uid,
-		CreatedAt:  createdAt,
-		Shop:       getCurrentShop(),
-		Shopper:    getCurrentShopper(uid),
-		TotalPrice: 51000,
-		Currency:   "EUR",
-		SelectedProducts: []SelectedProduct{
-			{
-				UID:         "product_tennis_racket",
-				Description: "Tennis racket",
-				Price:       10000,
-				Currency:    "EUR",
-				Quantity:    5,
-			},
-			{
-				UID:         "product_tennis_balls",
-				Description: "Tennis balls",
-				Price:       1000,
-				Currency:    "EUR",
-				Quantity:    1,
-			},
-		},
-		ReturnURL:            returnURL,
-		InitialPaymentStatus: "open",
-	}
-}
-
-func getCurrentShop() Shop {
-	return Shop{
-		UID:      "shop_evas_shop",
-		Name:     "Eva's shop",
-		Country:  "NL",
-		Currency: "EUR",
-		Hostname: "https://www.marcgrolconsultancy.nl/", // "http://localhost:8082"
-	}
-}
-
-func getCurrentShopper(uid string) Shopper {
-	return Shopper{
-		UID:         "shopper_marc_grol",
-		FirstName:   "Marc",
-		LastName:    "Grol",
-		DateOfBirth: func() *time.Time { t := time.Date(1971, time.February, 27, 0, 0, 0, 0, time.UTC); return &t }(),
-		Address: Address{
-			City:              "De Bilt",
-			Country:           "NL",
-			HouseNumberOrName: "79",
-			PostalCode:        "3731TB",
-			StateOrProvince:   "Utrecht",
-			Street:            "Heemdstrakwartier",
-		},
-		Country:      "NL",
-		Locale:       "nl-NL",
-		EmailAddress: fmt.Sprintf("marc.grol+%s@gmail.com", uid),
-		PhoneNumber:  "+31648928856",
-	}
 }
