@@ -25,8 +25,9 @@
     <thead>
     <tr>
         <th scope="col">Created at</th>
-        <th scope="col">BasketUID</th>
+        <th scope="col">Product</th>
         <th scope="col">TotalPrice</th>
+        <th scope="col">Payment supplier</th>
         <th scope="col">Initial status</th>
         <th scope="col">Final status</th>
         <th scope="col">Payment method</th>
@@ -36,10 +37,11 @@
         {{range .}}
         <tr>
             <td>{{.Timestamp}}</td>
-            <td><a href="/basket/{{.UID}}">{{.UID}}</a></td>
+            <td><a href="/basket/{{.UID}}">{{.GetProductSummary}}</a></td>
             <td>{{.GetPriceInCurrency}}</td>
+            <td>{{.PaymentServiceProvider}}</td>
             <td>{{.InitialPaymentStatus}}</td>
-            <td>{{.FinalPaymentEvent}}={{.FinalPaymentStatus}} </td>
+            <td>{{.GetFinalPaymentStatus}}</td>
             <td>{{.PaymentMethod}} </td>
         </tr>
     {{end}}

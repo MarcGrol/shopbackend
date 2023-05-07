@@ -286,6 +286,7 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 		}
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
+			ProviderName:  "adyen",
 			CheckoutUID:   basketUID,
 			Status:        item.NotificationRequestItem.EventCode,
 			Success:       item.NotificationRequestItem.Success == "true",

@@ -2,6 +2,7 @@ package shop
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -42,21 +43,22 @@ const (
 )
 
 type Basket struct {
-	UID                  string
-	State                BasketState
-	CreatedAt            time.Time
-	LastModified         *time.Time
-	Shop                 Shop
-	Shopper              Shopper
-	TotalPrice           int64
-	Currency             string
-	SelectedProducts     []SelectedProduct
-	InitialPaymentStatus string
-	FinalPaymentEvent    string
-	FinalPaymentStatus   bool
-	PaymentMethod        string
-	Done                 bool
-	ReturnURL            string
+	UID                    string
+	State                  BasketState
+	CreatedAt              time.Time
+	LastModified           *time.Time
+	Shop                   Shop
+	Shopper                Shopper
+	TotalPrice             int64
+	Currency               string
+	SelectedProducts       []SelectedProduct
+	PaymentServiceProvider string
+	InitialPaymentStatus   string
+	FinalPaymentEvent      string
+	FinalPaymentStatus     bool
+	PaymentMethod          string
+	Done                   bool
+	ReturnURL              string
 }
 
 func (b Basket) Timestamp() string {
@@ -67,8 +69,23 @@ func (b Basket) GetPriceInCurrency() string {
 	return fmt.Sprintf("%s %.2f", b.Currency, float32(b.TotalPrice/100.00))
 }
 
+func (b Basket) GetProductSummary() string {
+	var sb strings.Builder
+	for _, p := range b.SelectedProducts {
+		sb.WriteString(fmt.Sprintf("%d x %s,", p.Quantity, p.Description))
+	}
+	return sb.String()
+}
+
 func (b Basket) IsNotPaid() bool {
 	return b.InitialPaymentStatus == "open" || b.InitialPaymentStatus == "error" || b.InitialPaymentStatus == "failed"
+}
+
+func (b Basket) GetFinalPaymentStatus() string {
+	if b.FinalPaymentEvent == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s=%v", b.FinalPaymentEvent, b.FinalPaymentStatus)
 }
 
 func (b *Basket) Execute(event any) error {

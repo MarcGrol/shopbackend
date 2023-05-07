@@ -31,8 +31,16 @@
                     <td>{{.Shopper.FirstName}} {{.Shopper.LastName}}</td>
                 </tr>
                 <tr>
+                    <td>Products</td>
+                    <td>{{.GetProductSummary}}</td>  
+                </tr>
+                <tr>
                     <td>Price</td>
                     <td>{{.GetPriceInCurrency}}</td>
+                </tr>
+                <tr>
+                    <td>PSP</td>
+                    <td>{{.PaymentServiceProvider}}</td>
                 </tr>
                 <tr>
                     <td>Initial status</td>
@@ -70,7 +78,7 @@
             <input type="hidden" name="shopper.address.state" value="{{.Shopper.Address.StateOrProvince}}"/>
             <input type="hidden" name="shopper.address.street" value="{{.Shopper.Address.Street}}"/>
             <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
-            <button type="submit" class="btn btn-primary">Checkout</button>
+            <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
         </form>
         {{end}}
 

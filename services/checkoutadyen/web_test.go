@@ -198,6 +198,7 @@ func TestCheckoutService(t *testing.T) {
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
 		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
+			ProviderName:  "adyen",
 			CheckoutUID:   "123",
 			PaymentMethod: "ideal",
 			Status:        "AUTHORISATION",

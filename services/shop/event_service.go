@@ -49,6 +49,7 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 			return nil
 		}
 
+		basket.PaymentServiceProvider = event.ProviderName
 		basket.FinalPaymentEvent = event.Status
 		basket.FinalPaymentStatus = event.Success
 		basket.LastModified = &now

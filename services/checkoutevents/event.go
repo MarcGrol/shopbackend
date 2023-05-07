@@ -70,6 +70,7 @@ func (e CheckoutStarted) GetAggregateName() string {
 }
 
 type CheckoutCompleted struct {
+	ProviderName  string
 	CheckoutUID   string
 	PaymentMethod string
 	Status        string

@@ -52,8 +52,8 @@ func TestBasketService(t *testing.T) {
 		// then
 		assert.Equal(t, 200, response.Code)
 		got := response.Body.String()
-		assert.Contains(t, got, "<td><a href=\"/basket/123\">123</a></td>")
-		assert.Contains(t, got, "<td><a href=\"/basket/456\">456</a></td>")
+		assert.Contains(t, got, "<td><a href=\"/basket/123\"></a></td>")
+		assert.Contains(t, got, "<td><a href=\"/basket/456\"></a></td>")
 	})
 
 	t.Run("Get basket", func(t *testing.T) {
@@ -124,7 +124,7 @@ func TestBasketService(t *testing.T) {
 		basket, exists, _ := storer.Get(ctx, "123")
 		assert.True(t, exists)
 		assert.Equal(t, "123", basket.UID)
-		assert.Equal(t, int64(51000), basket.TotalPrice)
+		assert.Equal(t, 2, len(basket.SelectedProducts))
 		assert.Equal(t, "EUR", basket.Currency)
 
 	})
