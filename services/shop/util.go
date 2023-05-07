@@ -164,7 +164,7 @@ var products = []SelectedProduct{
 	{
 		UID:         "product_running_cap",
 		Description: "Running cap",
-		Price:       1000,
+		Price:       2000,
 		Currency:    "EUR",
 		Quantity:    1,
 	},
