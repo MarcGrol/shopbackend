@@ -1,6 +1,10 @@
 package oauth
 
-import "time"
+import (
+	"time"
+
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
+)
 
 type OAuthSessionSetup struct {
 	UID          string
@@ -11,7 +15,7 @@ type OAuthSessionSetup struct {
 	Verifier     string
 	CreatedAt    time.Time
 	LastModified *time.Time
-	TokenData    *GetTokenResponse
+	TokenData    *oauthclient.GetTokenResponse
 	Done         bool
 }
 

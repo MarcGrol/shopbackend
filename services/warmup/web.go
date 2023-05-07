@@ -3,10 +3,11 @@ package warmup
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"net/http"
 
 	"github.com/gorilla/mux"
 
