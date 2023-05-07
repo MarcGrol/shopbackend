@@ -71,6 +71,41 @@ func getRandomProduct() SelectedProduct {
 
 var products = []SelectedProduct{
 	{
+		UID:         "product_hockey_stick",
+		Description: "Hockey stick",
+		Price:       19000,
+		Currency:    "EUR",
+		Quantity:    1,
+	},
+	{
+		UID:         "product_hockey_shoes",
+		Description: "Hockey shoes",
+		Price:       12000,
+		Currency:    "EUR",
+		Quantity:    1,
+	},
+	{
+		UID:         "product_jogging_pants",
+		Description: "Jogging pants",
+		Price:       6000,
+		Currency:    "EUR",
+		Quantity:    1,
+	},
+	{
+		UID:         "product_sweat_shirt",
+		Description: "Sweat shirt",
+		Price:       7000,
+		Currency:    "EUR",
+		Quantity:    1,
+	},
+	{
+		UID:         "product_hoody",
+		Description: "Hoody",
+		Price:       8000,
+		Currency:    "EUR",
+		Quantity:    1,
+	},
+	{
 		UID:         "product_tennis_racket",
 		Description: "Tennis racket",
 		Price:       16900,
@@ -89,7 +124,7 @@ var products = []SelectedProduct{
 		Description: "Tennis shoes",
 		Price:       12000,
 		Currency:    "EUR",
-		Quantity:    21,
+		Quantity:    1,
 	},
 	{
 		UID:         "product_running_shoes",
