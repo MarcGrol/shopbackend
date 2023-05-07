@@ -1,4 +1,4 @@
-package adyencheckout
+package checkoutadyen
 
 import (
 	"context"

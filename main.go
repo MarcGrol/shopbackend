@@ -16,7 +16,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/services/adyencheckout"
+	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
 	"github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
@@ -118,20 +118,20 @@ func createCheckoutService(c context.Context, router *mux.Router, vault myvault.
 	apiKey := getenvOrAbort("ADYEN_API_KEY")
 	clientKey := getenvOrAbort("ADYEN_CLIENT_KEY")
 
-	checkoutStore, checkoutStoreCleanup, err := mystore.New[adyencheckout.CheckoutContext](c)
+	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutadyen.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
-	cfg := adyencheckout.Config{
+	cfg := checkoutadyen.Config{
 		Environment:     environment,
 		MerchantAccount: merchantAccount,
 		ClientKey:       clientKey,
 		ApiKey:          apiKey,
 	}
 
-	payer := adyencheckout.NewPayer(environment, apiKey)
+	payer := checkoutadyen.NewPayer(environment, apiKey)
 
-	checkoutService, err := adyencheckout.NewWebService(cfg, payer, checkoutStore, vault, nower, subscriber, publisher)
+	checkoutService, err := checkoutadyen.NewWebService(cfg, payer, checkoutStore, vault, nower, subscriber, publisher)
 	if err != nil {
 		log.Fatalf("Error creating payment checkoutService: %s", err)
 	}
