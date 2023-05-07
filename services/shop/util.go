@@ -65,7 +65,7 @@ func getCurrentShopper(uid string) Shopper {
 			Street:            "Heemdstrakwartier",
 		},
 		Country:      "NL",
-		Locale:       "nl-NL",
+		Locale:       "nl", //"nl-NL",
 		EmailAddress: fmt.Sprintf("marc.grol+%s@gmail.com", uid),
 		PhoneNumber:  "+31648928856",
 	}

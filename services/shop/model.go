@@ -70,11 +70,11 @@ func (b Basket) GetPriceInCurrency() string {
 }
 
 func (b Basket) GetProductSummary() string {
-	var sb strings.Builder
+	lines := []string{}
 	for _, p := range b.SelectedProducts {
-		sb.WriteString(fmt.Sprintf("%d x %s,", p.Quantity, p.Description))
+		lines = append(lines, fmt.Sprintf("%d x %s,", p.Quantity, p.Description))
 	}
-	return sb.String()
+	return strings.Join(lines, ", ")
 }
 
 func (b Basket) IsNotPaid() bool {

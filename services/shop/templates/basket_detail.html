@@ -48,7 +48,7 @@
                 </tr>
                 <tr>
                     <td>Final status</td>
-                    <td>{{.FinalPaymentEvent}}={{.FinalPaymentStatus}}</td>
+                    <td>{{.GetFinalPaymentStatus}}</td>
                 </tr>
                 <tr>
                     <td>Payment method</td>
@@ -79,6 +79,30 @@
             <input type="hidden" name="shopper.address.street" value="{{.Shopper.Address.Street}}"/>
             <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
             <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
+        </form>
+
+        <form action="/stripe/checkout/{{.UID}}" method="POST">
+            <input type="hidden" name="returnUrl" value="{{.ReturnURL}}"/>
+            <input type="hidden" name="amount" value="{{.TotalPrice}}"/>
+            <input type="hidden" name="currency" value="{{.Currency}}"/>
+            <input type="hidden" name="countryCode" value="{{.Shop.Country}}"/>
+            <input type="hidden" name="company.homepage" value="{{.Shop.Hostname}}"/>
+            <input type="hidden" name="company.name" value="{{.Shop.Name}}"/>
+            <input type="hidden" name="shop.name" value="{{.Shop.Name}}"/>
+            <input type="hidden" name="shopper.email" value="{{.Shopper.EmailAddress}}"/>
+            <input type="hidden" name="shopper.locale" value="{{.Shopper.Locale}}"/>
+            <input type="hidden" name="shopper.firstName" value="{{.Shopper.FirstName}}"/>
+            <input type="hidden" name="shopper.lastName" value="{{.Shopper.LastName}}"/>
+            <input type="hidden" name="shopper.uid" value="{{.Shopper.UID}}"/>
+            <input type="hidden" name="shopper.phone" value="{{.Shopper.PhoneNumber}}"/>
+            <input type="hidden" name="shopper.address.city" value="{{.Shopper.Address.City}}"/>
+            <input type="hidden" name="shopper.address.country" value="{{.Shopper.Address.Country}}"/>
+            <input type="hidden" name="shopper.address.houseNumber" value="{{.Shopper.Address.HouseNumberOrName}}"/>
+            <input type="hidden" name="shopper.address.postalCode" value="{{.Shopper.Address.PostalCode}}"/>
+            <input type="hidden" name="shopper.address.state" value="{{.Shopper.Address.StateOrProvince}}"/>
+            <input type="hidden" name="shopper.address.street" value="{{.Shopper.Address.Street}}"/>
+            <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
+            <button type="submit" class="btn btn-primary">Checkout with Stripe</button>
         </form>
         {{end}}
 

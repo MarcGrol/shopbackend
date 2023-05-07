@@ -56,14 +56,18 @@ func main() {
 	}
 	defer vaultCleanup()
 
+	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutadyen.CheckoutContext](c)
+	if err != nil {
+		log.Fatalf("Error creating checkout store: %s", err)
+	}
+	defer checkoutStoreCleanup()
+
 	oauthServiceCleanup := createOAuthService(c, router, vault, nower, uuider, eventPublisher)
 	defer oauthServiceCleanup()
 
-	adyenCheckoutServiceCleanup := createAdyenCheckoutService(c, router, vault, nower, subscriber, eventPublisher)
-	defer adyenCheckoutServiceCleanup()
+	createAdyenCheckoutService(c, router, checkoutStore, vault, nower, subscriber, eventPublisher)
 
-	stripeCheckoutServiceCleanup := createStripeCheckoutService(c, router, vault, nower, subscriber, eventPublisher)
-	defer stripeCheckoutServiceCleanup()
+	createStripeCheckoutService(c, router, checkoutStore, vault, nower, subscriber, eventPublisher)
 
 	shopServiceCleanup := createShopService(c, router, nower, uuider, subscriber, eventPublisher)
 	defer shopServiceCleanup()
@@ -115,17 +119,13 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	return sessionStoreCleanup
 }
 
-func createAdyenCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) func() {
+func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
 	merchantAccount := getenvOrAbort("ADYEN_MERCHANT_ACCOUNT")
 	environment := getenvOrAbort("ADYEN_ENVIRONMENT")
 	apiKey := getenvOrAbort("ADYEN_API_KEY")
 	clientKey := getenvOrAbort("ADYEN_CLIENT_KEY")
 
-	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutadyen.CheckoutContext](c)
-	if err != nil {
-		log.Fatalf("Error creating checkout store: %s", err)
-	}
 	cfg := checkoutadyen.Config{
 		Environment:     environment,
 		MerchantAccount: merchantAccount,
@@ -140,19 +140,17 @@ func createAdyenCheckoutService(c context.Context, router *mux.Router, vault myv
 		log.Fatalf("Error creating adyen checkoutService: %s", err)
 	}
 	checkoutService.RegisterEndpoints(c, router)
-
-	return checkoutStoreCleanup
 }
 
-func createStripeCheckoutService(c context.Context, router *mux.Router, vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) func() {
+func createStripeCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
-	checkoutService, err := checkoutstripe.NewWebService()
+	apiKey := getenvOrAbort("STRIPE_API_KEY")
+
+	checkoutService, err := checkoutstripe.NewWebService(apiKey, nower, checkoutStore, publisher)
 	if err != nil {
 		log.Fatalf("Error creating stripe checkoutService: %s", err)
 	}
 	checkoutService.RegisterEndpoints(c, router)
-
-	return func() {}
 }
 
 func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader, uuider myuuid.UUIDer, pub mypublisher.Publisher) {
