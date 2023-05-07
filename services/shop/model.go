@@ -78,7 +78,11 @@ func (b Basket) GetProductSummary() string {
 }
 
 func (b Basket) IsNotPaid() bool {
-	return b.InitialPaymentStatus != "success" || (b.FinalPaymentEvent == "AUTHORISATION" && b.FinalPaymentStatus)
+	return !b.IsPaid()
+}
+
+func (b Basket) IsPaid() bool {
+	return b.InitialPaymentStatus == "success" || (b.FinalPaymentEvent == "AUTHORISATION" && b.FinalPaymentStatus)
 }
 
 func (b Basket) GetFinalPaymentStatus() string {
