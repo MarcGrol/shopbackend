@@ -16,6 +16,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
 func TestOauth(t *testing.T) {
@@ -218,7 +219,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := NewMockOauthClient(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
-	sut := NewService(storer, vault, nower, uuider, oauthClient, publisher, NewProviders())
+	sut := NewService(storer, vault, nower, uuider, oauthClient, publisher, providers.NewProviders())
 
 	publisher.EXPECT().CreateTopic(c, oauthevents.TopicName).Return(nil)
 

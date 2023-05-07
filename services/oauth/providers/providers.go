@@ -1,4 +1,4 @@
-package oauth
+package providers
 
 import "fmt"
 

@@ -18,6 +18,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkout"
 	"github.com/MarcGrol/shopbackend/services/oauth"
+	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 	"github.com/MarcGrol/shopbackend/services/shop"
 	"github.com/MarcGrol/shopbackend/services/warmup"
 )
@@ -87,11 +88,11 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		log.Fatalf("Error creating oauth-session store: %s", err)
 	}
 
-	providers := oauth.NewProviders()
+	providers := providers.NewProviders()
 
 	{
-		clientID := getenvOrAbort("OAUTH_CLIENT_ID")
-		clientSecret := getenvOrAbort("OAUTH_CLIENT_SECRET")
+		clientID := getenvOrAbort("ADYEN_OAUTH_CLIENT_ID")
+		clientSecret := getenvOrAbort("ADYEN_OAUTH_CLIENT_SECRET")
 		providers.Set("adyen", clientID, clientSecret, "", "")
 	}
 

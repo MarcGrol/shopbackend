@@ -18,6 +18,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
 type webService struct {
@@ -25,7 +26,7 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-func NewService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypublisher.Publisher, providers OAuthProvider) *webService {
+func NewService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *webService {
 	return &webService{
 		service: newService(storer, vault, nower, uuider, oauthClient, pub, providers),
 		logger:  mylog.New("oauth"),

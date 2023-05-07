@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/MarcGrol/shopbackend/lib/codeverifier"
+	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
 type ComposeAuthURLRequest struct {
@@ -46,10 +47,10 @@ type OauthClient interface {
 }
 
 type oauthClient struct {
-	providers *OAuthProviders
+	providers *providers.OAuthProviders
 }
 
-func NewOAuthClient(providers *OAuthProviders) *oauthClient {
+func NewOAuthClient(providers *providers.OAuthProviders) *oauthClient {
 	return &oauthClient{
 		providers: providers,
 	}

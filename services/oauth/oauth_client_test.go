@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
 const (
@@ -23,7 +25,7 @@ func RunGetAccessTokenServer(t *testing.T,
 	mux := http.NewServeMux()
 	ts := httptest.NewServer(mux)
 
-	providers := NewProviders()
+	providers := providers.NewProviders()
 	adyenProvider, err := providers.Get("adyen")
 	assert.NoError(t, err)
 
@@ -41,7 +43,7 @@ func RunGetAccessTokenServer(t *testing.T,
 func TestOAuthClient(t *testing.T) {
 	t.Run("Compose auth url", func(t *testing.T) {
 
-		providers := NewProviders()
+		providers := providers.NewProviders()
 		providers.Set("adyen", "123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
 
 		oauthClient := NewOAuthClient(providers)
@@ -82,7 +84,7 @@ func TestOAuthClient(t *testing.T) {
 		ts, cleanup := RunGetAccessTokenServer(t, unserializeGetTokenRequest, verifier, responder, serializeGetTokenResponse)
 		defer cleanup()
 
-		providers := NewProviders()
+		providers := providers.NewProviders()
 		providers.Set("adyen", "123", "456", ts.URL, ts.URL)
 
 		client := NewOAuthClient(providers)
@@ -107,7 +109,7 @@ func TestOAuthClient(t *testing.T) {
 			Scope:        adyenExampleScopes,
 			RefreshToken: "rst456",
 		}
-		providers := NewProviders()
+		providers := providers.NewProviders()
 		adyenProvider, err := providers.Get("adyen")
 		assert.NoError(t, err)
 		mux.HandleFunc(adyenProvider.TokenEndpoint.Path, func(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +136,6 @@ func TestOAuthClient(t *testing.T) {
 			assert.NoError(t, err)
 		})
 
-		providers = NewProviders()
 		providers.Set("adyen", "123", "456", ts.URL, ts.URL)
 
 		client := NewOAuthClient(providers)
@@ -160,7 +161,7 @@ func TestOAuthClient(t *testing.T) {
 			Scope:        adyenExampleScopes,
 			RefreshToken: "newrst456",
 		}
-		providers := NewProviders()
+		providers := providers.NewProviders()
 		adyenProvider, err := providers.Get("adyen")
 		assert.NoError(t, err)
 
