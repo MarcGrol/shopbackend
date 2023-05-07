@@ -89,6 +89,8 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 		return GetTokenResponse{}, fmt.Errorf("provider with name '%s' not known", req.ProviderName)
 	}
 
+	clientID, secret := provider.GetCredentials(provider)
+
 	getTokenURL := provider.TokenEndpoint.GetFullURL()
 
 	requestBody := url.Values{
@@ -98,9 +100,7 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 		"code_verifier": {req.CodeVerifier},
 	}.Encode()
 
-	clientID, secret := provider.GetCredentials(provider)
 	httpClient := newHttpClient(clientID, secret)
-
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, getTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
@@ -125,14 +125,15 @@ func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequ
 		return GetTokenResponse{}, fmt.Errorf("provider with name '%s' not known", req.ProviderName)
 	}
 
+	clientID, secret := provider.GetCredentials(provider)
+
+	refreshTokenURL := provider.TokenEndpoint.GetFullURL()
+
 	requestBody := url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {req.RefreshToken},
 	}.Encode()
 
-	refreshTokenURL := provider.TokenEndpoint.GetFullURL()
-
-	clientID, secret := provider.GetCredentials(provider)
 	httpClient := newHttpClient(clientID, secret)
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, refreshTokenURL, []byte(requestBody))
 	if err != nil {
