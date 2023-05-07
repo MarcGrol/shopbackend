@@ -68,31 +68,29 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 
 	now := s.nower.Now()
 
-	var paymentMethodsResp checkout.PaymentMethodsResponse
-	var checkoutSessionResp checkout.CreateCheckoutSessionResponse
+	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+	if err != nil || !exist || accessToken.ProviderName != "adyen" {
+		s.payer.UseApiKey(s.apiKey)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
+	} else {
+		s.payer.UseToken(accessToken.AccessToken)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+	}
+
+	// Initiate a checkout session on the Adyen platform
+	checkoutSessionResp, err := s.payer.Sessions(c, req)
+	if err != nil {
+		return nil, myerrors.NewInternalError(fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
+	}
+
+	// Ask the Adyen platform to return payment methods that are allowed for this merchant
+	paymentMethodsResp, err := s.payer.PaymentMethods(c, checkoutToPaymentMethodsRequest(req))
+	if err != nil {
+		return nil, myerrors.NewInternalError(fmt.Errorf("error fetching payment methods for checkout %s: %s", basketUID, err))
+	}
+
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
-
-		accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
-		if err != nil || !exist || accessToken.ProviderName != "adyen" {
-			s.payer.UseApiKey(s.apiKey)
-			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
-		} else {
-			s.payer.UseToken(accessToken.AccessToken)
-			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-		}
-
-		// Initiate a checkout session on the Adyen platform
-		checkoutSessionResp, err = s.payer.Sessions(c, req)
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
-		}
-
-		// Ask the Adyen platform to return payment methods that are allowed for this merchant
-		paymentMethodsResp, err = s.payer.PaymentMethods(c, checkoutToPaymentMethodsRequest(req))
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error fetching payment methods for checkout %s: %s", basketUID, err))
-		}
 
 		// Store checkout context because we need it later again
 		err = s.checkoutStore.Put(c, basketUID, CheckoutContext{
