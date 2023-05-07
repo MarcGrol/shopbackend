@@ -47,21 +47,22 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
-	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
-	if err != nil || !exist || accessToken.ProviderName != "stripe" {
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
-		stripe.Key = s.apiKey
-	} else {
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-		stripe.Key = accessToken.AccessToken
-	}
+	err := s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 
-	session, err := session.New(&params)
-	if err != nil {
-		return "", myerrors.NewInvalidInputError(fmt.Errorf("error creating session: %s", err))
-	}
+		accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+		if err != nil || !exist || accessToken.ProviderName != "stripe" {
+			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
+			stripe.Key = s.apiKey
+		} else {
+			s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+			stripe.Key = accessToken.AccessToken
+		}
 
-	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		session, err := session.New(&params)
+		if err != nil {
+			return myerrors.NewInvalidInputError(fmt.Errorf("error creating session: %s", err))
+		}
+
 		// must be idempotent
 
 		// Store checkout context on basketUID because we need it for the success/cancel callback
