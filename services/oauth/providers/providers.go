@@ -12,10 +12,11 @@ func (ep EndPoint) GetFullURL() string {
 }
 
 type OauthParty struct {
-	ClientID      string
-	Secret        string
-	AuthEndpoint  EndPoint
-	TokenEndpoint EndPoint
+	ClientID       string
+	Secret         string
+	AuthEndpoint   EndPoint
+	TokenEndpoint  EndPoint
+	GetCredentials func(p OauthParty) (string, string)
 }
 
 type OAuthProvider interface {
@@ -41,6 +42,9 @@ func NewProviders() *OAuthProviders {
 					Hostname: "https://oauth-test.adyen.com",
 					Path:     "/v1/token",
 				},
+				GetCredentials: func(p OauthParty) (string, string) {
+					return p.ClientID, p.Secret
+				},
 			},
 			"stripe": {
 				ClientID: "stripe_client_id",
@@ -52,6 +56,9 @@ func NewProviders() *OAuthProviders {
 				TokenEndpoint: EndPoint{
 					Hostname: "https://connect.stripe.com",
 					Path:     "/oauth/token",
+				},
+				GetCredentials: func(p OauthParty) (string, string) {
+					return p.Secret, "" // secret is used as basic auth username with empty password
 				},
 			},
 		},

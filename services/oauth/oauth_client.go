@@ -98,10 +98,8 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 		"code_verifier": {req.CodeVerifier},
 	}.Encode()
 
-	httpClient := newHttpClient(provider.ClientID, provider.Secret)
-	if req.ProviderName == "stripe" {
-		httpClient = newHttpClient(provider.Secret, "") // Stripe uses secret as username with empty password
-	}
+	clientID, secret := provider.GetCredentials(provider)
+	httpClient := newHttpClient(clientID, secret)
 
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, getTokenURL, []byte(requestBody))
 	if err != nil {
@@ -134,10 +132,8 @@ func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequ
 
 	refreshTokenURL := provider.TokenEndpoint.GetFullURL()
 
-	httpClient := newHttpClient(provider.ClientID, provider.Secret)
-	if req.ProviderName == "stripe" {
-		httpClient = newHttpClient(provider.Secret, "") // Stripe uses secret as username with empty password
-	}
+	clientID, secret := provider.GetCredentials(provider)
+	httpClient := newHttpClient(clientID, secret)
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, refreshTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %s", err)
