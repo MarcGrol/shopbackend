@@ -24,7 +24,7 @@ availableSecrets:
       env: ADYEN_CLIENT_KEY_VAR
     - versionName: projects/$PROJECT_ID/secrets/ADYEN_OAUTH_CLIENT_SECRET_VAR/versions/latest
       env: ADYEN_OAUTH_CLIENT_SECRET_VAR
-   - versionName: projects/$PROJECT_ID/secrets/STRIPE_OAUTH_CLIENT_SECRET_VAR/versions/latest
+    - versionName: projects/$PROJECT_ID/secrets/STRIPE_OAUTH_CLIENT_SECRET_VAR/versions/latest
       env: STRIPE_OAUTH_CLIENT_SECRET_VAR
 
 # Save test logs to Google Cloud Storage
