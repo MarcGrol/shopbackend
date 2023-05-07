@@ -61,6 +61,17 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
 		}
 
+		// Store checkout indexed on sessionID so we can fetch it later when we receive a webhook
+		err = s.checkoutStore.Put(c, session.ID, checkoutadyen.CheckoutContext{
+			BasketUID:         basketUID,
+			CreatedAt:         now,
+			OriginalReturnURL: returnURL,
+			ID:                session.ID,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
+		}
+
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutStarted{
 			ProviderName:  "stripe",
 			CheckoutUID:   basketUID,
