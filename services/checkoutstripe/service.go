@@ -64,7 +64,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
-		// Store checkout context because we need it later again
+		// Store checkout context on basketUID because we need it later again
 		err = s.checkoutStore.Put(c, basketUID, checkoutadyen.CheckoutContext{
 			BasketUID:         basketUID,
 			CreatedAt:         now,
@@ -74,6 +74,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
 		}
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Stored checkout on basket-uid %s", basketUID)
 
 		// Store checkout indexed on sessionID so we can fetch it later when we receive a webhook
 		err = s.checkoutStore.Put(c, session.ID, checkoutadyen.CheckoutContext{
@@ -85,6 +86,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
 		}
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Stored checkout on stripe-uid %s", session.ID)
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutStarted{
 			ProviderName:  "stripe",
@@ -161,7 +163,7 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 func (s *service) webhookNotification(c context.Context, username, password string, event stripe.Event) error {
 	// TODO check username+password to make sure notification originates from Adyen
 
-	s.logger.Log(c, event.ID, mylog.SeverityInfo, "Webhook: status update event %s: %+v", event.Type, event)
+	s.logger.Log(c, event.ID, mylog.SeverityInfo, "Webhook: status update event %s with ID: %s", event.Type, event.ID)
 
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
@@ -172,7 +174,7 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 			if err != nil {
 				return myerrors.NewInvalidInputError(fmt.Errorf("error parsing webhook %v JSON: %v", event.Type, err))
 			}
-			return s.handlePaymentIntentCreated(c, paymentIntent)
+			return s.handlePaymentIntentCreated(c, event.ID, paymentIntent)
 		}
 	case "payment_intent.succeeded":
 		{
@@ -181,7 +183,7 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 			if err != nil {
 				return myerrors.NewInvalidInputError(fmt.Errorf("error parsing webhook %v JSON: %v", event.Type, err))
 			}
-			return s.handlePaymentIntentSucceeded(c, paymentIntent)
+			return s.handlePaymentIntentSucceeded(c, event.ID, paymentIntent)
 		}
 	case "payment_method.attached":
 		{
@@ -190,7 +192,7 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 			if err != nil {
 				return myerrors.NewInvalidInputError(fmt.Errorf("error parsing webhook %v JSON: %v", event.Type, err))
 			}
-			return s.handlePaymentMethodAttached(c, paymentMethod)
+			return s.handlePaymentMethodAttached(c, event.ID, paymentMethod)
 		}
 	default:
 		{
@@ -200,12 +202,11 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 	return nil
 }
 
-func (s *service) handlePaymentIntentCreated(c context.Context, paymentIntent stripe.PaymentIntent) error {
+func (s *service) handlePaymentIntentCreated(c context.Context, uid string, paymentIntent stripe.PaymentIntent) error {
 	return myerrors.NewNotImplementedError(fmt.Errorf("unhandled event %+v", paymentIntent))
 }
 
-func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent stripe.PaymentIntent) error {
-	uid := paymentIntent.ID
+func (s *service) handlePaymentIntentSucceeded(c context.Context, uid string, paymentIntent stripe.PaymentIntent) error {
 
 	s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: status update event received on payment %s: %+v", uid, paymentIntent)
 
@@ -224,6 +225,9 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 		if !found {
 			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", uid))
 		}
+
+		s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: Payment %s is related to basket %s", uid, checkoutContext.BasketUID)
+
 		checkoutContext.PaymentMethod = "ideal" // TODO
 		checkoutContext.WebhookStatus = "payment_intent.succeeded"
 		checkoutContext.WebhookSuccess = "true"
@@ -258,6 +262,6 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 	return nil
 }
 
-func (s *service) handlePaymentMethodAttached(c context.Context, paymentMethod stripe.PaymentMethod) error {
+func (s *service) handlePaymentMethodAttached(c context.Context, uid string, paymentMethod stripe.PaymentMethod) error {
 	return myerrors.NewNotImplementedError(fmt.Errorf("unhandled event"))
 }
