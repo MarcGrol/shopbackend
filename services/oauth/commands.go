@@ -51,6 +51,10 @@ func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 }
 
 func (s *service) start(c context.Context, providerName string, requestedScopes string, originalReturnURL string, currentHostname string) (string, error) {
+	now := s.nower.Now()
+	sessionUID := s.uuider.Create()
+
+	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Start oauth session-setup %s", sessionUID)
 
 	provider, err := s.providers.Get(providerName)
 	if err != nil {
@@ -63,12 +67,20 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 	}
 	codeVerifierValue := codeVerifier.GetValue()
 
-	now := s.nower.Now()
-	sessionUID := s.uuider.Create()
-
 	authURL := ""
 	err = s.storer.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
+
+		authURL, err = s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
+			ProviderName:  providerName,
+			CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
+			Scope:         requestedScopes,
+			State:         sessionUID,
+			CodeVerifier:  codeVerifierValue,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
+		}
 
 		// Create new session
 		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
@@ -83,17 +95,6 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing: %s", err))
-		}
-
-		authURL, err = s.oauthClient.ComposeAuthURL(c, ComposeAuthURLRequest{
-			ProviderName:  providerName,
-			CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
-			Scope:         requestedScopes,
-			State:         sessionUID,
-			CodeVerifier:  codeVerifierValue,
-		})
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
 		}
 
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthSessionSetupStarted{
@@ -112,13 +113,15 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 		return "", err
 	}
 
-	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Started oauth session-setup %s", sessionUID)
+	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Completed first step of oauth session-setup %s", sessionUID)
 
 	return authURL, nil
 }
 
 func (s *service) done(c context.Context, sessionUID string, code string, currentHostname string) (string, error) {
 	now := s.nower.Now()
+
+	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Continue with oauth session-setup (create-token) %s", sessionUID)
 
 	returnURL := ""
 	tokenResp := GetTokenResponse{}
@@ -130,7 +133,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 			return myerrors.NewInternalError(fmt.Errorf("error fetching session: %s", err))
 		}
 		if !exist {
-			return myerrors.NewNotFoundError(fmt.Errorf("Session with uid %s not found", sessionUID))
+			return myerrors.NewNotFoundError(fmt.Errorf("session with uid %s not found", sessionUID))
 		}
 		returnURL = session.ReturnURL
 
@@ -156,7 +159,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 			return myerrors.NewInternalError(fmt.Errorf("error storing session: %s", err))
 		}
 
-		// Store token in vault
+		// Store new token in vault
 		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
 			ProviderName: session.ProviderName,
 			ClientID:     session.ClientID,
@@ -188,7 +191,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		return "", err
 	}
 
-	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Completed oauth session-setup %s", sessionUID)
+	s.logger.Log(c, sessionUID, mylog.SeverityInfo, "Completed oauth session-setup (token-created) %s", sessionUID)
 
 	return returnURL, nil
 }
@@ -198,9 +201,10 @@ func createCompletionURL(hostname string) string {
 }
 
 func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
-
 	now := s.nower.Now()
 	uid := s.uuider.Create()
+
+	s.logger.Log(c, "", mylog.SeverityInfo, "Start oauth token-refresh")
 
 	newToken := myvault.Token{}
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
@@ -251,13 +255,13 @@ func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
 		}
 
-		s.logger.Log(c, "", mylog.SeverityInfo, "Complete oauth session-refresh-token")
-
 		return nil
 	})
 	if err != nil {
 		return newToken, err
 	}
+
+	s.logger.Log(c, "", mylog.SeverityInfo, "Completed oauth token-refresh")
 
 	return newToken, nil
 }
