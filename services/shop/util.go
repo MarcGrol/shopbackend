@@ -22,16 +22,22 @@ func createBasket(uid string, createdAt time.Time, returnURL string) Basket {
 		Currency:             "EUR",
 		SelectedProducts:     []SelectedProduct{},
 		ReturnURL:            returnURL,
-		InitialPaymentStatus: "open",
+		InitialPaymentStatus: "not paid yet",
 	}
 	basket.SelectedProducts = append(basket.SelectedProducts, getRandomProduct())
 	basket.SelectedProducts = append(basket.SelectedProducts, getRandomProduct())
 
-	for _, p := range basket.SelectedProducts {
-		basket.TotalPrice += p.Price * int64(p.Quantity)
-	}
+	basket.TotalPrice = calculateTotalPrice(basket.SelectedProducts)
 
 	return basket
+}
+
+func calculateTotalPrice(products []SelectedProduct) int64 {
+	var totalPrice int64
+	for _, p := range products {
+		totalPrice += p.Price * int64(p.Quantity)
+	}
+	return totalPrice
 }
 
 func getCurrentShop() Shop {
