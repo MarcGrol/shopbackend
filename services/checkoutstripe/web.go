@@ -206,11 +206,6 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 		CustomerEmail:      stripe.String(shopperEmail),
 		Locale:             stripe.String(shopperLocale),
 		PaymentMethodTypes: stripe.StringSlice([]string{"ideal", "card"}),
-		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
-			Metadata: map[string]string{
-				"basketUID": basketUID,
-			},
-		},
 	}, basketUID, returnURL, nil
 
 }
