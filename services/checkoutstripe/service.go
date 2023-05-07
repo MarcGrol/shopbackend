@@ -41,7 +41,6 @@ func newService(apiKey string, logger mylog.Logger, nower mytime.Nower, checkout
 	}, nil
 }
 
-// startCheckout starts a checkout session on the Adyen platform
 func (s *service) startCheckout(c context.Context, basketUID string, returnURL string, params stripe.CheckoutSessionParams) (string, error) {
 	now := s.nower.Now()
 
@@ -181,6 +180,8 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 			}
 			return s.handlePaymentMethodAttached(c, paymentMethod)
 		}
+		// case "payment_intent.canceled", "ayment_intent.partially_funded", "payment_intent.payment_failed",
+		// "payment_intent.processing", "payment_intent.requires_action", "payment_intent.requires_capture",
 	default:
 		{
 			fmt.Printf("unhandled event type: %v\n", event.Type)
@@ -227,7 +228,7 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 		}
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
-			ProviderName:  "adyen",
+			ProviderName:  "stripe",
 			CheckoutUID:   checkoutContext.BasketUID,
 			Status:        "payment_intent.succeeded",
 			Success:       true,

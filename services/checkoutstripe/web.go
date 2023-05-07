@@ -170,7 +170,7 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 		},
 		PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
 			Metadata: map[string]string{
-				"basketUID": basketUID,
+				"basketUID": basketUID, // This is to correlare the webhook with the basket
 			},
 			Shipping: &stripe.ShippingDetailsParams{
 				Name:           stripe.String(shopperFirstName + " " + shopperLastName),
