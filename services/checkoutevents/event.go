@@ -53,6 +53,7 @@ func DispatchEvent(c context.Context, reader io.Reader, service CheckoutEventSer
 }
 
 type CheckoutStarted struct {
+	ProviderName  string
 	CheckoutUID   string
 	AmountInCents int64
 	Currency      string

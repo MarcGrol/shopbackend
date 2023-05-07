@@ -107,6 +107,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 		}
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutStarted{
+			ProviderName:  "adyen",
 			CheckoutUID:   basketUID,
 			AmountInCents: req.Amount.Value,
 			Currency:      req.Amount.Currency,
@@ -145,7 +146,7 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 	if req.Amount.Currency == "" || req.Amount.Value == 0 || req.CountryCode == "" ||
 		req.ShopperLocale == "" || req.ReturnUrl == "" || req.MerchantOrderReference == "" ||
 		req.Reference == "" || req.MerchantAccount == "" || req.Channel == "" {
-		return myerrors.NewInvalidInputError(fmt.Errorf("Missing mandatory field"))
+		return myerrors.NewInvalidInputError(fmt.Errorf("missing mandatory field"))
 	}
 
 	return nil

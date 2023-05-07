@@ -82,7 +82,13 @@ func TestCheckoutService(t *testing.T) {
 		payer.EXPECT().Sessions(gomock.Any(), sessionRequest).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil) // TODO: check event
+		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, checkoutevents.CheckoutStarted{
+			ProviderName:  "adyen",
+			CheckoutUID:   "123",
+			AmountInCents: 12300,
+			Currency:      "EUR",
+			MerchantUID:   "MyMerchantAccount",
+		}).Return(nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl`))
@@ -191,7 +197,12 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
-		publisher.EXPECT().Publish(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil) // TODO: check event
+		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
+			CheckoutUID:   "123",
+			PaymentMethod: "ideal",
+			Status:        "AUTHORISATION",
+			Success:       true,
+		}).Return(nil)
 
 		storer.Put(ctx, "123", CheckoutContext{
 			BasketUID:         "123",
@@ -209,6 +220,7 @@ func TestCheckoutService(t *testing.T) {
       {
          "NotificationRequestItem":{
             "eventCode":"AUTHORISATION",
+			"paymentMethod":"ideal",
             "success":"true",
             "eventDate":"2019-06-28T18:03:50+01:00",
             "merchantAccountCode":"MyMerchantAccount",
