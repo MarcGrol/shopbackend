@@ -217,7 +217,12 @@ func (s *service) handlePaymentIntentSucceeded(c context.Context, paymentIntent 
 
 		s.logger.Log(c, uid, mylog.SeverityInfo, "Webhook: Payment %s is related to basket %s", uid, checkoutContext.BasketUID)
 
-		checkoutContext.PaymentMethod = "ideal" // TODO
+		checkoutContext.PaymentMethod = func() string {
+			if len(paymentIntent.PaymentMethodTypes) == 0 {
+				return ""
+			}
+			return paymentIntent.PaymentMethodTypes[0]
+		}()
 		checkoutContext.WebhookStatus = "payment_intent.succeeded"
 		checkoutContext.WebhookSuccess = "true"
 		checkoutContext.LastModified = &now
