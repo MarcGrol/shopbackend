@@ -20,29 +20,30 @@
 <div class="container">
     <h1>Checkout</h1>
     <div class="row">
-
+        <div class="col">
             <table class="table">
                 <tbody>
-                <tr>
-                    <td>UID</td>
-                    <td>{{.BasketUID}}</td>
-                </tr>
-                <tr>
-                    <td>Amount</td>
-                    <td>{{.Amount.String}}</td>
-                </tr>   
+                    <tr>
+                        <td>UID</td>
+                        <td>{{.BasketUID}}</td>
+                    </tr>
+                    <tr>
+                        <td>Amount</td>
+                        <td>{{.Amount.String}}</td>
+                    </tr>   
                 </tbody>
             </table>
-    </div>
-    <div class="row">
+        </div>
+        <div class="col">
         <p>
             Use "4111 1111 4555 1142" or "4917 6100 0000 0000" to test Mastercard
         </p>
         <div class="payment-container">
             <div id="payment" class="payment"></div>
         </div>
-
     </div>
+    </div>
+</div>
 
 
     <footer class="container-fluid">
