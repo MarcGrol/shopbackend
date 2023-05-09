@@ -39,6 +39,18 @@ type CheckoutPageInfo struct {
 	PaymentMethodsResponse checkout.PaymentMethodsResponse
 	ID                     string
 	SessionData            string
+
+	ShopperFullname string
+	Products        []Product
+	AmountTotal     Amount
+}
+
+type Product struct {
+	Name        string
+	Description string
+	ItemPrice   Amount
+	Quantity    int
+	TotalPrice  Amount
 }
 
 func (ci CheckoutPageInfo) AmountFormatted() string {

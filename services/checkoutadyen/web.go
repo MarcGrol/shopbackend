@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -102,6 +103,9 @@ func (s *webService) startCheckoutPage() http.HandlerFunc {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
+
+		log.Printf("sessionRequest:%+v", sessionRequest)
+		log.Printf("sessionRequest:%+v", *sessionRequest.LineItems)
 
 		resp, err := s.service.startCheckout(c, basketUID, sessionRequest, returnURL)
 		if err != nil {
@@ -256,6 +260,52 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 	shopperUID := r.Form.Get("shopper.uid")
 	shopperPhoneNumber := r.Form.Get("shopper.phone")
 
+	/*
+			  <input type="hidden" name="product.count" value="0"/>
+
+		            <input type="hidden" name="product.0.name" value="product_running_socks"/>
+		            <input type="hidden" name="product.0.description" value="Running socks"/>
+		            <input type="hidden" name="product.0.itemPrice" value="1000"/>
+		            <input type="hidden" name="product.0.currency" value="EUR"/>
+		            <input type="hidden" name="product.0.quantity" value="3"/>
+		            <input type="hidden" name="product.0.totalPrice" value="3000"/>
+
+		            <input type="hidden" name="product.1.name" value="product_tennis_balls"/>
+		            <input type="hidden" name="product.1.description" value="Tennis balls"/>
+		            <input type="hidden" name="product.1.itemPrice" value="1000"/>
+		            <input type="hidden" name="product.1.currency" value="EUR"/>
+		            <input type="hidden" name="product.1.quantity" value="6"/>
+		            <input type="hidden" name="product.1.totalPrice" value="6000"/>
+
+	*/
+	productCount, err := strconv.Atoi(r.Form.Get("product.count"))
+	if err != nil {
+		return checkout.CreateCheckoutSessionRequest{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid product count '%s' (%s)", r.Form.Get("product.count"), err))
+	}
+
+	products := []checkout.LineItem{}
+	for i := 0; i < productCount; i++ {
+		p := checkout.LineItem{
+			Id:          r.Form.Get(fmt.Sprintf("product.%d.name", i)),
+			Description: r.Form.Get(fmt.Sprintf("product.%d.description", i)),
+			AmountIncludingTax: func() int64 {
+				price, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.itemPrice", i)))
+				if err != nil {
+					return 0
+				}
+				return int64(price)
+			}(),
+			Quantity: func() int64 {
+				quantity, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.quantity", i)))
+				if err != nil {
+					return 0
+				}
+				return int64(quantity)
+			}(),
+		}
+		products = append(products, p)
+	}
+
 	//expiresAt := time.Now().Add(time.Hour * 24)
 
 	return checkout.CreateCheckoutSessionRequest{
@@ -318,7 +368,7 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 		//EnablePayOut:             false,
 		//EnableRecurring:          false,
 		//ExpiresAt: &expiresAt,
-		//LineItems:                nil,
+		LineItems: &products,
 		//Mandate:                  nil,
 		//Mcc:                      "",
 		// MerchantAccount:         "",

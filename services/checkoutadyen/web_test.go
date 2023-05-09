@@ -79,7 +79,7 @@ func TestCheckoutService(t *testing.T) {
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
 		payer.EXPECT().UseApiKey(gomock.Any())
-		payer.EXPECT().Sessions(gomock.Any(), sessionRequest).Return(sessionResp, nil)
+		payer.EXPECT().Sessions(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, checkoutevents.CheckoutStarted{
@@ -91,7 +91,7 @@ func TestCheckoutService(t *testing.T) {
 		}).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl`))
+		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl&product.count=0&shopper.firstName=Marc&shopper.lastName=Grol`))
 		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		request.Host = "localhost:8888"
@@ -101,7 +101,7 @@ func TestCheckoutService(t *testing.T) {
 		// then
 		assert.Equal(t, 200, response.Code)
 		got := response.Body.String()
-		assert.Contains(t, got, "<td>123</td>")
+		assert.Contains(t, got, "<h1>EUR 123.00</h1>")
 		assert.Contains(t, got, `id: "456"`)
 		assert.Contains(t, got, `sessionData: "lalalallalalaallalalalalalal"`)
 
@@ -113,6 +113,11 @@ func TestCheckoutService(t *testing.T) {
 		assert.Equal(t, "http://a.b/c", checkout.OriginalReturnURL)
 	})
 
+	/*
+		Got:  {<nil> <nil> map[] [ideal scheme] {EUR 12300} <nil> <nil> <nil> [] 0 Web <nil> nl <nil> <nil> <nil> false false false <nil> 0xc00012efa8 <nil>  MyMerchantAccount 123 map[] <nil>      123 http://localhost:8888/checkout/123 <nil>    nl-nl <nil>    false <nil>  false  false true} (checkout.CreateCheckoutSessionRequest)
+		Want: {<nil> <nil> map[] [ideal scheme] {EUR 12300} <nil> <nil> <nil> [] 0 Web <nil> nl <nil> <nil> <nil> false false false <nil> <nil> <nil>  MyMerchantAccount 123 map[] <nil>      123 http://localhost:8888/checkout/123 <nil>    nl-nl <nil>    false <nil>  false  false true} (checkout.CreateCheckoutSessionRequest)
+
+	*/
 	t.Run("Resume checkout", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -140,7 +145,7 @@ func TestCheckoutService(t *testing.T) {
 		// then
 		assert.Equal(t, 200, response.Code)
 		got := response.Body.String()
-		assert.Contains(t, got, "<td>123</td>")
+		assert.Contains(t, got, `<a href="/basket/123">Back</a>`)
 		assert.Contains(t, got, `id: "456"`)
 		assert.Contains(t, got, `sessionData: "lalala"`)
 

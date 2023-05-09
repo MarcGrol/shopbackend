@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v74"
@@ -162,6 +163,50 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 
 	//expiresAt := time.Now().Add(time.Hour * 24)
 
+	productCount, err := strconv.Atoi(r.Form.Get("product.count"))
+	if err != nil {
+		return stripe.CheckoutSessionParams{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid product count '%s' (%s)", r.Form.Get("product.count"), err))
+	}
+
+	// PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+	// 			Currency: stripe.String(currency),
+	// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+	// 				Name:        stripe.String("Tennis shoes"),
+	// 				Description: stripe.String("Ascis Gel Lyte 3"),
+	// 			},
+	// 			UnitAmount: stripe.Int64(int64(12000)),
+	// 		},
+	// 		Quantity: stripe.Int64(1),
+
+	products := []*stripe.CheckoutSessionLineItemParams{}
+	for i := 0; i < productCount; i++ {
+		p := stripe.CheckoutSessionLineItemParams{
+			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+				Currency: stripe.String(r.Form.Get(fmt.Sprintf("product.%d.currency", i))),
+				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+					Name:        stripe.String(r.Form.Get(fmt.Sprintf("product.%d.name", i))),
+					Description: stripe.String(r.Form.Get(fmt.Sprintf("product.%d.description", i))),
+				},
+				UnitAmount: func() *int64 {
+					price, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.itemPrice", i)))
+					if err != nil {
+						return stripe.Int64(0)
+					}
+					return stripe.Int64(int64(price))
+				}(),
+			},
+			Quantity: func() *int64 {
+				quantity, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.quantity", i)))
+				if err != nil {
+					return stripe.Int64(0)
+				}
+				return stripe.Int64(int64(quantity))
+			}(),
+		}
+
+		products = append(products, &p)
+	}
+
 	return stripe.CheckoutSessionParams{
 		Params: stripe.Params{
 			Metadata: map[string]string{
@@ -187,41 +232,42 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 		SuccessURL:        stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/success", basketUID)),
 		CancelURL:         stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/cancel", basketUID)),
 		ClientReferenceID: stripe.String(basketUID),
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			{
-				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-					Currency: stripe.String(currency),
-					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Name:        stripe.String("Tennis shoes"),
-						Description: stripe.String("Ascis Gel Lyte 3"),
-					},
-					UnitAmount: stripe.Int64(int64(12000)),
-				},
-				Quantity: stripe.Int64(1),
-			},
-			{
-				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-					Currency: stripe.String(currency),
-					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Name:        stripe.String("Tennis racket"),
-						Description: stripe.String("Bobolat Pure Strike 98"),
-					},
-					UnitAmount: stripe.Int64(int64(23000)),
-				},
-				Quantity: stripe.Int64(1),
-			},
-			{
-				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-					Currency: stripe.String(currency),
-					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Name:        stripe.String("Tennis balls"),
-						Description: stripe.String("Dunlop Fort All Court"),
-					},
-					UnitAmount: stripe.Int64(int64(1000)),
-				},
-				Quantity: stripe.Int64(3),
-			},
-		},
+		// LineItems: []*stripe.CheckoutSessionLineItemParams{
+		// 	{
+		// 		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+		// 			Currency: stripe.String(currency),
+		// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+		// 				Name:        stripe.String("Tennis shoes"),
+		// 				Description: stripe.String("Ascis Gel Lyte 3"),
+		// 			},
+		// 			UnitAmount: stripe.Int64(int64(12000)),
+		// 		},
+		// 		Quantity: stripe.Int64(1),
+		// 	},
+		// 	{
+		// 		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+		// 			Currency: stripe.String(currency),
+		// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+		// 				Name:        stripe.String("Tennis racket"),
+		// 				Description: stripe.String("Bobolat Pure Strike 98"),
+		// 			},
+		// 			UnitAmount: stripe.Int64(int64(23000)),
+		// 		},
+		// 		Quantity: stripe.Int64(1),
+		// 	},
+		// 	{
+		// 		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+		// 			Currency: stripe.String(currency),
+		// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+		// 				Name:        stripe.String("Tennis balls"),
+		// 				Description: stripe.String("Dunlop Fort All Court"),
+		// 			},
+		// 			UnitAmount: stripe.Int64(int64(1000)),
+		// 		},
+		// 		Quantity: stripe.Int64(3),
+		// 	},
+		// },
+		LineItems:          products,
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 		Currency:           stripe.String(currency),
 		CustomerEmail:      stripe.String(shopperEmail),

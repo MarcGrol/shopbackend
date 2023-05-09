@@ -137,6 +137,26 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 		PaymentMethodsResponse: paymentMethodsResp,
 		ID:                     checkoutSessionResp.Id,
 		SessionData:            checkoutSessionResp.SessionData,
+		Products: func() []Product {
+			products := []Product{}
+			for _, item := range *(req.LineItems) {
+				products = append(products, Product{
+					Name:        item.Id,
+					Description: item.Description,
+					ItemPrice: Amount{
+						Currency: req.Amount.Currency,
+						Value:    item.AmountIncludingTax,
+					},
+					Quantity: int(item.Quantity),
+					TotalPrice: Amount{
+						Currency: req.Amount.Currency,
+						Value:    item.AmountIncludingTax * int64(item.Quantity),
+					},
+				})
+			}
+			return products
+		}(),
+		ShopperFullname: req.ShopperName.FirstName + " " + req.ShopperName.LastName,
 	}, nil
 }
 

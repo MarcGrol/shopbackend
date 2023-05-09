@@ -72,7 +72,7 @@ func (b Basket) GetPriceInCurrency() string {
 func (b Basket) GetProductSummary() string {
 	lines := []string{}
 	for _, p := range b.SelectedProducts {
-		lines = append(lines, fmt.Sprintf("%d x %s,", p.Quantity, p.Description))
+		lines = append(lines, fmt.Sprintf("%d x	 %s,", p.Quantity, p.Description))
 	}
 	return strings.Join(lines, ", ")
 }
@@ -105,4 +105,8 @@ type SelectedProduct struct {
 	Price       int64
 	Currency    string
 	Quantity    int
+}
+
+func (p SelectedProduct) TotalPrice() int {
+	return int(p.Price) * p.Quantity
 }
