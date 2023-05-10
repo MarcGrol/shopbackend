@@ -20,7 +20,3 @@ Example app that demonstrates how Adyen and Stripe OAuth and checkout work
     
     # Perform the actual deployment
     gcloud app deploy app.yaml index.yaml cron.yaml --quiet
-
-## Overview of architecture
-
-![alt text](./docs/adyen_shop_architecture.png)
