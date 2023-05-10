@@ -151,8 +151,20 @@ func (s *webService) checkoutFinalized() http.HandlerFunc {
 			return
 		}
 
+		checkout := convertBasketToCheckout(basket)
+		values, err := checkout.ToForm()
+		if err != nil {
+			errorWriter.WriteError(c, w, 2, err)
+			return
+		}
+
+		pageInfo := BasketDetailPageInfo{
+			Basket:     basket,
+			FormValues: values,
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		basketDetailPageTemplate.Execute(w, basket)
+		basketDetailPageTemplate.Execute(w, pageInfo)
 	}
 }
 
