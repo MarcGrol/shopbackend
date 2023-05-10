@@ -6,10 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 	"github.com/gorilla/mux"
@@ -23,6 +20,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 )
 
@@ -103,9 +101,6 @@ func (s *webService) startCheckoutPage() http.HandlerFunc {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
-
-		log.Printf("sessionRequest:%+v", sessionRequest)
-		log.Printf("sessionRequest:%+v", *sessionRequest.LineItems)
 
 		resp, err := s.service.startCheckout(c, basketUID, sessionRequest, returnURL)
 		if err != nil {
@@ -219,94 +214,10 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 		return checkout.CreateCheckoutSessionRequest{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
 	}
 
-	err := r.ParseForm()
+	co, err := checkoutapi.NewFromRequest(r)
 	if err != nil {
-		return checkout.CreateCheckoutSessionRequest{}, basketUID, "", myerrors.NewInvalidInputError(err)
+		return checkout.CreateCheckoutSessionRequest{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("error parsing form: %s", err))
 	}
-
-	returnURL := r.Form.Get("returnUrl")
-	countryCode := r.Form.Get("countryCode")
-	currency := r.Form.Get("currency")
-	amount, err := strconv.Atoi(r.Form.Get("amount"))
-	if err != nil {
-		return checkout.CreateCheckoutSessionRequest{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount '%s' (%s)", r.Form.Get("amount"), err))
-	}
-	addressCity := r.Form.Get("shopper.address.city")
-	addressCountry := r.Form.Get("shopper.address.country")
-	addressHouseNumber := r.Form.Get("shopper.address.houseNumber")
-	addressPostalCode := r.Form.Get("shopper.address.postalCode")
-	addressStateOrProvince := r.Form.Get("shopper.address.state")
-	addressStreet := r.Form.Get("shopper.address.street")
-	shopperEmail := r.Form.Get("shopper.email")
-	companyHomepage := r.Form.Get("company.homepage")
-	companyName := r.Form.Get("company.name")
-	// TODO: Understand why this field causes /session to fail
-	//shopName := r.Form.Get("shop.name")
-
-	shopperDateOfBirth := func() *time.Time {
-		dob := r.Form.Get("shopper.dateOfBirth")
-		if dob == "" {
-			return nil
-		}
-		t, err := time.Parse("2006-01-02", r.Form.Get("shopper.dateOfBirth"))
-		if err != nil {
-			return nil
-		}
-		return &t
-	}()
-	shopperLocale := r.Form.Get("shopper.locale")
-	shopperFirstName := r.Form.Get("shopper.firstName")
-	shopperLastName := r.Form.Get("shopper.lastName")
-	shopperUID := r.Form.Get("shopper.uid")
-	shopperPhoneNumber := r.Form.Get("shopper.phone")
-
-	/*
-			  <input type="hidden" name="product.count" value="0"/>
-
-		            <input type="hidden" name="product.0.name" value="product_running_socks"/>
-		            <input type="hidden" name="product.0.description" value="Running socks"/>
-		            <input type="hidden" name="product.0.itemPrice" value="1000"/>
-		            <input type="hidden" name="product.0.currency" value="EUR"/>
-		            <input type="hidden" name="product.0.quantity" value="3"/>
-		            <input type="hidden" name="product.0.totalPrice" value="3000"/>
-
-		            <input type="hidden" name="product.1.name" value="product_tennis_balls"/>
-		            <input type="hidden" name="product.1.description" value="Tennis balls"/>
-		            <input type="hidden" name="product.1.itemPrice" value="1000"/>
-		            <input type="hidden" name="product.1.currency" value="EUR"/>
-		            <input type="hidden" name="product.1.quantity" value="6"/>
-		            <input type="hidden" name="product.1.totalPrice" value="6000"/>
-
-	*/
-	productCount, err := strconv.Atoi(r.Form.Get("product.count"))
-	if err != nil {
-		return checkout.CreateCheckoutSessionRequest{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid product count '%s' (%s)", r.Form.Get("product.count"), err))
-	}
-
-	products := []checkout.LineItem{}
-	for i := 0; i < productCount; i++ {
-		p := checkout.LineItem{
-			Id:          r.Form.Get(fmt.Sprintf("product.%d.name", i)),
-			Description: r.Form.Get(fmt.Sprintf("product.%d.description", i)),
-			AmountIncludingTax: func() int64 {
-				price, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.itemPrice", i)))
-				if err != nil {
-					return 0
-				}
-				return int64(price)
-			}(),
-			Quantity: func() int64 {
-				quantity, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.quantity", i)))
-				if err != nil {
-					return 0
-				}
-				return int64(quantity)
-			}(),
-		}
-		products = append(products, p)
-	}
-
-	//expiresAt := time.Now().Add(time.Hour * 24)
 
 	return checkout.CreateCheckoutSessionRequest{
 		//AccountInfo:           nil,
@@ -314,64 +225,60 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 		//AdditionalData:        nil,
 		AllowedPaymentMethods: []string{"ideal", "scheme"},
 		Amount: checkout.Amount{
-			Currency: currency,
-			Value:    int64(amount),
+			Currency: co.TotalAmount.Currency,
+			Value:    int64(co.TotalAmount.Value),
 		},
 		//ApplicationInfo:    nil,
 		//AuthenticationData: nil,
-		BillingAddress: func() *checkout.Address {
-			if addressCity != "" {
-				return &checkout.Address{
-					City:              addressCity,
-					Country:           addressCountry,
-					HouseNumberOrName: addressHouseNumber,
-					PostalCode:        addressPostalCode,
-					StateOrProvince:   addressStateOrProvince,
-					Street:            addressStreet,
-				}
-			}
-			return nil
-		}(),
+		BillingAddress: &checkout.Address{
+			City:              co.Shopper.Address.City,
+			Country:           co.Shopper.Address.Country,
+			HouseNumberOrName: co.Shopper.Address.AddressHouseNumber,
+			PostalCode:        co.Shopper.Address.PostalCode,
+			StateOrProvince:   co.Shopper.Address.State,
+			Street:            co.Shopper.Address.Street,
+		},
 		//BlockedPaymentMethods: []string{},
 		//CaptureDelayHours:     0,
 		Channel: "Web",
-		Company: func() *checkout.Company {
-			if companyName != "" || companyHomepage != "" {
-				return &checkout.Company{
-					Homepage:           companyHomepage,
-					Name:               companyName,
-					RegistrationNumber: "",
-					RegistryLocation:   "",
-					TaxId:              "",
-					Type:               "",
-				}
-			}
-			return nil
-		}(),
-		CountryCode: countryCode,
-		DateOfBirth: shopperDateOfBirth,
+		Company: &checkout.Company{
+			Homepage:           co.Company.Homepage,
+			Name:               co.Company.Name,
+			RegistrationNumber: "",
+			RegistryLocation:   "",
+			TaxId:              "",
+			Type:               "",
+		},
+		CountryCode: co.Company.CountryCode,
+		//DateOfBirth: nil
 		//DeliverAt:   nil,
-		DeliveryAddress: func() *checkout.Address {
-			if addressCity != "" {
-				return &checkout.Address{
-					City:              addressCity,
-					Country:           addressCountry,
-					HouseNumberOrName: addressHouseNumber,
-					PostalCode:        addressPostalCode,
-					StateOrProvince:   addressStateOrProvince,
-					Street:            addressStreet,
-				}
-			}
-			return nil
-		}(),
+		DeliveryAddress: &checkout.Address{
+			City:              co.Shopper.Address.City,
+			Country:           co.Shopper.Address.Country,
+			HouseNumberOrName: co.Shopper.Address.AddressHouseNumber,
+			PostalCode:        co.Shopper.Address.PostalCode,
+			StateOrProvince:   co.Shopper.Address.State,
+			Street:            co.Shopper.Address.Street,
+		},
 		//EnableOneClick:           false,
 		//EnablePayOut:             false,
 		//EnableRecurring:          false,
 		//ExpiresAt: &expiresAt,
-		LineItems: &products,
+		LineItems: func() *[]checkout.LineItem {
+			products := []checkout.LineItem{}
+			for _, p := range co.Products {
+				products = append(products, checkout.LineItem{
+					Id:                 p.Name,
+					Description:        p.Description,
+					AmountIncludingTax: int64(p.ItemPrice),
+					Quantity:           int64(p.Quantity),
+				})
+			}
+			return &products
+		}(),
 		//Mandate:                  nil,
 		//Mcc:                      "",
-		// MerchantAccount:         "",
+		//MerchantAccount:         "",
 		MerchantOrderReference: basketUID,
 		//Metadata:                 nil,
 		//MpiData:                  nil,
@@ -383,28 +290,23 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 		Reference:          basketUID,
 		RiskData:           nil,
 		ReturnUrl:          fmt.Sprintf("%s/checkout/%s", myhttp.HostnameWithScheme(r), basketUID),
-		ShopperEmail:       shopperEmail,
+		ShopperEmail:       co.Shopper.ContactInfo.Email,
 		ShopperIP:          "",
 		ShopperInteraction: "",
-		ShopperLocale:      shopperLocale,
-		ShopperName: func() *checkout.Name {
-			if shopperFirstName != "" {
-				return &checkout.Name{
-					FirstName: shopperFirstName,
-					LastName:  shopperLastName,
-				}
-			}
-			return nil
-		}(),
-		ShopperReference: shopperUID,
+		ShopperLocale:      co.Shopper.Locale,
+		ShopperName: &checkout.Name{
+			FirstName: co.Shopper.FirstName,
+			LastName:  co.Shopper.LastName,
+		},
+		ShopperReference: co.Shopper.UID,
 		//ShopperStatement:          "",
 		//SocialSecurityNumber:      "",
 		//SplitCardFundingSources:   false,
 		//Splits:                    nil,
 		//Store: shopName,
 		//StorePaymentMethod:        false,
-		TelephoneNumber: shopperPhoneNumber,
+		TelephoneNumber: co.Shopper.ContactInfo.PhoneNumber,
 		//ThreeDSAuthenticationOnly: false,
 		TrustedShopper: true,
-	}, basketUID, returnURL, nil
+	}, basketUID, co.ReturnURL, nil
 }

@@ -16,110 +16,57 @@
             <tbody>
                 <tr>
                     <td>UID</td>
-                    <td>{{.UID}}</td>
+                    <td>{{.Basket.UID}}</td>
                 </tr>
                 <tr>
                     <td>Created at</td>
-                    <td>{{.Timestamp}}</td>
+                    <td>{{.Basket.Timestamp}}</td>
                 </tr>                
                 <tr>
                     <td>Shop</td>
-                    <td>{{.Shop.Name}}</td>
+                    <td>{{.Basket.Shop.Name}}</td>
                 </tr>
                 <tr>
                     <td>Shopper</td>
-                    <td>{{.Shopper.FirstName}} {{.Shopper.LastName}}</td>
+                    <td>{{.Basket.Shopper.FirstName}} {{.Basket.Shopper.LastName}}</td>
                 </tr>
                 <tr>
                     <td>Products</td>
-                    <td>{{.GetProductSummary}}</td>  
+                    <td>{{.Basket.GetProductSummary}}</td>  
                 </tr>
                 <tr>
                     <td>Price</td>
-                    <td>{{.GetPriceInCurrency}}</td>
+                    <td>{{.Basket.GetPriceInCurrency}}</td>
                 </tr>
                 <tr>
                     <td>PSP</td>
-                    <td>{{.PaymentServiceProvider}}</td>
+                    <td>{{.Basket.PaymentServiceProvider}}</td>
                 </tr>
                 <tr>
                     <td>Initial status</td>
-                    <td>{{.InitialPaymentStatus}}</td>
+                    <td>{{.Basket.InitialPaymentStatus}}</td>
                 </tr>
                 <tr>
                     <td>Final status</td>
-                    <td>{{.GetFinalPaymentStatus}}</td>
+                    <td>{{.Basket.GetFinalPaymentStatus}}</td>
                 </tr>
                 <tr>
                     <td>Payment method</td>
-                    <td>{{.PaymentMethod}}</td>
+                    <td>{{.Basket.PaymentMethod}}</td>
                 </tr>
             </tbody>
         </table>
-        {{if .IsNotPaid}}
-        <form action="/checkout/{{.UID}}" method="POST">
-            <input type="hidden" name="returnUrl" value="{{.ReturnURL}}"/>
-            <input type="hidden" name="amount" value="{{.TotalPrice}}"/>
-            <input type="hidden" name="currency" value="{{.Currency}}"/>
-            <input type="hidden" name="countryCode" value="{{.Shop.Country}}"/>
-            <input type="hidden" name="company.homepage" value="{{.Shop.Hostname}}"/>
-            <input type="hidden" name="company.name" value="{{.Shop.Name}}"/>
-            <input type="hidden" name="shop.name" value="{{.Shop.Name}}"/>
-            <input type="hidden" name="shopper.email" value="{{.Shopper.EmailAddress}}"/>
-            <input type="hidden" name="shopper.locale" value="{{.Shopper.Locale}}"/>
-            <input type="hidden" name="shopper.firstName" value="{{.Shopper.FirstName}}"/>
-            <input type="hidden" name="shopper.lastName" value="{{.Shopper.LastName}}"/>
-            <input type="hidden" name="shopper.uid" value="{{.Shopper.UID}}"/>
-            <input type="hidden" name="shopper.phone" value="{{.Shopper.PhoneNumber}}"/>
-            <input type="hidden" name="shopper.address.city" value="{{.Shopper.Address.City}}"/>
-            <input type="hidden" name="shopper.address.country" value="{{.Shopper.Address.Country}}"/>
-            <input type="hidden" name="shopper.address.houseNumber" value="{{.Shopper.Address.HouseNumberOrName}}"/>
-            <input type="hidden" name="shopper.address.postalCode" value="{{.Shopper.Address.PostalCode}}"/>
-            <input type="hidden" name="shopper.address.state" value="{{.Shopper.Address.StateOrProvince}}"/>
-            <input type="hidden" name="shopper.address.street" value="{{.Shopper.Address.Street}}"/>
-            <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
-            <input type="hidden" name="product.count" value="{{ len .SelectedProducts}}"/>
-            {{range   $i, $p := .SelectedProducts}}
-            <input type="hidden" name="product.{{$i}}.name" value="{{$p.UID}}"/>
-            <input type="hidden" name="product.{{$i}}.description" value="{{$p.Description}}"/>
-            <input type="hidden" name="product.{{$i}}.itemPrice" value="{{$p.Price}}"/>
-            <input type="hidden" name="product.{{$i}}.currency" value="{{$p.Currency}}"/>
-            <input type="hidden" name="product.{{$i}}.quantity" value="{{$p.Quantity}}"/>
-            <input type="hidden" name="product.{{$i}}.totalPrice" value="{{$p.TotalPrice}}"/>
+        {{if .Basket.IsNotPaid}}
+        <form action="/checkout/{{.Basket.UID}}" method="POST">
+            {{range $key, $value := .FormValues}}
+            <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
             {{end}}
-
             <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
         </form>
 
-        <form action="/stripe/checkout/{{.UID}}" method="POST">
-            <input type="hidden" name="returnUrl" value="{{.ReturnURL}}"/>
-            <input type="hidden" name="amount" value="{{.TotalPrice}}"/>
-            <input type="hidden" name="currency" value="{{.Currency}}"/>
-            <input type="hidden" name="countryCode" value="{{.Shop.Country}}"/>
-            <input type="hidden" name="company.homepage" value="{{.Shop.Hostname}}"/>
-            <input type="hidden" name="company.name" value="{{.Shop.Name}}"/>
-            <input type="hidden" name="shop.name" value="{{.Shop.Name}}"/>
-            <input type="hidden" name="shopper.email" value="{{.Shopper.EmailAddress}}"/>
-            <input type="hidden" name="shopper.locale" value="{{.Shopper.Locale}}"/>
-            <input type="hidden" name="shopper.firstName" value="{{.Shopper.FirstName}}"/>
-            <input type="hidden" name="shopper.lastName" value="{{.Shopper.LastName}}"/>
-            <input type="hidden" name="shopper.uid" value="{{.Shopper.UID}}"/>
-            <input type="hidden" name="shopper.phone" value="{{.Shopper.PhoneNumber}}"/>
-            <input type="hidden" name="shopper.address.city" value="{{.Shopper.Address.City}}"/>
-            <input type="hidden" name="shopper.address.country" value="{{.Shopper.Address.Country}}"/>
-            <input type="hidden" name="shopper.address.houseNumber" value="{{.Shopper.Address.HouseNumberOrName}}"/>
-            <input type="hidden" name="shopper.address.postalCode" value="{{.Shopper.Address.PostalCode}}"/>
-            <input type="hidden" name="shopper.address.state" value="{{.Shopper.Address.StateOrProvince}}"/>
-            <input type="hidden" name="shopper.address.street" value="{{.Shopper.Address.Street}}"/>
-            <!-- <input type="hidden" name="shopper.dateOfBirth" value=""/> -->
-            <input type="hidden" name="product.count" value="{{ len .SelectedProducts}}"/>
-            {{range   $i, $p := .SelectedProducts}}
-            <input type="hidden" name="product.{{$i}}.name" value="{{$p.UID}}"/>
-            <input type="hidden" name="product.{{$i}}.description" value="{{$p.Description}}"/>
-            <input type="hidden" name="product.{{$i}}.itemPrice" value="{{$p.Price}}"/>
-            <input type="hidden" name="product.{{$i}}.currency" value="{{$p.Currency}}"/>
-            <input type="hidden" name="product.{{$i}}.quantity" value="{{$p.Quantity}}"/>
-            <input type="hidden" name="product.{{$i}}.totalPrice" value="{{$p.TotalPrice}}"/>
+        <form action="/stripe/checkout/{{.Basket.UID}}" method="POST">
+            {{range $key, $value := .FormValues}}
+            <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
             {{end}}
             <button type="submit" class="btn btn-primary">Checkout with Stripe</button>
         </form>

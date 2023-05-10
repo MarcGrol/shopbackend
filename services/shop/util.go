@@ -32,10 +32,10 @@ func createBasket(uid string, createdAt time.Time, returnURL string) Basket {
 	return basket
 }
 
-func calculateTotalPrice(products []SelectedProduct) int64 {
-	var totalPrice int64
+func calculateTotalPrice(products []SelectedProduct) int {
+	var totalPrice int
 	for _, p := range products {
-		totalPrice += p.Price * int64(p.Quantity)
+		totalPrice += p.Price * p.Quantity
 	}
 	return totalPrice
 }

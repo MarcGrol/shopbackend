@@ -12,6 +12,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/shop/shopevents"
 )
 
@@ -138,4 +139,53 @@ func (s *service) checkoutFinalized(c context.Context, basketUID string, status 
 	}
 
 	return basket, nil
+}
+
+func convertBasketToCheckout(b Basket) checkoutapi.Checkout {
+	return checkoutapi.Checkout{
+		BasketUID: b.UID,
+		ReturnURL: b.ReturnURL,
+		TotalAmount: checkoutapi.Amount{
+			Value:    b.TotalPrice,
+			Currency: b.Currency,
+		},
+		Company: checkoutapi.Company{
+			CountryCode: b.Shop.Country,
+			Homepage:    b.Shop.Hostname,
+			Name:        b.Shop.Name,
+			ShopName:    b.Shop.Name,
+		},
+		Shopper: checkoutapi.Shopper{
+			UID:       b.Shopper.UID,
+			Locale:    b.Shopper.Locale,
+			FirstName: b.Shopper.FirstName,
+			LastName:  b.Shopper.LastName,
+			ContactInfo: checkoutapi.ContactInfo{
+				Email:       b.Shopper.EmailAddress,
+				PhoneNumber: b.Shopper.PhoneNumber,
+			},
+			Address: checkoutapi.Address{
+				City:               b.Shopper.Address.City,
+				Country:            b.Shopper.Address.Country,
+				AddressHouseNumber: b.Shopper.Address.HouseNumberOrName,
+				PostalCode:         b.Shopper.Address.PostalCode,
+				State:              b.Shopper.Address.StateOrProvince,
+				Street:             b.Shopper.Address.Street,
+			},
+		},
+		Products: func() []checkoutapi.Product {
+			products := []checkoutapi.Product{}
+			for _, p := range b.SelectedProducts {
+				products = append(products, checkoutapi.Product{
+					Name:        p.UID,
+					Description: p.Description,
+					ItemPrice:   p.Price,
+					Currency:    b.Currency,
+					Quantity:    p.Quantity,
+					TotalPrice:  p.Quantity * p.Price,
+				})
+			}
+			return products
+		}(),
+	}
 }

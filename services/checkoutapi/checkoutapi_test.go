@@ -22,6 +22,8 @@ func TestDecode(t *testing.T) {
 	form := url.Values{
 		"basketUid":                   []string{"123"},
 		"returnUrl":                   []string{"http://localhost/basket/123"},
+		"totalAmount.currency":        []string{"EUR"},
+		"totalAmount.value":           []string{"46700"},
 		"company.countryCode":         []string{"NL"},
 		"company.homepage":            []string{"https://www.marcgrolconsultancy.nl/"},
 		"company.name":                []string{"Evas shop"},
@@ -61,6 +63,10 @@ func TestDecode(t *testing.T) {
 var checkout = Checkout{
 	BasketUID: "123",
 	ReturnURL: "http://localhost/basket/123",
+	TotalAmount: Amount{
+		Currency: "EUR",
+		Value:    46700,
+	},
 	Company: Company{
 		CountryCode: "NL",
 		Homepage:    "https://www.marcgrolconsultancy.nl/",

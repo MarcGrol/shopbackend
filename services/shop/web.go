@@ -116,8 +116,20 @@ func (s *webService) basketDetailsPage() http.HandlerFunc {
 			return
 		}
 
+		checkout := convertBasketToCheckout(basket)
+		values, err := checkout.ToForm()
+		if err != nil {
+			errorWriter.WriteError(c, w, 2, err)
+			return
+		}
+
+		pageInfo := BasketDetailPageInfo{
+			Basket:     basket,
+			FormValues: values,
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		err = basketDetailPageTemplate.Execute(w, basket)
+		err = basketDetailPageTemplate.Execute(w, pageInfo)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return

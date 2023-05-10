@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v74"
@@ -19,6 +18,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 )
 
 type webService struct {
@@ -121,90 +121,9 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 		return stripe.CheckoutSessionParams{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
 	}
 
-	err := r.ParseForm()
+	co, err := checkoutapi.NewFromRequest(r)
 	if err != nil {
-		return stripe.CheckoutSessionParams{}, basketUID, "", myerrors.NewInvalidInputError(err)
-	}
-
-	returnURL := r.Form.Get("returnUrl")
-	//	countryCode := r.Form.Get("countryCode")
-	currency := r.Form.Get("currency")
-	//amount, err := strconv.Atoi(r.Form.Get("amount"))
-	if err != nil {
-		return stripe.CheckoutSessionParams{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid amount '%s' (%s)", r.Form.Get("amount"), err))
-	}
-	addressCity := r.Form.Get("shopper.address.city")
-	addressCountry := r.Form.Get("shopper.address.country")
-	addressHouseNumber := r.Form.Get("shopper.address.houseNumber")
-	addressPostalCode := r.Form.Get("shopper.address.postalCode")
-	//addressStateOrProvince := r.Form.Get("shopper.address.state")
-	addressStreet := r.Form.Get("shopper.address.street")
-	shopperEmail := r.Form.Get("shopper.email")
-	// companyHomepage := r.Form.Get("company.homepage")
-	// companyName := r.Form.Get("company.name")
-	// shopName := r.Form.Get("shop.name")
-
-	// shopperDateOfBirth := func() *time.Time {
-	// 	dob := r.Form.Get("shopper.dateOfBirth")
-	// 	if dob == "" {
-	// 		return nil
-	// 	}
-	// 	t, err := time.Parse("2006-01-02", r.Form.Get("shopper.dateOfBirth"))
-	// 	if err != nil {
-	// 		return nil
-	// 	}
-	// 	return &t
-	// }()
-	shopperLocale := r.Form.Get("shopper.locale")
-	shopperFirstName := r.Form.Get("shopper.firstName")
-	shopperLastName := r.Form.Get("shopper.lastName")
-	//shopperUID := r.Form.Get("shopper.uid")
-	shopperPhoneNumber := r.Form.Get("shopper.phone")
-
-	//expiresAt := time.Now().Add(time.Hour * 24)
-
-	productCount, err := strconv.Atoi(r.Form.Get("product.count"))
-	if err != nil {
-		return stripe.CheckoutSessionParams{}, basketUID, returnURL, myerrors.NewInvalidInputError(fmt.Errorf("invalid product count '%s' (%s)", r.Form.Get("product.count"), err))
-	}
-
-	// PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-	// 			Currency: stripe.String(currency),
-	// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-	// 				Name:        stripe.String("Tennis shoes"),
-	// 				Description: stripe.String("Ascis Gel Lyte 3"),
-	// 			},
-	// 			UnitAmount: stripe.Int64(int64(12000)),
-	// 		},
-	// 		Quantity: stripe.Int64(1),
-
-	products := []*stripe.CheckoutSessionLineItemParams{}
-	for i := 0; i < productCount; i++ {
-		p := stripe.CheckoutSessionLineItemParams{
-			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-				Currency: stripe.String(r.Form.Get(fmt.Sprintf("product.%d.currency", i))),
-				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-					Name:        stripe.String(r.Form.Get(fmt.Sprintf("product.%d.name", i))),
-					Description: stripe.String(r.Form.Get(fmt.Sprintf("product.%d.description", i))),
-				},
-				UnitAmount: func() *int64 {
-					price, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.itemPrice", i)))
-					if err != nil {
-						return stripe.Int64(0)
-					}
-					return stripe.Int64(int64(price))
-				}(),
-			},
-			Quantity: func() *int64 {
-				quantity, err := strconv.Atoi(r.Form.Get(fmt.Sprintf("product.%d.quantity", i)))
-				if err != nil {
-					return stripe.Int64(0)
-				}
-				return stripe.Int64(int64(quantity))
-			}(),
-		}
-
-		products = append(products, &p)
+		return stripe.CheckoutSessionParams{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("error parsing form: %s", err))
 	}
 
 	return stripe.CheckoutSessionParams{
@@ -218,61 +137,42 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 				"basketUID": basketUID, // This is to correlare the webhook with the basket
 			},
 			Shipping: &stripe.ShippingDetailsParams{
-				Name:           stripe.String(shopperFirstName + " " + shopperLastName),
-				Phone:          stripe.String(shopperPhoneNumber),
+				Name:           stripe.String(co.Shopper.FirstName + " " + co.Shopper.LastName),
+				Phone:          stripe.String(co.Shopper.ContactInfo.PhoneNumber),
 				TrackingNumber: stripe.String(basketUID),
 				Address: &stripe.AddressParams{
-					City:       stripe.String(addressCity),
-					Country:    stripe.String(addressCountry),
-					Line1:      stripe.String(addressStreet + " " + addressHouseNumber),
-					PostalCode: stripe.String(addressPostalCode),
+					City:       stripe.String(co.Shopper.Address.City),
+					Country:    stripe.String(co.Shopper.Address.Country),
+					Line1:      stripe.String(co.Shopper.Address.Street + " " + co.Shopper.Address.AddressHouseNumber),
+					PostalCode: stripe.String(co.Shopper.Address.PostalCode),
 				},
 			},
 		},
 		SuccessURL:        stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/success", basketUID)),
 		CancelURL:         stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/cancel", basketUID)),
 		ClientReferenceID: stripe.String(basketUID),
-		// LineItems: []*stripe.CheckoutSessionLineItemParams{
-		// 	{
-		// 		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-		// 			Currency: stripe.String(currency),
-		// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-		// 				Name:        stripe.String("Tennis shoes"),
-		// 				Description: stripe.String("Ascis Gel Lyte 3"),
-		// 			},
-		// 			UnitAmount: stripe.Int64(int64(12000)),
-		// 		},
-		// 		Quantity: stripe.Int64(1),
-		// 	},
-		// 	{
-		// 		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-		// 			Currency: stripe.String(currency),
-		// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-		// 				Name:        stripe.String("Tennis racket"),
-		// 				Description: stripe.String("Bobolat Pure Strike 98"),
-		// 			},
-		// 			UnitAmount: stripe.Int64(int64(23000)),
-		// 		},
-		// 		Quantity: stripe.Int64(1),
-		// 	},
-		// 	{
-		// 		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-		// 			Currency: stripe.String(currency),
-		// 			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-		// 				Name:        stripe.String("Tennis balls"),
-		// 				Description: stripe.String("Dunlop Fort All Court"),
-		// 			},
-		// 			UnitAmount: stripe.Int64(int64(1000)),
-		// 		},
-		// 		Quantity: stripe.Int64(3),
-		// 	},
-		// },
-		LineItems:          products,
+		LineItems: func() []*stripe.CheckoutSessionLineItemParams {
+			products := []*stripe.CheckoutSessionLineItemParams{}
+			for _, p := range co.Products {
+				products = append(products, &stripe.CheckoutSessionLineItemParams{
+					PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+						Currency: stripe.String(p.Currency),
+						ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+							Name:        stripe.String(p.Name),
+							Description: stripe.String(p.Description),
+						},
+						UnitAmount: stripe.Int64(int64(p.ItemPrice)),
+					},
+					Quantity: stripe.Int64(int64(p.Quantity)),
+				})
+			}
+			return products
+		}(),
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
-		Currency:           stripe.String(currency),
-		CustomerEmail:      stripe.String(shopperEmail),
-		Locale:             stripe.String(shopperLocale),
+		Currency:           stripe.String(co.TotalAmount.Currency),
+		CustomerEmail:      stripe.String(co.Shopper.ContactInfo.Email),
+		Locale:             stripe.String(co.Shopper.Locale),
 		PaymentMethodTypes: stripe.StringSlice([]string{"ideal", "card"}),
-	}, basketUID, returnURL, nil
+	}, basketUID, co.ReturnURL, nil
 
 }

@@ -91,7 +91,7 @@ func TestCheckoutService(t *testing.T) {
 		}).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`amount=12300&currency=EUR&returnUrl=http://a.b/c&countryCode=nl&shopper.locale=nl-nl&product.count=0&shopper.firstName=Marc&shopper.lastName=Grol`))
+		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&returnUrl=http://a.b/c&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol`))
 		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		request.Host = "localhost:8888"

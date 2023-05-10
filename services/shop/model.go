@@ -2,6 +2,7 @@ package shop
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -49,7 +50,7 @@ type Basket struct {
 	LastModified           *time.Time
 	Shop                   Shop
 	Shopper                Shopper
-	TotalPrice             int64
+	TotalPrice             int
 	Currency               string
 	SelectedProducts       []SelectedProduct
 	PaymentServiceProvider string
@@ -102,11 +103,16 @@ func (b *Basket) Execute(event any) error {
 type SelectedProduct struct {
 	UID         string
 	Description string
-	Price       int64
+	Price       int
 	Currency    string
 	Quantity    int
 }
 
 func (p SelectedProduct) TotalPrice() int {
 	return int(p.Price) * p.Quantity
+}
+
+type BasketDetailPageInfo struct {
+	Basket     Basket
+	FormValues url.Values
 }

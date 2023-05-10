@@ -12,13 +12,12 @@ import (
 )
 
 type Checkout struct {
-	BasketUID    string    `form:"basketUid"`
-	TotalAmount  Amount    `form:"amount"`
-	Company      Company   `form:"company"`
-	Shopper      Shopper   `form:"shopper"`
-	ProductCount int       `form:"product.count"`
-	Products     []Product `form:"products"`
-	ReturnURL    string    `form:"returnUrl"`
+	BasketUID   string    `form:"basketUid"`
+	TotalAmount Amount    `form:"totalAmount"`
+	Company     Company   `form:"company"`
+	Shopper     Shopper   `form:"shopper"`
+	Products    []Product `form:"products"`
+	ReturnURL   string    `form:"returnUrl"`
 }
 
 type Company struct {
@@ -29,7 +28,7 @@ type Company struct {
 }
 
 type Amount struct {
-	Amount   int    `form:"amount"`
+	Value    int    `form:"value"`
 	Currency string `form:"currency"`
 }
 
