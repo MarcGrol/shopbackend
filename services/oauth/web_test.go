@@ -99,7 +99,7 @@ func TestOauth(t *testing.T) {
 			CodeVerifier: "exampleHash",
 		}).Return(exampleResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), myvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "abcdef",
@@ -184,7 +184,7 @@ func TestOauth(t *testing.T) {
 		}, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("xyz")
-		vault.EXPECT().Put(gomock.Any(), myvault.CurrentToken, myvault.Token{
+		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), myvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",

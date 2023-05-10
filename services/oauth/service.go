@@ -200,7 +200,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		}
 
 		// Store new token in vault
-		err = s.vault.Put(c, myvault.CurrentToken, myvault.Token{
+		err = s.vault.Put(c, CreateTokenUID(session.ProviderName), myvault.Token{
 			ProviderName: session.ProviderName,
 			ClientID:     session.ClientID,
 			SessionUID:   session.UID,
@@ -281,7 +281,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 			ExpiresIn:    newTokenResp.ExpiresIn,
 		}
 		// Update token
-		err = s.vault.Put(c, myvault.CurrentToken, newToken)
+		err = s.vault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}

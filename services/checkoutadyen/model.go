@@ -42,7 +42,6 @@ type CheckoutPageInfo struct {
 
 	ShopperFullname string
 	Products        []Product
-	AmountTotal     Amount
 }
 
 type Product struct {
