@@ -77,7 +77,7 @@ func TestCheckoutService(t *testing.T) {
 		ctx, router, storer, vault, payer, nower, _, publisher := setup(t, ctrl)
 
 		// given
-		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken)
+		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"adyen").Return(myvault.Token{AccessToken: "at_123"}, true, nil)
 		payer.EXPECT().UseApiKey(gomock.Any())
 		payer.EXPECT().Sessions(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
@@ -91,7 +91,7 @@ func TestCheckoutService(t *testing.T) {
 		}).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&returnUrl=http://a.b/c&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol`))
+		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol&returnUrl=http://a.b/c`))
 		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		request.Host = "localhost:8888"

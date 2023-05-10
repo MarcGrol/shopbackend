@@ -16,10 +16,12 @@ type OauthParty struct {
 	Secret         string
 	AuthEndpoint   EndPoint
 	TokenEndpoint  EndPoint
+	DefaultScopes  string
 	GetCredentials func(p OauthParty) (string, string)
 }
 
 type OAuthProvider interface {
+	All() map[string]OauthParty
 	Set(providerName string, clientID string, secret string, authHostname string, tokenHostname string)
 	Get(providerName string) (OauthParty, error)
 }
@@ -42,6 +44,7 @@ func NewProviders() *OAuthProviders {
 					Hostname: "https://oauth-test.adyen.com",
 					Path:     "/v1/token",
 				},
+				DefaultScopes: "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write",
 				GetCredentials: func(p OauthParty) (string, string) {
 					return p.ClientID, p.Secret
 				},
@@ -57,12 +60,17 @@ func NewProviders() *OAuthProviders {
 					Hostname: "https://connect.stripe.com",
 					Path:     "/oauth/token",
 				},
+				DefaultScopes: "read_write",
 				GetCredentials: func(p OauthParty) (string, string) {
 					return p.Secret, "" // secret is used as basic auth username with empty password
 				},
 			},
 		},
 	}
+}
+
+func (op *OAuthProviders) All() map[string]OauthParty {
+	return op.providers
 }
 
 func (op *OAuthProviders) Set(providerName string, clientID string, secret string, authHostname string, tokenHostname string) {

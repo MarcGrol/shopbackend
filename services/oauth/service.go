@@ -51,15 +51,22 @@ func (s *service) CreateTopics(c context.Context) error {
 	return nil
 }
 
-func (s *service) getOauthStatus(c context.Context) (OAuthStatus, error) {
+func (s *service) getOauthStatus(c context.Context) (map[string]OAuthStatus, error) {
+
 	s.logger.Log(c, "", mylog.SeverityInfo, "Get oauth status")
 
-	token, exists, err := s.vault.Get(c, myvault.CurrentToken)
-	if err != nil {
-		return OAuthStatus{}, myerrors.NewInternalError(err)
+	statuses := map[string]OAuthStatus{}
+	for name := range s.providers.All() {
+		tokenUID := CreateTokenUID(name)
+		token, exists, err := s.vault.Get(c, tokenUID)
+		if err != nil {
+			return statuses, myerrors.NewInternalError(err)
+		}
+
+		statuses[name] = tokenToStatus(token, exists)
 	}
 
-	return tokenToStatus(token, exists), nil
+	return statuses, nil
 }
 
 func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
@@ -89,6 +96,9 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 	provider, err := s.providers.Get(providerName)
 	if err != nil {
 		return "", myerrors.NewInvalidInputError(fmt.Errorf("provider with name '%s' not known", providerName))
+	}
+	if requestedScopes == "" {
+		requestedScopes = provider.DefaultScopes
 	}
 
 	codeVerifier, err := codeverifier.NewVerifier()
@@ -230,7 +240,7 @@ func createCompletionURL(hostname string) string {
 	return fmt.Sprintf("%s/oauth/done", hostname)
 }
 
-func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
+func (s *service) refreshToken(c context.Context, providerName string) (myvault.Token, error) {
 	now := s.nower.Now()
 	uid := s.uuider.Create()
 
@@ -238,9 +248,10 @@ func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 
 	newToken := myvault.Token{}
 	err := s.storer.RunInTransaction(c, func(c context.Context) error {
-		currentToken, exists, err := s.vault.Get(c, myvault.CurrentToken)
+		tokenUID := CreateTokenUID(providerName)
+		currentToken, exists, err := s.vault.Get(c, tokenUID)
 		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error fetching current token:%s", err))
+			return myerrors.NewInternalError(fmt.Errorf("error fetching token %s:%s", tokenUID, err))
 		}
 
 		if !exists {
@@ -294,4 +305,8 @@ func (s *service) refreshToken(c context.Context) (myvault.Token, error) {
 	s.logger.Log(c, "", mylog.SeverityInfo, "Completed oauth token-refresh")
 
 	return newToken, nil
+}
+
+func CreateTokenUID(providerName string) string {
+	return myvault.CurrentToken + "_" + providerName
 }

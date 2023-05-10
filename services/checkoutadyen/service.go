@@ -68,7 +68,8 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 
 	now := s.nower.Now()
 
-	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+	tokenUID := myvault.CurrentToken + "_" + "adyen"
+	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "adyen" {
 		s.payer.UseApiKey(s.apiKey)
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
@@ -161,7 +162,8 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 }
 
 func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
-	if req.Amount.Currency == "" || req.Amount.Value == 0 || req.CountryCode == "" ||
+	if req.Amount.Currency == "" || req.Amount.Value == 0 ||
+		req.CountryCode == "" ||
 		req.ShopperLocale == "" || req.ReturnUrl == "" || req.MerchantOrderReference == "" ||
 		req.Reference == "" || req.MerchantAccount == "" || req.Channel == "" {
 		return myerrors.NewInvalidInputError(fmt.Errorf("missing mandatory field"))

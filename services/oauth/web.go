@@ -39,7 +39,7 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 
 	router.HandleFunc("/oauth/start/{providerName}", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
-	router.HandleFunc("/oauth/refresh", s.refreshTokenPage()).Methods("GET")
+	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("GET")
 
 	err := s.service.CreateTopics(context.Background())
 	if err != nil {
@@ -64,14 +64,14 @@ func (s *webService) adminPage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		oauthStatus, err := s.service.getOauthStatus(c)
+		oauthStatuses, err := s.service.getOauthStatus(c)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		err = adminPageTemplate.Execute(w, oauthStatus)
+		err = adminPageTemplate.Execute(w, oauthStatuses)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
@@ -90,10 +90,6 @@ func (s *webService) startPage() http.HandlerFunc {
 		}
 
 		requestedScopes := r.URL.Query().Get("scopes")
-		if requestedScopes == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing scopes")))
-			return
-		}
 
 		originalReturnURL := r.URL.Query().Get("returnURL")
 		if originalReturnURL == "" {
@@ -143,7 +139,12 @@ func (s *webService) refreshTokenPage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		_, err := s.service.refreshToken(c)
+		providerName := mux.Vars(r)["providerName"]
+		if providerName == "" {
+			providerName = "adyen"
+		}
+
+		_, err := s.service.refreshToken(c, providerName)
 		if err != nil {
 			errorWriter.WriteError(c, w, 4, err)
 			return

@@ -46,7 +46,8 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
-	accessToken, exist, err := s.vault.Get(c, myvault.CurrentToken)
+	tokenUID := myvault.CurrentToken + "_" + ("adyen")
+	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "stripe" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
 		stripe.Key = s.apiKey

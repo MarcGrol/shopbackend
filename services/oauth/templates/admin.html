@@ -8,63 +8,69 @@
 
 
 <div class="container">
-    <h1>OAuth summary</h1>
+    <h1>OAuth admin</h1>
     <div class="row">
-        <form action="/basket" method="GET">
-            <button type="submit" class="btn btn-secundary">Back to basket overview</button>
-        </form>
-        <table class="table">
-            <tbody>
-            <tr>
-                <td>Provider</td>
-                <td>{{.ProviderName}}</td>
-            </tr>
-            <tr>
-                <td>Client ID</td>
-                <td>{{.ClientID}}</td>
-            </tr>
-            <tr>
-                <td>Session ID</td>
-                <td>{{.SessionUID}}</td>
-            </tr>
-            <tr>
-                <td>Status</td>
-                <td>{{.Status}}</td>
-            </tr>
-            <tr>
-                <td>Created at</td>
-                <td>{{.CreatedAt}}</td>
-            </tr>
-            <tr>
-                <td>Last modified</td>
-                <td>{{.LastModified}}</td>
-            </tr>
-            <tr>
-                <td>Token valid until</td>
-                <td>{{.ValidUntil}}</td>
-            </tr>
-            </tbody>
-        </table>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/basket">Back</a></li>
+            </ol>
+        </nav>
     </div>
     <div class="row">
-        <div class="col">
-        <form action="/oauth/start/adyen" method="GET">
-            <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
-            <input type="hidden" name="scopes" value="psp.onlinepayment:write psp.accountsettings:write psp.webhook:write"/>
-            <button type="submit" class="btn btn-secondary">OAuth connect with Adyen</button>
-        </form>
-        <form action="/oauth/start/stripe" method="GET">
-            <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
-            <input type="hidden" name="scopes" value="read_write"/>
-            <button type="submit" class="btn btn-secondary">OAuth connect with Stripe</button>
-        </form>
 
-    </div>
+        {{ range $name, $oauthStatus := . }}
         <div class="col">
-            <form action="/oauth/refresh" method="GET">
-                <button type="submit" class="btn btn-secondary">Refresh token</button>
+            <h2>{{$name}}</h2>
+            {{if .Status}}
+            <table class="table">
+                <tbody>
+                <tr>
+                    <td>Provider</td>
+                    <td>{{$oauthStatus.ProviderName}}</td>
+                </tr>
+                <tr>
+                    <td>Client ID</td>
+                    <td>{{$oauthStatus.ClientID}}</td>
+                </tr>
+                <tr>
+                    <td>Session ID</td>
+                    <td>{{$oauthStatus.SessionUID}}</td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>{{$oauthStatus.Status}}</td>
+                </tr>
+                <tr>
+                    <td>Created at</td>
+                    <td>{{$oauthStatus.CreatedAt}}</td>
+                </tr>
+                <tr>
+                    <td>Last modified</td>
+                    <td>{{$oauthStatus.LastModified}}</td>
+                </tr>
+                <tr>
+                    <td>Token valid until</td>
+                    <td>{{$oauthStatus.ValidUntil}}</td>
+                </tr>
+                </tbody>
+            </table>
+            <form action="/oauth/refresh/adyen" method="GET">
+                <button type="submit" class="btn btn-secondary">Refresh {{$name}} token</button>
             </form>
+
+            {{else}}
+
+            <form action="/oauth/start/{{$name}}" method="GET">
+                <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
+                <input type="hidden" name="scopes" value="{{$oauthStatus.Scopes}}"/>
+                <button type="submit" class="btn btn-secondary">OAuth connect with {{$name}}</button>
+            </form>
+
+            {{end}}
+        
         </div>
+
+        {{end}}
     </div>
 </div>
 

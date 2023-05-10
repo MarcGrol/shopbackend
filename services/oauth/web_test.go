@@ -162,7 +162,7 @@ func TestOauth(t *testing.T) {
 				RefreshToken: "rst456",
 			},
 		})
-		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken).Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
@@ -203,7 +203,7 @@ func TestOauth(t *testing.T) {
 		}).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodGet, "/oauth/refresh", nil)
+		request, err := http.NewRequest(http.MethodGet, "/oauth/refresh/adyen", nil)
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
