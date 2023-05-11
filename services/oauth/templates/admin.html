@@ -42,18 +42,19 @@
                 </tr>
                 <tr>
                     <td>Last modified</td>
-                    <td>{{if . }}
+                    <td>
+                        {{if . }}
                             {{$oauthStatus.LastModified.Format "2006-01-02 15:04:05"}}
                         {{end}} 
                     </td>
                 </tr>
                 <tr>
                     <td>Token valid until</td>
-                    <td>{{if not . }}
-                            -
-                        {{else}}
+                    <td>
+                        {{if  . }}
                             {{$oauthStatus.ValidUntil.Format "2006-01-02 15:04:05"}}
-                        {{end}}</td>
+                        {{end}}
+                    </td>
                 </tr>
                 </tbody>
             </table>
