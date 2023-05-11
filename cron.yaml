@@ -1,4 +1,7 @@
 cron:
-  - description: "hourly token refresh"
-    url: /oauth/refresh
+  - description: "hourly token refresh for adyen"
+    url: /oauth/refresh/adyen
+    schedule: every 1 hours
+  - description: "hourly token refresh for stripe"
+    url: /oauth/refresh/stripe
     schedule: every 1 hours
