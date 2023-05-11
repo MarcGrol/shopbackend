@@ -65,6 +65,14 @@
 
             {{else}}
 
+              <table class="table">
+                <tbody>
+                    <tr>
+                        <td>Client ID</td>
+                        <td>{{$oauthStatus.ClientID}}</td>
+                    </tr>
+               </tbody>
+            </table>
             <form action="/oauth/start/{{$name}}" method="GET">
                 <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
                 <input type="hidden" name="scopes" value="{{$oauthStatus.Scopes}}"/>
