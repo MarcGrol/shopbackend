@@ -223,7 +223,6 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 			ProviderName: session.ProviderName,
 			ClientID:     session.ClientID,
 			SessionUID:   sessionUID,
-			Success:      true,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
@@ -258,8 +257,9 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 			return myerrors.NewInternalError(fmt.Errorf("error fetching token %s:%s", tokenUID, err))
 		}
 
-		if !exists {
-			// cannot refreshToken without a token: do not consider this a failure
+		if !exists || currentToken.RefreshToken == "" {
+			s.logger.Log(c, "", mylog.SeverityInfo, "Cannot refresh token: no token to")
+			// Do not consider this a failure
 			return nil
 		}
 
@@ -294,7 +294,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 			ProviderName: currentToken.ProviderName,
 			UID:          uid,
 			ClientID:     currentToken.ClientID,
-			Success:      true,
+			SessionUID:   currentToken.SessionUID,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
@@ -324,8 +324,9 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 			return myerrors.NewInternalError(fmt.Errorf("error fetching token %s:%s", tokenUID, err))
 		}
 
-		if !exists {
-			// cannot refreshToken without a token: do not consider this a failure
+		if !exists || currentToken.RefreshToken == "" {
+			s.logger.Log(c, "", mylog.SeverityInfo, "Cannot cancel token: no token to")
+			// Do not consider this a failure
 			return nil
 		}
 
@@ -357,7 +358,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthTokenCancelCompleted{
 			ProviderName: currentToken.ProviderName,
 			ClientID:     currentToken.ClientID,
-			Success:      true,
+			SessionUID:   currentToken.SessionUID,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))

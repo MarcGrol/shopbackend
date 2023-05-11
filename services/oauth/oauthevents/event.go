@@ -104,8 +104,6 @@ type OAuthSessionSetupCompleted struct {
 	ProviderName string
 	ClientID     string
 	SessionUID   string
-	Success      bool
-	ErrorMessage string
 }
 
 func (e OAuthSessionSetupCompleted) GetEventTypeName() string {
@@ -120,8 +118,6 @@ type OAuthTokenCreationCompleted struct {
 	ProviderName string
 	ClientID     string
 	SessionUID   string
-	Success      bool
-	ErrorMessage string
 }
 
 func (e OAuthTokenCreationCompleted) GetEventTypeName() string {
@@ -136,8 +132,7 @@ type OAuthTokenRefreshCompleted struct {
 	ProviderName string
 	UID          string
 	ClientID     string
-	Success      bool
-	ErrorMessage string
+	SessionUID   string
 }
 
 func (e OAuthTokenRefreshCompleted) GetEventTypeName() string {
@@ -152,8 +147,7 @@ type OAuthTokenCancelCompleted struct {
 	ProviderName string
 	UID          string
 	ClientID     string
-	Success      bool
-	ErrorMessage string
+	SessionUID   string
 }
 
 func (e OAuthTokenCancelCompleted) GetEventTypeName() string {

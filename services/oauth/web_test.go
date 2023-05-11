@@ -114,7 +114,6 @@ func TestOauth(t *testing.T) {
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "abcdef",
-			Success:      true,
 		}).Return(nil)
 
 		// when
@@ -199,7 +198,7 @@ func TestOauth(t *testing.T) {
 			ProviderName: "adyen",
 			UID:          "xyz",
 			ClientID:     "adyen_client_id",
-			Success:      true,
+			SessionUID:   "xyz",
 		}).Return(nil)
 
 		// when
