@@ -78,11 +78,15 @@ func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 		CreatedAt:    token.CreatedAt,
 		LastModified: token.LastModified,
 		Status:       exists && token.AccessToken != "",
-		ValidUntil: func() time.Time {
-			if token.LastModified != nil {
-				return token.LastModified.Add(time.Second * time.Duration(token.ExpiresIn))
+		ValidUntil: func() *time.Time {
+			if token.ExpiresIn == 0 {
+				return nil
+			} else if token.LastModified != nil {
+				t := token.LastModified.Add(time.Second * time.Duration(token.ExpiresIn))
+				return &t
 			}
-			return token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn))
+			t := token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn))
+			return &t
 		}(),
 	}
 }

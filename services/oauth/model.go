@@ -26,6 +26,6 @@ type OAuthStatus struct {
 	Scopes       string
 	CreatedAt    time.Time
 	LastModified *time.Time
-	ValidUntil   time.Time
+	ValidUntil   *time.Time
 	Status       bool
 }

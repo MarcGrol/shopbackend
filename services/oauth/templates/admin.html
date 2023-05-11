@@ -37,20 +37,23 @@
                     <td>{{$oauthStatus.SessionUID}}</td>
                 </tr>
                 <tr>
-                    <td>Status</td>
-                    <td>{{$oauthStatus.Status}}</td>
-                </tr>
-                <tr>
                     <td>Created at</td>
-                    <td>{{$oauthStatus.CreatedAt}}</td>
+                    <td>{{$oauthStatus.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
                 </tr>
                 <tr>
                     <td>Last modified</td>
-                    <td>{{$oauthStatus.LastModified}}</td>
+                    <td>{{if not .}}
+                            {{$oauthStatus.LastModified.Format "2006-01-02 15:04:05"}}
+                        {{end}} 
+                    </td>
                 </tr>
                 <tr>
                     <td>Token valid until</td>
-                    <td>{{$oauthStatus.ValidUntil}}</td>
+                    <td>{{if not .}}
+                            -
+                        {{else}}}
+                            {{$oauthStatus.ValidUntil.Format "2006-01-02 15:04:05"}}
+                        {{end}}</td>
                 </tr>
                 </tbody>
             </table>
