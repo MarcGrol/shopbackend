@@ -40,3 +40,8 @@ func (s *service) OnOAuthTokenRefreshCompleted(c context.Context, topic string, 
 	// TODO update local store instead of using the shared vault
 	return nil
 }
+
+func (s *service) OnOAuthTokenCancelCompleted(c context.Context, topic string, event oauthevents.OAuthTokenCancelCompleted) error {
+	// TODO update local store instead of using the shared vault
+	return nil
+}

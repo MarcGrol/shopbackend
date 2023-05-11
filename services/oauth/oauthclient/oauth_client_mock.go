@@ -34,6 +34,20 @@ func (m *MockOauthClient) EXPECT() *MockOauthClientMockRecorder {
 	return m.recorder
 }
 
+// CancelAccessToken mocks base method.
+func (m *MockOauthClient) CancelAccessToken(c context.Context, req CancelTokenRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelAccessToken", c, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CancelAccessToken indicates an expected call of CancelAccessToken.
+func (mr *MockOauthClientMockRecorder) CancelAccessToken(c, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelAccessToken", reflect.TypeOf((*MockOauthClient)(nil).CancelAccessToken), c, req)
+}
+
 // ComposeAuthURL mocks base method.
 func (m *MockOauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
 	m.ctrl.T.Helper()

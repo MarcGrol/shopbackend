@@ -307,6 +307,69 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 	return newToken, nil
 }
 
+func (s *service) cancelToken(c context.Context, providerName string) error {
+	now := s.nower.Now()
+
+	s.logger.Log(c, "", mylog.SeverityInfo, "Start canceling token-refresh")
+
+	newToken := myvault.Token{}
+	err := s.storer.RunInTransaction(c, func(c context.Context) error {
+		tokenUID := CreateTokenUID(providerName)
+		currentToken, exists, err := s.vault.Get(c, tokenUID)
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error fetching token %s:%s", tokenUID, err))
+		}
+
+		if !exists {
+			// cannot refreshToken without a token: do not consider this a failure
+			return nil
+		}
+
+		err = s.oauthClient.CancelAccessToken(c, oauthclient.CancelTokenRequest{
+			ProviderName: currentToken.ProviderName,
+			AccessToken:  currentToken.AccessToken,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error canceling token: %s", err))
+		}
+
+		newToken = myvault.Token{
+			ProviderName: currentToken.ProviderName,
+			ClientID:     currentToken.ClientID,
+			SessionUID:   "",
+			Scopes:       "",
+			CreatedAt:    currentToken.CreatedAt,
+			LastModified: &now,
+			AccessToken:  "",
+			RefreshToken: "",
+			ExpiresIn:    0,
+		}
+		// Update token
+		err = s.vault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
+		}
+
+		err = s.publisher.Publish(c, oauthevents.TopicName, oauthevents.OAuthTokenCancelCompleted{
+			ProviderName: currentToken.ProviderName,
+			ClientID:     currentToken.ClientID,
+			Success:      true,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	s.logger.Log(c, "", mylog.SeverityInfo, "Completed oauth token-cancelation")
+
+	return nil
+}
+
 func CreateTokenUID(providerName string) string {
 	return myvault.CurrentToken + "_" + providerName
 }

@@ -39,7 +39,8 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 
 	router.HandleFunc("/oauth/start/{providerName}", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
-	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("GET")
+	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("POST")
+	router.HandleFunc("/oauth/cancel/{providerName}", s.cancelTokenPage()).Methods("POST")
 
 	err := s.service.CreateTopics(context.Background())
 	if err != nil {
@@ -135,6 +136,26 @@ func (s *webService) donePage() http.HandlerFunc {
 }
 
 func (s *webService) refreshTokenPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		providerName := mux.Vars(r)["providerName"]
+		if providerName == "" {
+			providerName = "adyen"
+		}
+
+		_, err := s.service.refreshToken(c, providerName)
+		if err != nil {
+			errorWriter.WriteError(c, w, 4, err)
+			return
+		}
+
+		http.Redirect(w, r, "/oauth/admin", http.StatusSeeOther)
+	}
+}
+
+func (s *webService) cancelTokenPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)

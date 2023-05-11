@@ -203,7 +203,7 @@ func TestOauth(t *testing.T) {
 		}).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodGet, "/oauth/refresh/adyen", nil)
+		request, err := http.NewRequest(http.MethodPost, "/oauth/refresh/adyen", nil)
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()

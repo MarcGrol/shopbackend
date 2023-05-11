@@ -54,8 +54,13 @@
                 </tr>
                 </tbody>
             </table>
-            <form action="/oauth/refresh/adyen" method="GET">
+
+            <form action="/oauth/refresh/{{$name}}" method="POST">
                 <button type="submit" class="btn btn-secondary">Refresh {{$name}} token</button>
+            </form>
+
+            <form action="/oauth/cancel/{{$name}}" method="POST">
+                <button type="submit" class="btn btn-secondary">Invalidate {{$name}} token</button>
             </form>
 
             {{else}}

@@ -31,6 +31,11 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type CancelTokenRequest struct {
+	ProviderName string `json:"-"`
+	AccessToken  string `json:"access_token"`
+}
+
 type GetTokenResponse struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
@@ -44,6 +49,7 @@ type OauthClient interface {
 	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)
 	RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error)
+	CancelAccessToken(c context.Context, req CancelTokenRequest) error
 }
 
 type oauthClient struct {
@@ -151,4 +157,9 @@ func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequ
 	}
 
 	return resp, nil
+}
+
+func (oc oauthClient) CancelAccessToken(c context.Context, req CancelTokenRequest) error {
+	// TODO: implement
+	return nil
 }

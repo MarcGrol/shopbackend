@@ -16,6 +16,7 @@ const (
 	oauthSessionSetupCompletedName  = TopicName + ".sessionSetup.completed"
 	oauthTokenCreationCompletedName = TopicName + ".tokenCreation.completed"
 	oauthTokenRefreshCompletedName  = TopicName + ".tokenRefresh.completed"
+	oauthTokenCancelCompletedName   = TopicName + ".tokenCancel.completed"
 )
 
 type OAuthEventService interface {
@@ -24,6 +25,7 @@ type OAuthEventService interface {
 	OnOAuthSessionSetupCompleted(c context.Context, topic string, event OAuthSessionSetupCompleted) error
 	OnOAuthTokenCreationCompleted(c context.Context, topic string, event OAuthTokenCreationCompleted) error
 	OnOAuthTokenRefreshCompleted(c context.Context, topic string, event OAuthTokenRefreshCompleted) error
+	OnOAuthTokenCancelCompleted(c context.Context, topic string, event OAuthTokenCancelCompleted) error
 }
 
 func DispatchEvent(c context.Context, reader io.Reader, service OAuthEventService) error {
@@ -68,6 +70,15 @@ func DispatchEvent(c context.Context, reader io.Reader, service OAuthEventServic
 				return myerrors.NewInvalidInputError(err)
 			}
 			return service.OnOAuthTokenRefreshCompleted(c, envelope.Topic, event)
+		}
+	case oauthTokenCancelCompletedName:
+		{
+			event := OAuthTokenCancelCompleted{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnOAuthTokenCancelCompleted(c, envelope.Topic, event)
 		}
 	default:
 		return myerrors.NewNotImplementedError(fmt.Errorf(envelope.EventTypeName))
@@ -137,10 +148,18 @@ func (e OAuthTokenRefreshCompleted) GetAggregateName() string {
 	return e.ClientID
 }
 
-type OAuthTokenRefreshFailed struct {
+type OAuthTokenCancelCompleted struct {
 	ProviderName string
 	UID          string
 	ClientID     string
 	Success      bool
 	ErrorMessage string
+}
+
+func (e OAuthTokenCancelCompleted) GetEventTypeName() string {
+	return oauthTokenCancelCompletedName
+}
+
+func (e OAuthTokenCancelCompleted) GetAggregateName() string {
+	return e.ClientID
 }
