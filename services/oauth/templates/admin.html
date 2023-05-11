@@ -43,7 +43,7 @@
                 <tr>
                     <td>Last modified</td>
                     <td>
-                        {{if . }}
+                        {{if $oauthStatus.LastModified }}
                             {{$oauthStatus.LastModified.Format "2006-01-02 15:04:05"}}
                         {{end}} 
                     </td>
@@ -51,7 +51,7 @@
                 <tr>
                     <td>Token valid until</td>
                     <td>
-                        {{if  . }}
+                        {{if $oauthStatus.ValidUntil }}
                             {{$oauthStatus.ValidUntil.Format "2006-01-02 15:04:05"}}
                         {{end}}
                     </td>
