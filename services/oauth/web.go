@@ -39,7 +39,8 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 
 	router.HandleFunc("/oauth/start/{providerName}", s.startPage()).Methods("GET")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
-	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("POST")
+	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("GET")  // cron support onnly get
+	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("POST") // as used from screens
 	router.HandleFunc("/oauth/cancel/{providerName}", s.cancelTokenPage()).Methods("POST")
 
 	err := s.service.CreateTopics(context.Background())
@@ -165,7 +166,7 @@ func (s *webService) cancelTokenPage() http.HandlerFunc {
 			providerName = "adyen"
 		}
 
-		_, err := s.service.refreshToken(c, providerName)
+		err := s.service.cancelToken(c, providerName)
 		if err != nil {
 			errorWriter.WriteError(c, w, 4, err)
 			return
