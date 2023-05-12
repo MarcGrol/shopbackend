@@ -1,6 +1,6 @@
 # Example of doing payments with the Adyen and Stripe platform
 
-Example app that demonstrates how Adyen and Stripe OAuth and checkout work
+Example app that demonstrates how Adyen and Stripe checkout and OAuth work
 
 ## Play around with the app
 
