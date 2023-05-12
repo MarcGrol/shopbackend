@@ -6,6 +6,11 @@ Example app that demonstrates how Adyen and Stripe OAuth and checkout work
 
 [https://www.marcgrolconsultancy.nl](https://www.marcgrolconsultancy.nl/)
 
+## Architecture
+
+![Overview if architecture](https://github.com/MarcGrol/shopbackend/blob/main/docs/integration_experiment_architecture.png)
+
+
 ## Manual deployment on Google Appengine
 
     # Login in to gcloud to start using the cli
@@ -20,3 +25,5 @@ Example app that demonstrates how Adyen and Stripe OAuth and checkout work
     
     # Perform the actual deployment
     gcloud app deploy app.yaml index.yaml cron.yaml --quiet
+
+
