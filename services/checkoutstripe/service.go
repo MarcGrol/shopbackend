@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/stripe/stripe-go/v74"
-	"github.com/stripe/stripe-go/v74/checkout/session"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
@@ -21,6 +20,7 @@ import (
 
 type service struct {
 	apiKey        string
+	payer         Payer
 	logger        mylog.Logger
 	nower         mytime.Nower
 	checkoutStore mystore.Store[checkoutadyen.CheckoutContext]
@@ -29,7 +29,7 @@ type service struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(apiKey string, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
+func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
 	stripe.Key = apiKey
 	return &service{
 		apiKey:        apiKey,
@@ -56,9 +56,9 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 		stripe.Key = accessToken.AccessToken
 	}
 
-	session, err := session.New(&params)
+	session, err := s.payer.CreateCheckoutSession(c, params)
 	if err != nil {
-		return "", myerrors.NewInvalidInputError(fmt.Errorf("error creating session: %s", err))
+		return "", myerrors.NewInvalidInputError(err)
 	}
 
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {

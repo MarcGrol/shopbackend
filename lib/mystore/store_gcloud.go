@@ -168,7 +168,7 @@ func (s *gcloudStore[T]) List(c context.Context) ([]T, error) {
 
 	objectsToFetch := []T{}
 
-	q := datastore.NewQuery(s.kind)
+	q := datastore.NewQuery(s.kind).Limit(100)
 
 	if transaction != nil {
 		q = q.Transaction(transaction.(*datastore.Transaction))

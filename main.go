@@ -146,7 +146,9 @@ func createStripeCheckoutService(c context.Context, router *mux.Router, checkout
 
 	apiKey := getenvOrAbort("STRIPE_API_KEY")
 
-	checkoutService, err := checkoutstripe.NewWebService(apiKey, nower, checkoutStore, vault, publisher)
+	payer := checkoutstripe.NewPayer()
+
+	checkoutService, err := checkoutstripe.NewWebService(apiKey, payer, nower, checkoutStore, vault, publisher)
 	if err != nil {
 		log.Fatalf("Error creating stripe checkoutService: %s", err)
 	}
