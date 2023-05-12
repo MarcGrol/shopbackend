@@ -8,12 +8,17 @@ env_variables:
   LOCATION_ID: "europe-west1"
   QUEUE_NAME: "default"
   ADYEN_ENVIRONMENT: "test"
-  ADYEN_MERCHANT_ACCOUNT: "..." # set your own value
-  ADYEN_API_KEY: "..."          # set your own value
-  ADYEN_CLIENT_KEY: "..."       # set your own value
-  OAUTH_CLIENT_ID: "..."        # set your own value
-  OAUTH_CLIENT_SECRET: "..."    # set your own value
-  OAUTH_HOSTNAME: "https://ca-test.adyen.com"
+  ADYEN_MERCHANT_ACCOUNT: "..."
+  ADYEN_API_KEY: "..."
+  ADYEN_CLIENT_KEY: "..."
+  ADYEN_OAUTH_CLIENT_ID: "..."
+  ADYEN_OAUTH_CLIENT_SECRET: "..."
+  ADYEN_OAUTH_AUTH_HOSTNAME: "https://ca-test.adyen.com"
+  ADYEN_OAUTH_TOKEN_HOSTNAME: "https://oauth-test.adyen.com"
+  STRIPE_ENVIRONMENT: "test"
+  STRIPE_API_KEY: "..."
+  STRIPE_OAUTH_CLIENT_ID: "..."
+  STRIPE_OAUTH_CLIENT_SECRET: "..."
 
 
 handlers:
