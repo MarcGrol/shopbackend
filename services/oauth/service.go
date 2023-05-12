@@ -78,17 +78,7 @@ func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 		CreatedAt:    token.CreatedAt,
 		LastModified: token.LastModified,
 		Status:       exists && token.AccessToken != "",
-		ValidUntil: func() *time.Time {
-			if token.ExpiresIn == 0 {
-				return nil
-			}
-			if token.LastModified != nil {
-				t := token.LastModified.Add(time.Second * time.Duration(token.ExpiresIn))
-				return &t
-			}
-			t := token.CreatedAt.Add(time.Second * time.Duration(token.ExpiresIn))
-			return &t
-		}(),
+		ValidUntil:   token.ExpiresIn,
 	}
 }
 
@@ -214,7 +204,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 			LastModified: session.LastModified,
 			AccessToken:  tokenResp.AccessToken,
 			RefreshToken: tokenResp.RefreshToken,
-			ExpiresIn:    tokenResp.ExpiresIn,
+			ExpiresIn:    calculateExpriesIn(session.CreatedAt, tokenResp.ExpiresIn),
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token in vault: %s", err))
@@ -283,7 +273,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 			LastModified: &now,
 			AccessToken:  newTokenResp.AccessToken,
 			RefreshToken: newTokenResp.RefreshToken,
-			ExpiresIn:    newTokenResp.ExpiresIn,
+			ExpiresIn:    calculateExpriesIn(now, newTokenResp.ExpiresIn),
 		}
 		// Update token
 		err = s.vault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
@@ -310,6 +300,14 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 	s.logger.Log(c, "", mylog.SeverityInfo, "Completed oauth token-refresh")
 
 	return newToken, nil
+}
+
+func calculateExpriesIn(lastModified time.Time, expiresIn int) *time.Time {
+	if expiresIn == 0 {
+		return nil
+	}
+	t := lastModified.Add(time.Second * time.Duration(expiresIn))
+	return &t
 }
 
 func (s *service) cancelToken(c context.Context, providerName string) error {
@@ -348,7 +346,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 			LastModified: &now,
 			AccessToken:  "",
 			RefreshToken: "",
-			ExpiresIn:    0,
+			ExpiresIn:    nil,
 		}
 		// Update token
 		err = s.vault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)

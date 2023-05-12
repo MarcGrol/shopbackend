@@ -69,7 +69,7 @@ var (
 
 func TestCheckoutService(t *testing.T) {
 
-	t.Run("Create checkout", func(t *testing.T) {
+	t.Run("Create checkout with api-key", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -77,8 +77,8 @@ func TestCheckoutService(t *testing.T) {
 		ctx, router, storer, vault, payer, nower, _, publisher := setup(t, ctrl)
 
 		// given
-		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"adyen").Return(myvault.Token{AccessToken: "at_123"}, true, nil)
-		payer.EXPECT().UseApiKey(gomock.Any())
+		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"adyen").Return(myvault.Token{}, false, nil)
+		payer.EXPECT().UseApiKey("my_api_key")
 		payer.EXPECT().Sessions(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -113,11 +113,38 @@ func TestCheckoutService(t *testing.T) {
 		assert.Equal(t, "http://a.b/c", checkout.OriginalReturnURL)
 	})
 
-	/*
-		Got:  {<nil> <nil> map[] [ideal scheme] {EUR 12300} <nil> <nil> <nil> [] 0 Web <nil> nl <nil> <nil> <nil> false false false <nil> 0xc00012efa8 <nil>  MyMerchantAccount 123 map[] <nil>      123 http://localhost:8888/checkout/123 <nil>    nl-nl <nil>    false <nil>  false  false true} (checkout.CreateCheckoutSessionRequest)
-		Want: {<nil> <nil> map[] [ideal scheme] {EUR 12300} <nil> <nil> <nil> [] 0 Web <nil> nl <nil> <nil> <nil> false false false <nil> <nil> <nil>  MyMerchantAccount 123 map[] <nil>      123 http://localhost:8888/checkout/123 <nil>    nl-nl <nil>    false <nil>  false  false true} (checkout.CreateCheckoutSessionRequest)
+	t.Run("Create checkout with access-token", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-	*/
+		// setup
+		_, router, _, vault, payer, nower, _, publisher := setup(t, ctrl)
+
+		// given
+		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"adyen").Return(myvault.Token{
+			ProviderName: "adyen",
+			AccessToken:  "my_access_token",
+			RefreshToken: "my_refresh_token",
+		}, true, nil)
+		payer.EXPECT().UseToken("my_access_token")
+		payer.EXPECT().Sessions(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
+		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
+		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, gomock.Any()).Return(nil)
+
+		// when
+		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol&returnUrl=http://a.b/c`))
+		assert.NoError(t, err)
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		request.Host = "localhost:8888"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 200, response.Code)
+
+	})
+
 	t.Run("Resume checkout", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()

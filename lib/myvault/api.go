@@ -18,7 +18,7 @@ type Token struct {
 	LastModified *time.Time
 	AccessToken  string
 	RefreshToken string
-	ExpiresIn    int
+	ExpiresIn    *time.Time
 }
 
 type VaultReader interface {

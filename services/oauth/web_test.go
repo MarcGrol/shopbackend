@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
@@ -75,7 +76,7 @@ func TestOauth(t *testing.T) {
 
 		exampleResp := oauthclient.GetTokenResponse{
 			TokenType:    "bearer",
-			ExpiresIn:    12345,
+			ExpiresIn:    24 * 60 * 60,
 			AccessToken:  "abc123",
 			Scope:        adyenExampleScopes,
 			RefreshToken: "rst456",
@@ -108,7 +109,7 @@ func TestOauth(t *testing.T) {
 			LastModified: &mytime.ExampleTime,
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
-			ExpiresIn:    12345,
+			ExpiresIn:    func() *time.Time { t := mytime.ExampleTime.Add(24 * 60 * 60 * time.Second); return &t }(),
 		}).Return(nil)
 		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthSessionSetupCompleted{
 			ProviderName: "adyen",
@@ -155,7 +156,7 @@ func TestOauth(t *testing.T) {
 			CreatedAt:    mytime.ExampleTime,
 			TokenData: &oauthclient.GetTokenResponse{
 				TokenType:    "bearer",
-				ExpiresIn:    12345,
+				ExpiresIn:    24 * 60 * 60,
 				AccessToken:  "abc123",
 				Scope:        adyenExampleScopes,
 				RefreshToken: "rst456",
@@ -167,16 +168,17 @@ func TestOauth(t *testing.T) {
 			SessionUID:   "xyz",
 			Scopes:       adyenExampleScopes,
 			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
 			AccessToken:  "abc123",
 			RefreshToken: "rst456",
-			ExpiresIn:    12345,
+			ExpiresIn:    func() *time.Time { t := mytime.ExampleTime.Add(24 * 60 * 60 * time.Second); return &t }(),
 		}, true, nil)
 		oauthClient.EXPECT().RefreshAccessToken(gomock.Any(), oauthclient.RefreshTokenRequest{
 			ProviderName: "adyen",
 			RefreshToken: "rst456",
 		}).Return(oauthclient.GetTokenResponse{
 			TokenType:    "bearer",
-			ExpiresIn:    123456,
+			ExpiresIn:    24 * 60 * 60,
 			AccessToken:  "abc123new",
 			Scope:        adyenExampleScopes,
 			RefreshToken: "rst456new",
@@ -192,7 +194,7 @@ func TestOauth(t *testing.T) {
 			LastModified: &mytime.ExampleTime,
 			AccessToken:  "abc123new",
 			RefreshToken: "rst456new",
-			ExpiresIn:    123456,
+			ExpiresIn:    func() *time.Time { t := mytime.ExampleTime.Add(24 * 60 * 60 * time.Second); return &t }(),
 		}).Return(nil)
 		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthTokenRefreshCompleted{
 			ProviderName: "adyen",
