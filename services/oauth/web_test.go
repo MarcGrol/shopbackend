@@ -32,6 +32,68 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
+		ctx, router, storer, vault, _, _, _, _ := setup(t, ctrl)
+
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			SessionUID:   "xyz",
+			Scopes:       adyenExampleScopes,
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
+			AccessToken:  "abc123",
+			RefreshToken: "rst456",
+			ExpiresIn:    func() *time.Time { t := mytime.ExampleTime.Add(24 * 60 * 60 * time.Second); return &t }(),
+		}, true, nil)
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("stripe")).Return(myvault.Token{
+			ProviderName: "stripe",
+			ClientID:     "adyen_client_id",
+			SessionUID:   "",
+			Scopes:       "",
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
+			AccessToken:  "",
+			RefreshToken: "",
+			ExpiresIn:    nil,
+		}, true, nil)
+
+		storer.Put(ctx, "xyz", OAuthSessionSetup{
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			UID:          "abcdef",
+			Scopes:       adyenExampleScopes,
+			ReturnURL:    "http://localhost:8888/basket",
+			Verifier:     "exampleHash",
+			CreatedAt:    mytime.ExampleTime,
+			TokenData:    nil,
+		})
+
+		// when
+		request, err := http.NewRequest(http.MethodGet, "/oauth/admin", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 200, response.Code)
+		got := response.Body.String()
+
+		assert.Contains(t, got, "<td>adyen_client_id</td>")
+		assert.Contains(t, got, "Refresh adyen token")
+		assert.Contains(t, got, "Invalidate adyen token")
+		assert.NotContains(t, got, "OAuth connect with adyen")
+
+		assert.NotContains(t, got, "Refresh stripe token")
+		assert.NotContains(t, got, "Invalidate stripe token")
+		assert.Contains(t, got, "OAuth connect with stripe")
+	})
+
+	t.Run("Start oauth", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
 		ctx, router, storer, _, nower, uuider, oauthClient, publisher := setup(t, ctrl)
 
 		// given
