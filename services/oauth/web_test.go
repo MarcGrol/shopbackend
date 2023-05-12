@@ -214,6 +214,76 @@ func TestOauth(t *testing.T) {
 		assert.Equal(t, 303, response.Code)
 		assert.Equal(t, "/oauth/admin", response.Header().Get("Location"))
 	})
+
+	t.Run("Cancel token", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
+		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(t, ctrl)
+
+		// given
+		storer.Put(ctx, "abcdef", OAuthSessionSetup{
+			UID:          "abcdef",
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			Scopes:       adyenExampleScopes,
+			ReturnURL:    "http://localhost:8888/basket",
+			Verifier:     "exampleHash",
+			CreatedAt:    mytime.ExampleTime,
+			TokenData: &oauthclient.GetTokenResponse{
+				TokenType:    "bearer",
+				ExpiresIn:    24 * 60 * 60,
+				AccessToken:  "abc123",
+				Scope:        adyenExampleScopes,
+				RefreshToken: "rst456",
+			},
+		})
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			SessionUID:   "xyz",
+			Scopes:       adyenExampleScopes,
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
+			AccessToken:  "abc123",
+			RefreshToken: "rst456",
+			ExpiresIn:    func() *time.Time { t := mytime.ExampleTime.Add(24 * 60 * 60 * time.Second); return &t }(),
+		}, true, nil)
+		oauthClient.EXPECT().CancelAccessToken(gomock.Any(), oauthclient.CancelTokenRequest{
+			ProviderName: "adyen",
+			AccessToken:  "abc123",
+		}).Return(nil)
+		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), myvault.Token{
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			SessionUID:   "",
+			Scopes:       "",
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
+			AccessToken:  "",
+			RefreshToken: "",
+			ExpiresIn:    nil,
+		}).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), oauthevents.TopicName, oauthevents.OAuthTokenCancelCompleted{
+			ProviderName: "adyen",
+			ClientID:     "adyen_client_id",
+			SessionUID:   "xyz",
+		}).Return(nil)
+
+		// when
+		request, err := http.NewRequest(http.MethodPost, "/oauth/cancel/adyen", nil)
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		// then
+		assert.Equal(t, 303, response.Code)
+		assert.Equal(t, "/oauth/admin", response.Header().Get("Location"))
+	})
+
 }
 
 func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {
