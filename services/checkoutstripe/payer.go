@@ -11,6 +11,8 @@ import (
 
 //go:generate mockgen -source=payer.go -package checkoutstripe -destination payer_mock.go Payer
 type Payer interface {
+	UseApiKey(key string)
+	UseToken(accessToken string)
 	CreateCheckoutSession(ctx context.Context, params stripe.CheckoutSessionParams) (stripe.CheckoutSession, error)
 }
 
@@ -18,6 +20,14 @@ type stripePayer struct{}
 
 func NewPayer() Payer {
 	return &stripePayer{}
+}
+
+func (p *stripePayer) UseApiKey(apiKey string) {
+	stripe.Key = apiKey
+}
+
+func (p *stripePayer) UseToken(accessToken string) {
+	stripe.Key = accessToken
 }
 
 func (p *stripePayer) CreateCheckoutSession(ctx context.Context, params stripe.CheckoutSessionParams) (stripe.CheckoutSession, error) {

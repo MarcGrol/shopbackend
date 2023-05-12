@@ -46,6 +46,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
+	// Iniitialize payment to the adyen platform
 	s.setupAuthentication(c, basketUID)
 	session, err := s.payer.CreateCheckoutSession(c, params)
 	if err != nil {
@@ -91,10 +92,10 @@ func (s *service) setupAuthentication(c context.Context, basketUID string) {
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "stripe" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
-		stripe.Key = s.apiKey
+		s.payer.UseApiKey(s.apiKey)
 	} else {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-		stripe.Key = accessToken.AccessToken
+		s.payer.UseToken(accessToken.AccessToken)
 	}
 }
 
