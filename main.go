@@ -106,9 +106,9 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	}
 
 	{
-		stripeOAuthClientID := getenvOrAbort("STRIPE_OAUTH_CLIENT_ID")
-		stripeOAuthClientSecret := getenvOrAbort("STRIPE_OAUTH_CLIENT_SECRET")
-		providers.Set("stripe", stripeOAuthClientID, stripeOAuthClientSecret, "", "")
+		clientID := getenvOrAbort("STRIPE_OAUTH_CLIENT_ID")
+		clientSecret := getenvOrAbort("STRIPE_OAUTH_CLIENT_SECRET")
+		providers.Set("stripe", clientID, clientSecret, "", "")
 	}
 
 	oauthClient := oauthclient.NewOAuthClient(providers)
