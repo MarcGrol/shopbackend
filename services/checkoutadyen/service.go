@@ -299,8 +299,8 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
 		}
 		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
-		checkoutContext.WebhookStatus = item.NotificationRequestItem.EventCode
-		checkoutContext.WebhookSuccess = item.NotificationRequestItem.Success
+		checkoutContext.WebhookEventName = item.NotificationRequestItem.EventCode
+		checkoutContext.WebhookEventSuccess = (item.NotificationRequestItem.Success == "true")
 		checkoutContext.LastModified = &now
 
 		err = s.checkoutStore.Put(c, basketUID, checkoutContext)

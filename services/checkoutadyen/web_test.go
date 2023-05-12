@@ -256,8 +256,8 @@ func TestCheckoutService(t *testing.T) {
 		checkout, exists, _ := storer.Get(ctx, "123")
 		assert.True(t, exists)
 		assert.Equal(t, "123", checkout.BasketUID)
-		assert.Equal(t, "AUTHORISATION", checkout.WebhookStatus)
-		assert.Equal(t, "true", checkout.WebhookSuccess)
+		assert.Equal(t, "AUTHORISATION", checkout.WebhookEventName)
+		assert.True(t, checkout.WebhookEventSuccess)
 	})
 }
 

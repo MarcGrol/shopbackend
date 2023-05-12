@@ -9,22 +9,22 @@ import (
 
 func NewCheckoutContext() CheckoutContext {
 	return CheckoutContext{
-		WebhookStatus:  "unknown",
-		WebhookSuccess: "unknown",
+		WebhookEventName:    "unknown",
+		WebhookEventSuccess: false,
 	}
 }
 
 type CheckoutContext struct {
-	BasketUID         string
-	CreatedAt         time.Time
-	LastModified      *time.Time
-	OriginalReturnURL string
-	ID                string
-	SessionData       string `datastore:",noindex"`
-	Status            string
-	PaymentMethod     string
-	WebhookStatus     string
-	WebhookSuccess    string
+	BasketUID           string
+	CreatedAt           time.Time
+	LastModified        *time.Time
+	OriginalReturnURL   string
+	ID                  string
+	SessionData         string `datastore:",noindex"`
+	Status              string
+	PaymentMethod       string
+	WebhookEventName    string
+	WebhookEventSuccess bool
 }
 
 type CheckoutPageInfo struct {
