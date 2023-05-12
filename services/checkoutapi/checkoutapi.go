@@ -90,11 +90,3 @@ func (c Checkout) ToForm() (url.Values, error) {
 
 	return values, nil
 }
-
-func FormValuesToHtml(values url.Values) string {
-	buf := strings.Builder{}
-	for key, value := range values {
-		buf.WriteString(fmt.Sprintf("<input type=\"hidden\" name=\"%s\" value=\"%s\"/>\n", key, value[0]))
-	}
-	return buf.String()
-}
