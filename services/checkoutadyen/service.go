@@ -68,17 +68,8 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 
 	now := s.nower.Now()
 
-	tokenUID := myvault.CurrentToken + "_" + "adyen"
-	accessToken, exist, err := s.vault.Get(c, tokenUID)
-	if err != nil || !exist || accessToken.ProviderName != "adyen" {
-		s.payer.UseApiKey(s.apiKey)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
-	} else {
-		s.payer.UseToken(accessToken.AccessToken)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-	}
-
 	// Initiate a checkout session on the Adyen platform
+	s.setupAuthentication(c, basketUID)
 	checkoutSessionResp, err := s.payer.Sessions(c, req)
 	if err != nil {
 		return nil, myerrors.NewInternalError(fmt.Errorf("error creating payment session for checkout %s: %s", basketUID, err))
@@ -170,6 +161,18 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 	}
 
 	return nil
+}
+
+func (s *service) setupAuthentication(c context.Context, basketUID string) {
+	tokenUID := myvault.CurrentToken + "_" + "adyen"
+	accessToken, exist, err := s.vault.Get(c, tokenUID)
+	if err != nil || !exist || accessToken.ProviderName != "adyen" {
+		s.payer.UseApiKey(s.apiKey)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
+	} else {
+		s.payer.UseToken(accessToken.AccessToken)
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+	}
 }
 
 // resumeCheckout is called when the shopper has finished the checkout process

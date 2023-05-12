@@ -46,16 +46,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
-	tokenUID := myvault.CurrentToken + "_" + ("adyen")
-	accessToken, exist, err := s.vault.Get(c, tokenUID)
-	if err != nil || !exist || accessToken.ProviderName != "stripe" {
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
-		stripe.Key = s.apiKey
-	} else {
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-		stripe.Key = accessToken.AccessToken
-	}
-
+	s.setupAuthentication(c, basketUID)
 	session, err := s.payer.CreateCheckoutSession(c, params)
 	if err != nil {
 		return "", myerrors.NewInvalidInputError(err)
@@ -93,6 +84,18 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 	}
 
 	return session.URL, nil
+}
+
+func (s *service) setupAuthentication(c context.Context, basketUID string) {
+	tokenUID := myvault.CurrentToken + "_" + ("adyen")
+	accessToken, exist, err := s.vault.Get(c, tokenUID)
+	if err != nil || !exist || accessToken.ProviderName != "stripe" {
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
+		stripe.Key = s.apiKey
+	} else {
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+		stripe.Key = accessToken.AccessToken
+	}
 }
 
 func (s *service) finalizeCheckout(c context.Context, basketUID string, status string) (string, error) {
