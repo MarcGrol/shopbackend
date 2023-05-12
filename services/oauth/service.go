@@ -102,20 +102,19 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 	}
 	codeVerifierValue := codeVerifier.GetValue()
 
-	authURL := ""
+	authURL, err := s.oauthClient.ComposeAuthURL(c, oauthclient.ComposeAuthURLRequest{
+		ProviderName:  providerName,
+		CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
+		Scope:         requestedScopes,
+		State:         sessionUID,
+		CodeVerifier:  codeVerifierValue,
+	})
+	if err != nil {
+		return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
+	}
+	
 	err = s.storer.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
-
-		authURL, err = s.oauthClient.ComposeAuthURL(c, oauthclient.ComposeAuthURLRequest{
-			ProviderName:  providerName,
-			CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
-			Scope:         requestedScopes,
-			State:         sessionUID,
-			CodeVerifier:  codeVerifierValue,
-		})
-		if err != nil {
-			return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
-		}
 
 		// Create new session
 		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
