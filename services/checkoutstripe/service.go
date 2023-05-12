@@ -33,6 +33,7 @@ func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.No
 	stripe.Key = apiKey
 	return &service{
 		apiKey:        apiKey,
+		payer:         payer,
 		logger:        logger,
 		nower:         nower,
 		checkoutStore: checkoutStore,
@@ -89,7 +90,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 }
 
 func (s *service) setupAuthentication(c context.Context, basketUID string) {
-	tokenUID := myvault.CurrentToken + "_" + ("adyen")
+	tokenUID := myvault.CurrentToken + "_" + ("stripe")
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "stripe" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")

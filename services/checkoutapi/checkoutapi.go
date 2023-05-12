@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	formcodec "github.com/go-playground/form/v4"
 
@@ -82,7 +81,7 @@ func NewFromValues(values url.Values) (Checkout, error) {
 	return checkout, nil
 }
 
-func (c Checkout) ToForm() (url.Values, error) {
+func (c Checkout) ToFormValues() (url.Values, error) {
 	values, err := formcodec.NewEncoder().Encode(c)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding form: %s", err)

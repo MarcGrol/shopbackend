@@ -110,9 +110,9 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 		CodeVerifier:  codeVerifierValue,
 	})
 	if err != nil {
-		return myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
+		return "", myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
 	}
-	
+
 	err = s.storer.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 

@@ -117,7 +117,7 @@ func (s *webService) basketDetailsPage() http.HandlerFunc {
 		}
 
 		checkout := convertBasketToCheckout(basket)
-		values, err := checkout.ToForm()
+		values, err := checkout.ToFormValues()
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return
@@ -152,7 +152,7 @@ func (s *webService) checkoutFinalized() http.HandlerFunc {
 		}
 
 		checkout := convertBasketToCheckout(basket)
-		values, err := checkout.ToForm()
+		values, err := checkout.ToFormValues()
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return

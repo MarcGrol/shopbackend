@@ -10,7 +10,7 @@ import (
 func TestEncodeDecodeSame(t *testing.T) {
 	//  encode followed by decode must end up same
 
-	values, err := checkout.ToForm()
+	values, err := checkout.ToFormValues()
 	assert.NoError(t, err)
 	checkoutAgain, err := NewFromValues(values)
 	assert.NoError(t, err)
