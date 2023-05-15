@@ -19,7 +19,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 )
 
@@ -147,7 +147,7 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		storer.Put(ctx, "123", checkoutadyen.CheckoutContext{
+		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -191,7 +191,7 @@ func TestCheckoutService(t *testing.T) {
 			Success:       true,
 		}).Return(nil)
 
-		storer.Put(ctx, "123", checkoutadyen.CheckoutContext{
+		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -232,9 +232,9 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutadyen.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypubsub.MockPubSub, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutapi.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypubsub.MockPubSub, *mypublisher.MockPublisher) {
 	c := context.TODO()
-	storer, _, _ := mystore.New[checkoutadyen.CheckoutContext](c)
+	storer, _, _ := mystore.New[checkoutapi.CheckoutContext](c)
 	vault := myvault.NewMockVaultReader(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	payer := NewMockPayer(ctrl)

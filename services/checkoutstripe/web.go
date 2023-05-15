@@ -17,7 +17,6 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 )
 
@@ -27,7 +26,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewWebService(apiKey string, payer Payer, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*webService, error) {
+func NewWebService(apiKey string, payer Payer, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkoutstripe")
 	s, err := newService(apiKey, payer, logger, nower, checkoutStore, vault, publisher)
 	if err != nil {
@@ -49,7 +48,7 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 	return nil
 }
 
-// startCheckoutPage starts a checkout session on the Adyen platform
+// startCheckoutPage starts a checkout session on the Stripe platform
 func (s *webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)

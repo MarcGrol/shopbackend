@@ -14,7 +14,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
-	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 )
 
@@ -23,13 +23,13 @@ type service struct {
 	payer         Payer
 	logger        mylog.Logger
 	nower         mytime.Nower
-	checkoutStore mystore.Store[checkoutadyen.CheckoutContext]
+	checkoutStore mystore.Store[checkoutapi.CheckoutContext]
 	vault         myvault.VaultReader
 	publisher     mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
+func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
 	stripe.Key = apiKey
 	return &service{
 		apiKey:        apiKey,
@@ -47,7 +47,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
-	// Iniitialize payment to the adyen platform
+	// Iniitialize payment to the stripe platform
 	s.setupAuthentication(c, basketUID)
 	session, err := s.payer.CreateCheckoutSession(c, params)
 	if err != nil {
@@ -58,7 +58,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 		// must be idempotent
 
 		// Store checkout context on basketUID because we need it for the success/cancel callback and the webhook
-		err = s.checkoutStore.Put(c, basketUID, checkoutadyen.CheckoutContext{
+		err = s.checkoutStore.Put(c, basketUID, checkoutapi.CheckoutContext{
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,
@@ -154,7 +154,7 @@ func addStatusQueryParam(orgUrl string, status string) (string, error) {
 }
 
 func (s *service) webhookNotification(c context.Context, username, password string, event stripe.Event) error {
-	// TODO check username+password to make sure notification originates from Adyen
+	// TODO check username+password to make sure notification originates from Strip
 
 	s.logger.Log(c, event.ID, mylog.SeverityInfo, "Webhook: status update event %s with ID: %s", event.Type, event.ID)
 
@@ -180,7 +180,7 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 			return s.handlePaymentMethodEvent(c, event.Type, paymentMethod)
 		}
 
-		// TODO "ayment_intent.partially_funded", "payment_intent.processing",
+		// TODO "payment_intent.partially_funded", "payment_intent.processing",
 		//  "payment_intent.requires_action", "payment_intent.requires_capture",
 	default:
 		{
@@ -197,7 +197,7 @@ func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, 
 
 	now := s.nower.Now()
 
-	var checkoutContext checkoutadyen.CheckoutContext
+	var checkoutContext checkoutapi.CheckoutContext
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {

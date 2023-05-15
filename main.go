@@ -17,6 +17,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutstripe"
 	"github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
@@ -56,7 +57,7 @@ func main() {
 	}
 	defer vaultCleanup()
 
-	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutadyen.CheckoutContext](c)
+	checkoutStore, checkoutStoreCleanup, err := mystore.New[checkoutapi.CheckoutContext](c)
 	if err != nil {
 		log.Fatalf("Error creating checkout store: %s", err)
 	}
@@ -119,7 +120,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	return sessionStoreCleanup
 }
 
-func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
+func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
 	merchantAccount := getenvOrAbort("ADYEN_MERCHANT_ACCOUNT")
 	environment := getenvOrAbort("ADYEN_ENVIRONMENT")
@@ -142,7 +143,7 @@ func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutS
 	checkoutService.RegisterEndpoints(c, router)
 }
 
-func createStripeCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutadyen.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
+func createStripeCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
 	apiKey := getenvOrAbort("STRIPE_API_KEY")
 

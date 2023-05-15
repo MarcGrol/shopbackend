@@ -12,6 +12,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
@@ -22,7 +23,7 @@ type service struct {
 	clientKey       string
 	apiKey          string
 	payer           Payer
-	checkoutStore   mystore.Store[CheckoutContext]
+	checkoutStore   mystore.Store[checkoutapi.CheckoutContext]
 	vault           myvault.VaultReader
 	nower           mytime.Nower
 	logger          mylog.Logger
@@ -31,7 +32,7 @@ type service struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) (*service, error) {
+func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -85,7 +86,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, req checkou
 		// must be idempotent
 
 		// Store checkout context because we need it later again
-		err = s.checkoutStore.Put(c, basketUID, CheckoutContext{
+		err = s.checkoutStore.Put(c, basketUID, checkoutapi.CheckoutContext{
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,
@@ -179,7 +180,7 @@ func (s *service) setupAuthentication(c context.Context, basketUID string) {
 func (s *service) resumeCheckout(c context.Context, basketUID string) (*CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
 
-	checkoutContext := CheckoutContext{}
+	checkoutContext := checkoutapi.CheckoutContext{}
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
@@ -212,7 +213,7 @@ func (s *service) finalizeCheckout(c context.Context, basketUID string, status s
 
 	now := s.nower.Now()
 
-	var checkoutContext CheckoutContext
+	var checkoutContext checkoutapi.CheckoutContext
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
@@ -285,7 +286,7 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 
 	now := s.nower.Now()
 
-	var checkoutContext CheckoutContext
+	var checkoutContext checkoutapi.CheckoutContext
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
