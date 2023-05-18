@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -182,7 +183,16 @@ func startWebServerBlocking(router *mux.Router) {
 	port := getenvWithDefault("PORT", "8080")
 
 	log.Printf("Starting webserver on port %s (try http://localhost:%s)", port, port)
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), router)
+
+	srv := http.Server{
+		Addr:         fmt.Sprintf(":%s", port),
+		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  5 * time.Second,
+		IdleTimeout:  5 * time.Second,
+		Handler:      http.TimeoutHandler(http.HandlerFunc(router.ServeHTTP), 10*time.Second, "Timeout!\n"),
+	}
+
+	err := srv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("Error starting webserver on port %s: %s", port, err)
 	}
