@@ -35,7 +35,7 @@ type responseWriter struct {
 }
 
 func (rw responseWriter) WriteError(c context.Context, w http.ResponseWriter, errorCode int, err error) {
-	httpStatus := myerrors.GetHttpStatus(err)
+	httpStatus := myerrors.GetHTTPStatus(err)
 	rw.logger.Log(c, "", mylog.SeverityWarn, "Error response: http-status:%d, error-code:%d, error-msg:%s", httpStatus, errorCode, err)
 	rw.write(w, httpStatus, errorResponse{
 		ErrorCode: errorCode,
@@ -57,6 +57,7 @@ func (rw responseWriter) write(w http.ResponseWriter, httpStatus int, resp inter
 	if err != nil {
 		log.Printf("Error writing error response: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 }

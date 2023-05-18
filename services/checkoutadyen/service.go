@@ -37,7 +37,7 @@ func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[che
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
 		clientKey:       cfg.ClientKey,
-		apiKey:          cfg.ApiKey,
+		apiKey:          cfg.APIKey,
 		payer:           payer,
 		checkoutStore:   checkoutStorer,
 		vault:           vault,
@@ -168,7 +168,7 @@ func (s *service) setupAuthentication(c context.Context, basketUID string) {
 	tokenUID := myvault.CurrentToken + "_" + "adyen"
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "adyen" {
-		s.payer.UseApiKey(s.apiKey)
+		s.payer.UseAPIKey(s.apiKey)
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
 	} else {
 		s.payer.UseToken(accessToken.AccessToken)
@@ -181,6 +181,7 @@ func (s *service) resumeCheckout(c context.Context, basketUID string) (*Checkout
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Resume checkout for basket %s", basketUID)
 
 	checkoutContext := checkoutapi.CheckoutContext{}
+
 	var found bool
 	var err error
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
@@ -251,10 +252,10 @@ func (s *service) finalizeCheckout(c context.Context, basketUID string, status s
 	return adjustedReturnURL, nil
 }
 
-func addStatusQueryParam(orgUrl string, status string) (string, error) {
-	u, err := url.Parse(orgUrl)
+func addStatusQueryParam(orgURL string, status string) (string, error) {
+	u, err := url.Parse(orgURL)
 	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error parsing return ReturnURL %s: %s", orgUrl, err))
+		return "", myerrors.NewInternalError(fmt.Errorf("error parsing return ReturnURL %s: %s", orgURL, err))
 	}
 	params := u.Query()
 	params.Set("status", status)

@@ -39,8 +39,8 @@ func TestBasketService(t *testing.T) {
 		ctx, router, storer, _, _, _ := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, basket1.UID, basket1)
-		storer.Put(ctx, basket2.UID, basket2)
+		_ = storer.Put(ctx, basket1.UID, basket1)
+		_ = storer.Put(ctx, basket2.UID, basket2)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket", nil)
@@ -64,7 +64,7 @@ func TestBasketService(t *testing.T) {
 		ctx, router, storer, _, _, _ := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, basket1.UID, basket1)
+		_ = storer.Put(ctx, basket1.UID, basket1)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
@@ -105,7 +105,7 @@ func TestBasketService(t *testing.T) {
 		ctx, router, storer, nower, uuider, publisher := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, basket1.UID, basket1)
+		_ = storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("123")
 		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName, shopevents.BasketCreated{BasketUID: "123"})
@@ -137,7 +137,7 @@ func TestBasketService(t *testing.T) {
 		ctx, router, storer, nower, _, _ := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, basket1.UID, basket1)
+		_ = storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 
 		// when
@@ -159,7 +159,7 @@ func TestBasketService(t *testing.T) {
 		ctx, router, storer, nower, _, publisher := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, basket1.UID, basket1)
+		_ = storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName,
 			shopevents.BasketPaymentCompleted{BasketUID: basket1.UID})

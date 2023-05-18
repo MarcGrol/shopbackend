@@ -12,7 +12,7 @@ import (
 
 //go:generate mockgen -source=payer.go -package checkoutadyen -destination payer_mock.go Payer
 type Payer interface {
-	UseApiKey(key string)
+	UseAPIKey(key string)
 	UseToken(accessToken string)
 	Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error)
 	PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error)
@@ -32,7 +32,7 @@ func NewPayer(environment string, apiKey string) Payer {
 	}
 }
 
-func (p *adyenPayer) UseApiKey(apiKey string) {
+func (p *adyenPayer) UseAPIKey(apiKey string) {
 	// clear header
 	delete(p.client.GetConfig().DefaultHeader, "Authorization")
 	// set api-key

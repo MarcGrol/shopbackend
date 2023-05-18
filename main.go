@@ -87,7 +87,10 @@ func createShopService(c context.Context, router *mux.Router, nower mytime.Nower
 	}
 
 	basketService := shop.NewService(basketStore, nower, uuider, subscriber, publisher)
-	basketService.RegisterEndpoints(c, router)
+	err = basketService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering basket store: %s", err)
+	}
 
 	return basketstoreCleanup
 }
@@ -115,7 +118,10 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	oauthClient := oauthclient.NewOAuthClient(providers)
 	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, oauthClient, pub, providers)
 
-	oauthService.RegisterEndpoints(c, router)
+	err = oauthService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering oauth service: %s", err)
+	}
 
 	return sessionStoreCleanup
 }
@@ -131,7 +137,7 @@ func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutS
 		Environment:     environment,
 		MerchantAccount: merchantAccount,
 		ClientKey:       clientKey,
-		ApiKey:          apiKey,
+		APIKey:          apiKey,
 	}
 
 	payer := checkoutadyen.NewPayer(environment, apiKey)
@@ -140,7 +146,11 @@ func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutS
 	if err != nil {
 		log.Fatalf("Error creating adyen checkoutService: %s", err)
 	}
-	checkoutService.RegisterEndpoints(c, router)
+
+	err = checkoutService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering adyen checkout service: %s", err)
+	}
 }
 
 func createStripeCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
@@ -153,12 +163,19 @@ func createStripeCheckoutService(c context.Context, router *mux.Router, checkout
 	if err != nil {
 		log.Fatalf("Error creating stripe checkoutService: %s", err)
 	}
-	checkoutService.RegisterEndpoints(c, router)
+
+	err = checkoutService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering stripe checkout service: %s", err)
+	}
 }
 
 func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader, uuider myuuid.UUIDer, pub mypublisher.Publisher) {
 	warmupService := warmup.NewService(vault, uuider, pub)
-	warmupService.RegisterEndpoints(c, router)
+	err := warmupService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering warmup service: %s", err)
+	}
 }
 
 func startWebServerBlocking(router *mux.Router) {

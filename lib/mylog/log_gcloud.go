@@ -17,7 +17,6 @@ func init() {
 		// Prefix text prevents the message from being parsed as JSON.
 		// A timestamp is added when shipping logs to Cloud Logging.
 		log.SetFlags(0)
-
 	}
 }
 
@@ -54,5 +53,6 @@ func (e entry) String() string {
 	if err != nil {
 		log.Printf("error marshalling log record: %v", err)
 	}
+
 	return string(out)
 }

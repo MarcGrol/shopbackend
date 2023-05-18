@@ -9,12 +9,11 @@ import (
 
 func TestEncodeDecodeSame(t *testing.T) {
 	//  encode followed by decode must end up same
-
 	values, err := checkout.ToFormValues()
 	assert.NoError(t, err)
+
 	checkoutAgain, err := NewFromValues(values)
 	assert.NoError(t, err)
-
 	assert.Equal(t, checkout, checkoutAgain)
 }
 
@@ -57,7 +56,6 @@ func TestDecode(t *testing.T) {
 	checkoutAgain, err := NewFromValues(form)
 	assert.NoError(t, err)
 	assert.Equal(t, checkout, checkoutAgain)
-
 }
 
 var checkout = Checkout{

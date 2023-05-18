@@ -15,6 +15,7 @@ func New(c context.Context) (VaultReadWriter, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return &vault{
 		store: store,
 	}, storeCleanup, nil

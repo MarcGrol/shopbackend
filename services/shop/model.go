@@ -75,6 +75,7 @@ func (b Basket) GetProductSummary() string {
 	for _, p := range b.SelectedProducts {
 		lines = append(lines, fmt.Sprintf("%d x	 %s,", p.Quantity, p.Description))
 	}
+
 	return strings.Join(lines, ", ")
 }
 
@@ -90,6 +91,7 @@ func (b Basket) GetFinalPaymentStatus() string {
 	if b.FinalPaymentEvent == "" {
 		return ""
 	}
+
 	return fmt.Sprintf("%s=%v", b.FinalPaymentEvent, b.FinalPaymentStatus)
 }
 

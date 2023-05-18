@@ -62,12 +62,13 @@ func NewUnavailableError(err error) *httpError {
 	return newError(http.StatusServiceUnavailable, err)
 }
 
-func GetHttpStatus(err error) int {
+func GetHTTPStatus(err error) int {
 	if err != nil {
 		myError, ok := err.(httpErrorCoder)
 		if ok {
 			return myError.GetHTTPErrorCode()
 		}
 	}
+
 	return http.StatusInternalServerError
 }

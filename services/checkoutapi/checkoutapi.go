@@ -68,11 +68,13 @@ func NewFromRequest(r *http.Request) (Checkout, error) {
 	if err != nil {
 		return Checkout{}, myerrors.NewInvalidInputError(err)
 	}
+
 	return NewFromValues(r.Form)
 }
 
 func NewFromValues(values url.Values) (Checkout, error) {
 	checkout := Checkout{}
+
 	err := formcodec.NewDecoder().Decode(&checkout, values)
 	if err != nil {
 		return checkout, fmt.Errorf("error decoding form: %s", err)

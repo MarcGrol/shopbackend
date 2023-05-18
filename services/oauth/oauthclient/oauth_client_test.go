@@ -67,7 +67,7 @@ func TestOAuthClient(t *testing.T) {
 			assert.Equal(t, "123", clientID)
 			assert.Equal(t, "456", clientSecret)
 
-			assert.Equal(t, "http://localhost:8080/oauth/done", req.RedirectUri)
+			assert.Equal(t, "http://localhost:8080/oauth/done", req.RedirectURI)
 			assert.Equal(t, "mycode", req.Code)
 			assert.Equal(t, "exampleHash", req.CodeVerifier)
 		}
@@ -90,7 +90,7 @@ func TestOAuthClient(t *testing.T) {
 		client := NewOAuthClient(providers)
 		_, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
 			ProviderName: "adyen",
-			RedirectUri:  "http://localhost:8080/oauth/done",
+			RedirectURI:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
 			CodeVerifier: "exampleHash",
 		})
@@ -141,7 +141,7 @@ func TestOAuthClient(t *testing.T) {
 		client := NewOAuthClient(providers)
 		resp, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
 			ProviderName: "adyen",
-			RedirectUri:  "http://localhost:8080/oauth/done",
+			RedirectURI:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
 			CodeVerifier: "exampleHash",
 		})
@@ -211,7 +211,7 @@ func unserializeGetTokenRequest(t *testing.T, r *http.Request) GetTokenRequest {
 	assert.NoError(t, err)
 
 	return GetTokenRequest{
-		RedirectUri:  r.Form.Get("redirect_uri"),
+		RedirectURI:  r.Form.Get("redirect_uri"),
 		Code:         r.Form.Get("code"),
 		CodeVerifier: r.Form.Get("code_verifier"),
 	}

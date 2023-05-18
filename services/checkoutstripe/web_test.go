@@ -24,38 +24,44 @@ import (
 )
 
 var (
-	sessionRequest = stripe.CheckoutSessionParams{
-		Params: stripe.Params{
-			Metadata: map[string]string{
-				"basketUID": "123",
-			},
-		},
-		PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
-			Metadata: map[string]string{
-				"basketUID": "123", // This is to correlare the webhook with the basket
-			},
-			Shipping: &stripe.ShippingDetailsParams{
-				Name:           stripe.String("Marc Grol"),
-				Phone:          stripe.String("31612345678"),
-				TrackingNumber: stripe.String("123"),
-				Address: &stripe.AddressParams{
-					City:       stripe.String("Utrecht"),
-					Country:    stripe.String("NL"),
-					Line1:      stripe.String("My street 79"),
-					PostalCode: stripe.String("1234AB"),
+	/*
+			Fixes needed to replace gomock.Any with sessionRequest:
+		v	Got: {{<nil> [] <nil> map[] <nil> map[basketUID:123] <nil>} <nil> <nil> <nil> <nil> 0xc0003692d0 0xc000369310 <nil> 0xc000369330 <nil> <nil> 0xc000369340 <nil> [] <nil> [] <nil> <nil> [] 0xc000369350 0xc000369320 0xc000127260 <nil> <nil> [0xc000157600 0xc000157610] <nil> <nil> <nil> [] [] <nil> <nil> 0xc000369290 <nil>} (stripe.CheckoutSessionParams)
+			Want: is equal to {{<nil> [] <nil> map[] <nil> map[basketUID:123] <nil>} <nil> <nil> <nil> <nil> 0xc000368a10 0xc000368a20 <nil> 0xc000368a40 <nil> <nil> 0xc000368a50 <nil> [] <nil> [] <nil> <nil> [] 0xc000368a60 0xc000368a30 0x1eddca0 <nil> <nil> [0xc000157200 0xc000157210] <nil> <nil> <nil> [] [] <nil> <nil> 0xc000368a00 <nil>} (stripe.CheckoutSessionParams)
+
+			sessionRequest = stripe.CheckoutSessionParams{
+				Params: stripe.Params{
+					Metadata: map[string]string{
+						"basketUID": "123",
+					},
 				},
-			},
-		},
-		SuccessURL:         stripe.String("/stripe/checkout/123/status/success"),
-		CancelURL:          stripe.String("/stripe/checkout/123/status/cancel"),
-		ClientReferenceID:  stripe.String("123"),
-		LineItems:          []*stripe.CheckoutSessionLineItemParams{},
-		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
-		Currency:           stripe.String("EUR"),
-		CustomerEmail:      stripe.String("my@email.com"),
-		Locale:             stripe.String("nl"),
-		PaymentMethodTypes: stripe.StringSlice([]string{"ideal", "card"}),
-	}
+				PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
+					Metadata: map[string]string{
+						"basketUID": "123", // This is to correlare the webhook with the basket
+					},
+					Shipping: &stripe.ShippingDetailsParams{
+						Name:           stripe.String("Marc Grol"),
+						Phone:          stripe.String("31612345678"),
+						TrackingNumber: stripe.String("123"),
+						Address: &stripe.AddressParams{
+							City:       stripe.String("Utrecht"),
+							Country:    stripe.String("NL"),
+							Line1:      stripe.String("My street 79"),
+							PostalCode: stripe.String("1234AB"),
+						},
+					},
+				},
+				SuccessURL:         stripe.String("/stripe/checkout/123/status/success"),
+				CancelURL:          stripe.String("/stripe/checkout/123/status/cancel"),
+				ClientReferenceID:  stripe.String("123"),
+				LineItems:          []*stripe.CheckoutSessionLineItemParams{},
+				Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
+				Currency:           stripe.String("EUR"),
+				CustomerEmail:      stripe.String("my@email.com"),
+				Locale:             stripe.String("nl"),
+				PaymentMethodTypes: stripe.StringSlice([]string{"ideal", "card"}),
+			}
+	*/
 	sessionResp = stripe.CheckoutSession{
 		ID:          "456",
 		AmountTotal: int64(12300),
@@ -75,7 +81,7 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"stripe").Return(myvault.Token{}, false, nil)
-		payer.EXPECT().UseApiKey("my_api_key")
+		payer.EXPECT().UseAPIKey("my_api_key")
 		payer.EXPECT().CreateCheckoutSession(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, checkoutevents.CheckoutStarted{
@@ -147,7 +153,7 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
+		_ = storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -191,7 +197,7 @@ func TestCheckoutService(t *testing.T) {
 			Success:       true,
 		}).Return(nil)
 
-		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
+		_ = storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,

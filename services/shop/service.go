@@ -98,6 +98,7 @@ func (s service) getBasket(c context.Context, basketUID string) (Basket, error) 
 	if err != nil {
 		return Basket{}, myerrors.NewInternalError(err)
 	}
+
 	if !found {
 		return Basket{}, myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", basketUID))
 	}
@@ -113,6 +114,7 @@ func (s *service) checkoutFinalized(c context.Context, basketUID string, status 
 	var basket Basket
 	var found bool
 	var err error
+
 	err = s.basketStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 

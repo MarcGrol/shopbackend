@@ -46,5 +46,4 @@ func TestStore(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, all, []Person{person})
 	})
-
 }

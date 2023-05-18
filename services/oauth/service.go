@@ -174,7 +174,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		// Get token
 		tokenResp, err = s.oauthClient.GetAccessToken(c, oauthclient.GetTokenRequest{
 			ProviderName: session.ProviderName,
-			RedirectUri:  createCompletionURL(currentHostname),
+			RedirectURI:  createCompletionURL(currentHostname),
 			Code:         code,
 			CodeVerifier: session.Verifier,
 		})

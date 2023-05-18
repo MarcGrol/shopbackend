@@ -64,7 +64,7 @@ type NotificationRequestItem struct {
 }
 
 type AdditionalData struct {
-	CheckoutSessionId string `json:"checkoutSessionId"`
+	CheckoutSessionID string `json:"checkoutSessionId"`
 }
 
 type Amount struct {

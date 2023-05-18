@@ -25,5 +25,6 @@ func New[T any](c context.Context) (Store[T], func(), error) {
 	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
 		return newGcloudStore[T](c)
 	}
+
 	return newInMemoryStore[T](c)
 }

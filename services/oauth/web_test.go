@@ -57,7 +57,7 @@ func TestOauth(t *testing.T) {
 			ExpiresIn:    nil,
 		}, true, nil)
 
-		storer.Put(ctx, "xyz", OAuthSessionSetup{
+		_ = storer.Put(ctx, "xyz", OAuthSessionSetup{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			UID:          "abcdef",
@@ -145,7 +145,7 @@ func TestOauth(t *testing.T) {
 		}
 
 		// given
-		storer.Put(ctx, "abcdef", OAuthSessionSetup{
+		_ = storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			UID:          "abcdef",
@@ -157,7 +157,7 @@ func TestOauth(t *testing.T) {
 		})
 		oauthClient.EXPECT().GetAccessToken(gomock.Any(), oauthclient.GetTokenRequest{
 			ProviderName: "adyen",
-			RedirectUri:  "http://localhost:8888/oauth/done",
+			RedirectURI:  "http://localhost:8888/oauth/done",
 			Code:         "789",
 			CodeVerifier: "exampleHash",
 		}).Return(exampleResp, nil)
@@ -208,7 +208,7 @@ func TestOauth(t *testing.T) {
 		ctx, router, storer, vault, nower, uuider, oauthClient, publisher := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, "abcdef", OAuthSessionSetup{
+		_ = storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:          "abcdef",
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
@@ -285,7 +285,7 @@ func TestOauth(t *testing.T) {
 		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, "abcdef", OAuthSessionSetup{
+		_ = storer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:          "abcdef",
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
@@ -345,7 +345,6 @@ func TestOauth(t *testing.T) {
 		assert.Equal(t, 303, response.Code)
 		assert.Equal(t, "/oauth/admin", response.Header().Get("Location"))
 	})
-
 }
 
 func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {

@@ -21,7 +21,7 @@ type ComposeAuthURLRequest struct {
 
 type GetTokenRequest struct {
 	ProviderName string
-	RedirectUri  string
+	RedirectURI  string
 	Code         string
 	CodeVerifier string
 }
@@ -74,7 +74,10 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 		return "", err
 	}
 
-	method, challenge := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
+	method, challenge, err := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
+	if err != nil {
+		return "", err
+	}
 
 	u.RawQuery = url.Values{
 		"client_id":             []string{provider.ClientID},
@@ -101,12 +104,12 @@ func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (Ge
 
 	requestBody := url.Values{
 		"grant_type":    {"authorization_code"},
-		"redirect_uri":  {req.RedirectUri},
+		"redirect_uri":  {req.RedirectURI},
 		"code":          {req.Code},
 		"code_verifier": {req.CodeVerifier},
 	}.Encode()
 
-	httpClient := newHttpClient(clientID, secret)
+	httpClient := newHTTPClient(clientID, secret)
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, getTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting token: %s", err)
@@ -140,7 +143,7 @@ func (oc oauthClient) RefreshAccessToken(c context.Context, req RefreshTokenRequ
 		"refresh_token": {req.RefreshToken},
 	}.Encode()
 
-	httpClient := newHttpClient(clientID, secret)
+	httpClient := newHTTPClient(clientID, secret)
 	httpRespCode, respBody, err := httpClient.Send(c, http.MethodPost, refreshTokenURL, []byte(requestBody))
 	if err != nil {
 		return GetTokenResponse{}, fmt.Errorf("error getting refresh-token: %s", err)

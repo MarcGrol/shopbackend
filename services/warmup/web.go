@@ -26,6 +26,7 @@ type webService struct {
 // Use dependency injection to isolate the infrastructure and ease testing
 func NewService(vault myvault.VaultReader, uider myuuid.UUIDer, pub mypublisher.Publisher) *webService {
 	logger := mylog.New("basket")
+
 	return &webService{
 		logger:    logger,
 		vault:     vault,
@@ -34,10 +35,10 @@ func NewService(vault myvault.VaultReader, uider myuuid.UUIDer, pub mypublisher.
 	}
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) {
+func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/_ah/warmup", s.warmupPage()).Methods("GET")
 
-	s.Subscribe(c)
+	return s.Subscribe(c)
 }
 
 func (s *webService) Subscribe(c context.Context) error {
@@ -51,6 +52,7 @@ func (s *webService) Subscribe(c context.Context) error {
 
 func (s *webService) warmupPage() http.HandlerFunc {
 	uid := s.uider.Create()
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)

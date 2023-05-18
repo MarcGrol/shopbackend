@@ -94,7 +94,7 @@ func (s *service) setupAuthentication(c context.Context, basketUID string) {
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "stripe" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
-		s.payer.UseApiKey(s.apiKey)
+		s.payer.UseAPIKey(s.apiKey)
 	} else {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
 		s.payer.UseToken(accessToken.AccessToken)
@@ -142,10 +142,10 @@ func (s *service) finalizeCheckout(c context.Context, basketUID string, status s
 	return adjustedReturnURL, nil
 }
 
-func addStatusQueryParam(orgUrl string, status string) (string, error) {
-	u, err := url.Parse(orgUrl)
+func addStatusQueryParam(orgURL string, status string) (string, error) {
+	u, err := url.Parse(orgURL)
 	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error parsing return ReturnURL %s: %s", orgUrl, err))
+		return "", myerrors.NewInternalError(fmt.Errorf("error parsing return ReturnURL %s: %s", orgURL, err))
 	}
 	params := u.Query()
 	params.Set("status", status)

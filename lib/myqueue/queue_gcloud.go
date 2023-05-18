@@ -29,6 +29,7 @@ func newGcloudQueue(c context.Context) (TaskQueuer, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating cloudtask-client: %s", err)
 	}
+
 	return &gcloudTaskQueue{
 			client: cloudTaskClient,
 		}, func() {
@@ -60,19 +61,21 @@ func (q *gcloudTaskQueue) Enqueue(c context.Context, task Task) error {
 			// Convert error into success
 			return nil
 		}
+
 		return fmt.Errorf("error submitting task to queue: %s", err)
 	}
+
 	return nil
 }
 
 func composeQueueName() string {
-	projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	locationId := os.Getenv("LOCATION_ID")
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	locationID := os.Getenv("LOCATION_ID")
 	queueName := os.Getenv("QUEUE_NAME")
 	if queueName == "" {
 		queueName = "default"
 	}
-	return fmt.Sprintf("projects/%s/locations/%s/queues/%s", projectId, locationId, queueName)
+	return fmt.Sprintf("projects/%s/locations/%s/queues/%s", projectID, locationID, queueName)
 }
 
 func composeTaskName(taskUID string) string {

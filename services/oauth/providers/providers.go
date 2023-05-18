@@ -82,12 +82,15 @@ func (op *OAuthProviders) Set(providerName string, clientID string, secret strin
 	if clientID != "" {
 		provider.ClientID = clientID
 	}
+
 	if secret != "" {
 		provider.Secret = secret
 	}
+
 	if authHostname != "" {
 		provider.AuthEndpoint.Hostname = authHostname
 	}
+
 	if tokenHostname != "" {
 		provider.TokenEndpoint.Hostname = tokenHostname
 	}

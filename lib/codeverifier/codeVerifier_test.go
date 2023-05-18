@@ -2,6 +2,8 @@ package codeverifier
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVerifier(t *testing.T) {
@@ -19,7 +21,8 @@ func TestVerifier(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := NewVerifierFrom(tt.verifierData)
-			method, challenge := v.CreateChallenge()
+			method, challenge, err := v.CreateChallenge()
+			assert.NoError(t, err)
 			if method != "S256" {
 				t.Errorf("CreateChallenge() got = %v, want %v", method, "S256")
 			}

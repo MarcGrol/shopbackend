@@ -23,6 +23,7 @@ func NewVerifier() (*Verifier, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Verifier{
 		Value: value,
 	}, nil
@@ -32,18 +33,25 @@ func (v *Verifier) GetValue() string {
 	return v.Value
 }
 
-func (v *Verifier) CreateChallenge() (string, string) {
+func (v *Verifier) CreateChallenge() (string, string, error) {
 	sha2 := sha256.New()
-	io.WriteString(sha2, v.Value)
+
+	_, err := io.WriteString(sha2, v.Value)
+	if err != nil {
+		return "", "", fmt.Errorf("could not write challenge: %v", err)
+	}
+
 	codeChallenge := base64.RawURLEncoding.EncodeToString(sha2.Sum(nil))
-	return "S256", codeChallenge
+
+	return "S256", codeChallenge, nil
 }
 
 func randomBytesInHex(count int) (string, error) {
 	buf := make([]byte, count)
+
 	_, err := io.ReadFull(rand.Reader, buf)
 	if err != nil {
-		return "", fmt.Errorf("Could not generate %d Value bytes: %v", count, err)
+		return "", fmt.Errorf("could not generate %d Value bytes: %v", count, err)
 	}
 
 	return hex.EncodeToString(buf), nil

@@ -51,7 +51,7 @@ func TestErrors(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.msg, func(t *testing.T) {
-			httpStatus := GetHttpStatus(tc.in)
+			httpStatus := GetHTTPStatus(tc.in)
 			if httpStatus != tc.httpStatus {
 				t.Errorf("HttpStatus: got %v, want %v", httpStatus, tc.httpStatus)
 			}

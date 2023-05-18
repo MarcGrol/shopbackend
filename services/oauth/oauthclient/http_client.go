@@ -18,7 +18,7 @@ type httpOAuthClient struct {
 	password string
 }
 
-func newHttpClient(username string, password string) *httpOAuthClient {
+func newHTTPClient(username string, password string) *httpOAuthClient {
 	return &httpOAuthClient{
 		username: username,
 		password: password,
@@ -30,6 +30,7 @@ func (c httpOAuthClient) Send(ctx context.Context, method string, url string, bo
 	if err != nil {
 		return 0, []byte{}, fmt.Errorf("error creating http request for %s %s: %s", method, url, err)
 	}
+
 	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.SetBasicAuth(c.username, c.password)
@@ -40,6 +41,7 @@ func (c httpOAuthClient) Send(ctx context.Context, method string, url string, bo
 	}
 
 	log.Printf("HTTP request: %s %s", method, url)
+
 	httpClient := &http.Client{
 		Timeout: httpClientTimeout,
 	}
@@ -58,6 +60,7 @@ func (c httpOAuthClient) Send(ctx context.Context, method string, url string, bo
 	if err != nil {
 		return 0, []byte{}, fmt.Errorf("error reading response %s %s: %s", method, url, err)
 	}
+
 	log.Printf("HTTP resp: %d", httpResp.StatusCode)
 
 	return httpResp.StatusCode, respPayload, nil

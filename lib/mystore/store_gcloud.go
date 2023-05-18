@@ -16,8 +16,9 @@ type gcloudStore[T any] struct {
 }
 
 func newGcloudStore[T any](c context.Context) (*gcloudStore[T], func(), error) {
-	projectId := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	client, err := datastore.NewClient(c, projectId)
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+
+	client, err := datastore.NewClient(c, projectID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating datastore-client: %s", err)
 	}
@@ -63,8 +64,10 @@ func (s *gcloudStore[T]) RunInTransaction(c context.Context, f func(c context.Co
 
 			return err
 		}
+
 		return nil
 	}
+
 	return err
 }
 
@@ -199,5 +202,6 @@ func (s *gcloudStore[T]) Query(c context.Context, filters []Filter, orderByField
 	if err != nil {
 		return nil, fmt.Errorf("error fetching all entities %s: %s", s.kind, err)
 	}
+
 	return objectsToFetch, nil
 }

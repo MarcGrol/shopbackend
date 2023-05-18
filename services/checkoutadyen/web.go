@@ -38,7 +38,7 @@ type Config struct {
 	Environment     string
 	MerchantAccount string
 	ClientKey       string
-	ApiKey          string
+	APIKey          string
 }
 
 type webService struct {

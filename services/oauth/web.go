@@ -88,7 +88,8 @@ func (s *webService) startPage() http.HandlerFunc {
 
 		providerName := mux.Vars(r)["providerName"]
 		if providerName == "" {
-			providerName = "adyen"
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
+			return
 		}
 
 		requestedScopes := r.URL.Query().Get("scopes")
@@ -143,7 +144,8 @@ func (s *webService) refreshTokenPage() http.HandlerFunc {
 
 		providerName := mux.Vars(r)["providerName"]
 		if providerName == "" {
-			providerName = "adyen"
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
+			return
 		}
 
 		_, err := s.service.refreshToken(c, providerName)
@@ -163,7 +165,8 @@ func (s *webService) cancelTokenPage() http.HandlerFunc {
 
 		providerName := mux.Vars(r)["providerName"]
 		if providerName == "" {
-			providerName = "adyen"
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
+			return
 		}
 
 		err := s.service.cancelToken(c, providerName)

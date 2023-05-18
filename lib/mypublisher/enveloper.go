@@ -26,6 +26,7 @@ func (e enveloper) do(topic string, event myevents.Event) (myevents.EventEnvelop
 	if err != nil {
 		return myevents.EventEnvelope{}, fmt.Errorf("error marshalling request-payload: %s", err)
 	}
+
 	envelope := myevents.EventEnvelope{
 		Topic:         topic,
 		AggregateUID:  event.GetAggregateName(),
@@ -46,16 +47,18 @@ func (e enveloper) do(topic string, event myevents.Event) (myevents.EventEnvelop
 }
 
 func checksum(envlp myevents.EventEnvelope) (string, error) {
-	asJson, err := json.Marshal(envlp)
+	asJSON, err := json.Marshal(envlp)
 	if err != nil {
 		return "", err
 	}
 
 	sha2 := sha256.New()
-	_, err = io.WriteString(sha2, string(asJson))
+	_, err = io.WriteString(sha2, string(asJSON))
 	if err != nil {
 		return "", err
 	}
+
 	checkSum := base64.RawURLEncoding.EncodeToString(sha2.Sum(nil))
+
 	return checkSum, nil
 }

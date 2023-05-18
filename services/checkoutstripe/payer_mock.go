@@ -50,16 +50,16 @@ func (mr *MockPayerMockRecorder) CreateCheckoutSession(ctx, params interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCheckoutSession", reflect.TypeOf((*MockPayer)(nil).CreateCheckoutSession), ctx, params)
 }
 
-// UseApiKey mocks base method.
-func (m *MockPayer) UseApiKey(key string) {
+// UseAPIKey mocks base method.
+func (m *MockPayer) UseAPIKey(key string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UseApiKey", key)
+	m.ctrl.Call(m, "UseAPIKey", key)
 }
 
-// UseApiKey indicates an expected call of UseApiKey.
-func (mr *MockPayerMockRecorder) UseApiKey(key interface{}) *gomock.Call {
+// UseAPIKey indicates an expected call of UseAPIKey.
+func (mr *MockPayerMockRecorder) UseAPIKey(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseApiKey", reflect.TypeOf((*MockPayer)(nil).UseApiKey), key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseAPIKey", reflect.TypeOf((*MockPayer)(nil).UseAPIKey), key)
 }
 
 // UseToken mocks base method.

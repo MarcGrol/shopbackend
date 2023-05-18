@@ -25,18 +25,25 @@ import (
 )
 
 var (
-	sessionRequest = checkout.CreateCheckoutSessionRequest{
-		AllowedPaymentMethods:  []string{"ideal", "scheme"},
-		Amount:                 checkout.Amount{Value: 12300, Currency: "EUR"},
-		Channel:                "Web",
-		CountryCode:            "nl",
-		MerchantAccount:        "MyMerchantAccount",
-		MerchantOrderReference: "123",
-		Reference:              "123",
-		ReturnUrl:              "http://localhost:8888/checkout/123",
-		ShopperLocale:          "nl-nl",
-		TrustedShopper:         true,
-	}
+	/*
+			Fixes needed to replace gomock.Any with sessionRequest:
+			Got:              {<nil> <nil> map[] [ideal scheme] {EUR 12300} <nil> <nil> 0xc000189860 [] 0 Web 0xc0001898c0 nl <nil> <nil> 0xc000189920 false false false <nil> 0xc0001990e0 <nil>  MyMerchantAccount 123 map[] <nil>      123 http://localhost:8888/checkout/123 <nil>    nl-nl 0xc0001c3920    false <nil>  false  false true} (checkout.CreateCheckoutSessionRequest)
+			Want: is equal to {<nil> <nil> map[] [ideal scheme] {EUR 12300} <nil> <nil> <nil>        [] 0 Web <nil>        nl <nil> <nil> <nil>        false false false <nil> <nil>        <nil>  MyMerchantAccount 123 map[] <nil>      123 http://localhost:8888/checkout/123 <nil>    nl-nl <nil>           false <nil>  false  false true} (checkout.CreateCheckoutSessionRequest)
+
+
+		sessionRequest = checkout.CreateCheckoutSessionRequest{
+			AllowedPaymentMethods:  []string{"ideal", "scheme"},
+			Amount:                 checkout.Amount{Value: 12300, Currency: "EUR"},
+			Channel:                "Web",
+			CountryCode:            "nl",
+			MerchantAccount:        "MyMerchantAccount",
+			MerchantOrderReference: "123",
+			Reference:              "123",
+			ReturnUrl:              "http://localhost:8888/checkout/123",
+			ShopperLocale:          "nl-nl",
+			TrustedShopper:         true,
+		}
+	*/
 	sessionResp = checkout.CreateCheckoutSessionResponse{
 		AllowedPaymentMethods:  []string{"ideal", "scheme"},
 		Amount:                 checkout.Amount{Value: 12300, Currency: "EUR"},
@@ -79,7 +86,7 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"adyen").Return(myvault.Token{}, false, nil)
-		payer.EXPECT().UseApiKey("my_api_key")
+		payer.EXPECT().UseAPIKey("my_api_key")
 		payer.EXPECT().Sessions(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		payer.EXPECT().PaymentMethods(gomock.Any(), paymentMethodsReq).Return(paymentMethodsResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -154,7 +161,7 @@ func TestCheckoutService(t *testing.T) {
 		ctx, router, storer, _, _, _, _, _ := setup(t, ctrl)
 
 		// given
-		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
+		_ = storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -194,7 +201,7 @@ func TestCheckoutService(t *testing.T) {
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
+		_ = storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -238,7 +245,7 @@ func TestCheckoutService(t *testing.T) {
 			Success:       true,
 		}).Return(nil)
 
-		storer.Put(ctx, "123", checkoutapi.CheckoutContext{
+		_ = storer.Put(ctx, "123", checkoutapi.CheckoutContext{
 			BasketUID:         "123",
 			CreatedAt:         mytime.ExampleTime.Add(-1 * (time.Hour)),
 			LastModified:      nil,
@@ -302,7 +309,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 		Environment:     "Test",
 		MerchantAccount: "MyMerchantAccount",
 		ClientKey:       "my_client_key",
-		ApiKey:          "my_api_key",
+		APIKey:          "my_api_key",
 	}, payer, storer, vault, nower, subscriber, publisher)
 	assert.NoError(t, err)
 	router := mux.NewRouter()

@@ -131,7 +131,7 @@ func (s *webService) basketDetailsPage() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketDetailPageTemplate.Execute(w, pageInfo)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -164,7 +164,11 @@ func (s *webService) checkoutFinalized() http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		basketDetailPageTemplate.Execute(w, pageInfo)
+		err = basketDetailPageTemplate.Execute(w, pageInfo)
+		if err != nil {
+			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
+			return
+		}
 	}
 }
 

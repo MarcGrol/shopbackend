@@ -21,7 +21,6 @@ func init() {
 }
 
 func newGcloudPubSub(c context.Context) (PubSub, func(), error) {
-
 	client, err := pubsub.NewClient(c, os.Getenv("GOOGLE_CLOUD_PROJECT"))
 	if err != nil {
 		return nil, func() {}, err
@@ -64,6 +63,7 @@ func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
 	if err != nil {
 		return fmt.Errorf("error checking if topic %s exists: %s", topicName, err)
 	}
+
 	if exists {
 		return nil
 	}
