@@ -200,6 +200,7 @@ func (s *service) resumeCheckout(c context.Context, basketUID string) (*Checkout
 	}
 
 	return &CheckoutPageInfo{
+		Completed:       true,
 		Environment:     s.environment,
 		MerchantAccount: s.merchantAccount,
 		ClientKey:       s.clientKey,

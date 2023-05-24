@@ -8,6 +8,7 @@ import (
 )
 
 type CheckoutPageInfo struct {
+	Completed              bool
 	Environment            string
 	MerchantAccount        string
 	ClientKey              string

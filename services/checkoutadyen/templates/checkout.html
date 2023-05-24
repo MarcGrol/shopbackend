@@ -17,6 +17,16 @@
 
 
 <div class="container">
+
+    {{ if .Completed}}
+    
+    <div class="row"> 
+        <div class="payment-container">
+        <div id="payment" class="payment"></div>
+    </div>
+
+    {{else}}
+
     <div class="row">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -26,6 +36,7 @@
     </div>
       
     <div class="row">
+        
         <div class="col">
             <div class="row"> 
                 <h5>{{.ShopperFullname}}</h5>
@@ -68,6 +79,8 @@
        
         </div>
     </div>
+
+    {{end}}
 
     <div class="row">
         <footer class=".container-fluid">
