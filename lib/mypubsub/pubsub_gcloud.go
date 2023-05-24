@@ -39,18 +39,18 @@ func (ps *gcloudPubSub) Subscribe(c context.Context, topicName string, urlToPost
 		return err
 	}
 
-	topic := ps.client.Topic(topicName)
-
 	subscription := ps.client.Subscription(topicName)
 	exists, err := subscription.Exists(c)
 	if err != nil {
-		return fmt.Errorf("error checking if subscription %s exists: %s", topicName, err)
+		return fmt.Errorf("error checking if subscription %s (%s) exists: %s", topicName, urlToPostTo, err)
 	}
 
 	if exists {
+		log.Printf("*** Subsription %s (%s) already exists", topicName, urlToPostTo)
 		return nil
 	}
 
+	topic := ps.client.Topic(topicName)
 	_, err = ps.client.CreateSubscription(c, topicName, pubsub.SubscriptionConfig{
 		Topic: topic,
 		PushConfig: pubsub.PushConfig{
@@ -58,17 +58,15 @@ func (ps *gcloudPubSub) Subscribe(c context.Context, topicName string, urlToPost
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("error subscribing to topic %s: %s", topicName, err)
+		return fmt.Errorf("error subscribing to topic %s (%s): %s", topicName, urlToPostTo, err)
 	}
 
-	log.Printf("*** Subscribed to topic %s", topic.String())
+	log.Printf("*** Subscribed to topic %s (%s)", topic.String(), urlToPostTo)
 
 	return nil
 }
 
 func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
-	log.Printf("*** Creating topic %s", topicName)
-
 	topic := ps.client.Topic(topicName)
 	exists, err := topic.Exists(c)
 	if err != nil {
@@ -76,6 +74,7 @@ func (ps *gcloudPubSub) CreateTopic(c context.Context, topicName string) error {
 	}
 
 	if exists {
+		log.Printf("*** Topic %s already exists", topicName)
 		return nil
 	}
 
