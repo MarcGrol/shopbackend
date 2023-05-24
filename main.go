@@ -186,7 +186,7 @@ func startWebServerBlocking(router *mux.Router) {
 
 	srv := http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
-		WriteTimeout: 5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  5 * time.Second,
 		IdleTimeout:  5 * time.Second,
 		Handler:      http.TimeoutHandler(http.HandlerFunc(router.ServeHTTP), 10*time.Second, "Timeout!\n"),

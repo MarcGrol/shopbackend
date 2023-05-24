@@ -40,6 +40,17 @@ func (ps *gcloudPubSub) Subscribe(c context.Context, topicName string, urlToPost
 	}
 
 	topic := ps.client.Topic(topicName)
+
+	subscription := ps.client.Subscription(topicName)
+	exists, err := subscription.Exists(c)
+	if err != nil {
+		return fmt.Errorf("error checking if subscription %s exists: %s", topicName, err)
+	}
+
+	if exists {
+		return nil
+	}
+
 	_, err = ps.client.CreateSubscription(c, topicName, pubsub.SubscriptionConfig{
 		Topic: topic,
 		PushConfig: pubsub.PushConfig{
