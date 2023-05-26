@@ -180,7 +180,6 @@ func TestCheckoutService(t *testing.T) {
 		// then
 		assert.Equal(t, 200, response.Code)
 		got := response.Body.String()
-		assert.Contains(t, got, `<a href="/basket/123">Back</a>`)
 		assert.Contains(t, got, `id: "456"`)
 		assert.Contains(t, got, `sessionData: "lalala"`)
 

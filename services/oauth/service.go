@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MarcGrol/shopbackend/lib/codeverifier"
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
 	"github.com/MarcGrol/shopbackend/lib/mylog"
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
@@ -96,18 +95,11 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 		requestedScopes = provider.DefaultScopes
 	}
 
-	codeVerifier, err := codeverifier.NewVerifier()
-	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error creating verifier: %s", err))
-	}
-	codeVerifierValue := codeVerifier.GetValue()
-
-	authURL, err := s.oauthClient.ComposeAuthURL(c, oauthclient.ComposeAuthURLRequest{
+	authURL, codeVerifierValue, err := s.oauthClient.ComposeAuthURL(c, oauthclient.ComposeAuthURLRequest{
 		ProviderName:  providerName,
 		CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
 		Scope:         requestedScopes,
 		State:         sessionUID,
-		CodeVerifier:  codeVerifierValue,
 	})
 	if err != nil {
 		return "", myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))

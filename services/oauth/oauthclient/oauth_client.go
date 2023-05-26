@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/MarcGrol/shopbackend/lib/codeverifier"
+	"github.com/MarcGrol/shopbackend/lib/myerrors"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient/challenge"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
@@ -16,7 +17,6 @@ type ComposeAuthURLRequest struct {
 	CompletionURL string
 	Scope         string
 	State         string
-	CodeVerifier  string
 }
 
 type GetTokenRequest struct {
@@ -46,37 +46,44 @@ type GetTokenResponse struct {
 
 //go:generate mockgen -source=oauth_client.go -package oauthclient -destination oauth_client_mock.go OauthClient
 type OauthClient interface {
-	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error)
+	ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, string, error)
 	GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error)
 	RefreshAccessToken(c context.Context, req RefreshTokenRequest) (GetTokenResponse, error)
 	CancelAccessToken(c context.Context, req CancelTokenRequest) error
 }
 
 type oauthClient struct {
-	providers *providers.OAuthProviders
+	providers      *providers.OAuthProviders
+	randomStringer challenge.RandomStringer
 }
 
-func NewOAuthClient(providers *providers.OAuthProviders) *oauthClient {
+func NewOAuthClient(providers *providers.OAuthProviders, randomStringer challenge.RandomStringer) *oauthClient {
 	return &oauthClient{
-		providers: providers,
+		providers:      providers,
+		randomStringer: randomStringer,
 	}
 }
 
-func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
+func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, string, error) {
 	provider, err := oc.providers.Get(req.ProviderName)
 	if err != nil {
-		return "", fmt.Errorf("provider with name %s not known", req.ProviderName)
+		return "", "", fmt.Errorf("provider with name %s not known", req.ProviderName)
 	}
 
 	authURL := provider.AuthEndpoint.GetFullURL()
 	u, err := url.Parse(authURL)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	method, challenge, err := codeverifier.NewVerifierFrom(req.CodeVerifier).CreateChallenge()
+	randomString, err := oc.randomStringer.Create()
 	if err != nil {
-		return "", err
+		return "", "", myerrors.NewInternalError(fmt.Errorf("error creating seed: %s", err))
+	}
+
+	method, challenge, err := challenge.Create(randomString)
+	if err != nil {
+		return "", "", err
 	}
 
 	u.RawQuery = url.Values{
@@ -89,7 +96,7 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 		"state":                 []string{req.State},
 	}.Encode()
 
-	return u.String(), nil
+	return u.String(), randomString, nil
 }
 
 func (oc oauthClient) GetAccessToken(c context.Context, req GetTokenRequest) (GetTokenResponse, error) {

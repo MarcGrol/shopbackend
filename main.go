@@ -22,6 +22,7 @@ import (
 	"github.com/MarcGrol/shopbackend/services/checkoutstripe"
 	"github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient/challenge"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 	"github.com/MarcGrol/shopbackend/services/shop"
 	"github.com/MarcGrol/shopbackend/services/warmup"
@@ -116,7 +117,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		providers.Set("stripe", clientID, clientSecret, "", "")
 	}
 
-	oauthClient := oauthclient.NewOAuthClient(providers)
+	oauthClient := oauthclient.NewOAuthClient(providers, challenge.NewRandomStringer())
 	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, oauthClient, pub, providers)
 
 	err = oauthService.RegisterEndpoints(c, router)

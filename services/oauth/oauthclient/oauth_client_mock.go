@@ -49,12 +49,13 @@ func (mr *MockOauthClientMockRecorder) CancelAccessToken(c, req interface{}) *go
 }
 
 // ComposeAuthURL mocks base method.
-func (m *MockOauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, error) {
+func (m *MockOauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLRequest) (string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ComposeAuthURL", c, req)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ComposeAuthURL indicates an expected call of ComposeAuthURL.

@@ -7,8 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient/challenge"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
@@ -42,20 +44,25 @@ func RunGetAccessTokenServer(t *testing.T,
 
 func TestOAuthClient(t *testing.T) {
 	t.Run("Compose auth url", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		randomStringer := challenge.NewMockRandomStringer(ctrl)
+		randomStringer.EXPECT().Create().Return("05796efe18af079dc654bb88c68f5cd8b8a5d378e7cec8e9856258f95d3b0b5a", nil)
 
 		providers := providers.NewProviders()
 		providers.Set("adyen", "123", "456", "https://ca-test.adyen.com", "https://oauth-test.adyen.com")
 
-		oauthClient := NewOAuthClient(providers)
-		url, err := oauthClient.ComposeAuthURL(context.TODO(), ComposeAuthURLRequest{
+		oauthClient := NewOAuthClient(providers, randomStringer)
+		url, randomString, err := oauthClient.ComposeAuthURL(context.TODO(), ComposeAuthURLRequest{
 			ProviderName:  "adyen",
 			CompletionURL: "http://localhost:8888/oauth/done",
 			Scope:         adyenExampleScopes,
 			State:         "abcdef",
-			CodeVerifier:  "exampleHash",
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, "https://ca-test.adyen.com/ca/ca/oauth/connect.shtml?client_id=123&code_challenge=a4SPfcpynli7bwu--Wt2kOtp7WnyYfxoEOyM3r8TrFE&code_challenge_method=S256&redirect_uri=http%3A%2F%2Flocalhost%3A8888%2Foauth%2Fdone&response_type=code&scope=psp.onlinepayment%3Awrite+psp.accountsettings%3Awrite+psp.webhook%3Awrite&state=abcdef", url)
+		assert.Equal(t, "05796efe18af079dc654bb88c68f5cd8b8a5d378e7cec8e9856258f95d3b0b5a", randomString)
+		assert.Equal(t, "https://ca-test.adyen.com/ca/ca/oauth/connect.shtml?client_id=123&code_challenge=A-Y4cHhqIJi48r-V_cKdDRzlMJmC8zk_hlBBvOEE-A0&code_challenge_method=S256&redirect_uri=http%3A%2F%2Flocalhost%3A8888%2Foauth%2Fdone&response_type=code&scope=psp.onlinepayment%3Awrite+psp.accountsettings%3Awrite+psp.webhook%3Awrite&state=abcdef", url)
 	})
 
 	t.Run("Get access token", func(t *testing.T) {
@@ -87,7 +94,7 @@ func TestOAuthClient(t *testing.T) {
 		providers := providers.NewProviders()
 		providers.Set("adyen", "123", "456", ts.URL, ts.URL)
 
-		client := NewOAuthClient(providers)
+		client := NewOAuthClient(providers, nil)
 		_, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
 			ProviderName: "adyen",
 			RedirectURI:  "http://localhost:8080/oauth/done",
@@ -138,7 +145,7 @@ func TestOAuthClient(t *testing.T) {
 
 		providers.Set("adyen", "123", "456", ts.URL, ts.URL)
 
-		client := NewOAuthClient(providers)
+		client := NewOAuthClient(providers, nil)
 		resp, err := client.GetAccessToken(context.TODO(), GetTokenRequest{
 			ProviderName: "adyen",
 			RedirectURI:  "http://localhost:8080/oauth/done",
@@ -189,7 +196,7 @@ func TestOAuthClient(t *testing.T) {
 
 		providers.Set("adyen", "123", "456", ts.URL, ts.URL)
 
-		client := NewOAuthClient(providers)
+		client := NewOAuthClient(providers, nil)
 		resp, err := client.RefreshAccessToken(context.TODO(), RefreshTokenRequest{
 			ProviderName: "adyen",
 			RefreshToken: "r999",
