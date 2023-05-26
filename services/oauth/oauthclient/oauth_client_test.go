@@ -76,7 +76,7 @@ func TestOAuthClient(t *testing.T) {
 
 			assert.Equal(t, "http://localhost:8080/oauth/done", req.RedirectURI)
 			assert.Equal(t, "mycode", req.Code)
-			assert.Equal(t, "exampleHash", req.CodeVerifier)
+			assert.Equal(t, "randomString", req.CodeVerifier)
 		}
 		responder := func(t *testing.T, req GetTokenRequest) GetTokenResponse {
 			return GetTokenResponse{
@@ -99,7 +99,7 @@ func TestOAuthClient(t *testing.T) {
 			ProviderName: "adyen",
 			RedirectURI:  "http://localhost:8080/oauth/done",
 			Code:         "mycode",
-			CodeVerifier: "exampleHash",
+			CodeVerifier: "randomString",
 		})
 		assert.NoError(t, err)
 	})
