@@ -406,7 +406,7 @@ func parsePaybylinkRequest(r *http.Request) (checkout.CreatePaymentLinkRequest, 
 		//RedirectToIssuerMethod:   "",
 		Reference:    basketUID,
 		RiskData:     nil,
-		ReturnUrl:    fmt.Sprintf("%s/checkout/%s", myhttp.HostnameWithScheme(r), basketUID),
+		ReturnUrl:    fmt.Sprintf("%s/checkout/%s/status/success", myhttp.HostnameWithScheme(r), basketUID),
 		ShopperEmail: co.Shopper.ContactInfo.Email,
 		ShopperName: &checkout.Name{
 			FirstName: co.Shopper.FirstName,
