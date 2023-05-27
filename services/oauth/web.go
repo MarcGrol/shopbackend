@@ -115,21 +115,27 @@ func (s *webService) donePage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
+		error := r.URL.Query().Get("error")
+		if error != "" {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf(error)))
+			return
+		}
+
 		sessionUID := r.URL.Query().Get("state")
 		if sessionUID == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing state")))
+			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputError(fmt.Errorf("missing state")))
 			return
 		}
 
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputError(fmt.Errorf("missing code")))
+			errorWriter.WriteError(c, w, 3, myerrors.NewInvalidInputError(fmt.Errorf("missing code")))
 			return
 		}
 
 		originalRedirectURL, err := s.service.done(c, sessionUID, code, myhttp.HostnameWithScheme(r))
 		if err != nil {
-			errorWriter.WriteError(c, w, 3, err)
+			errorWriter.WriteError(c, w, 4, err)
 			return
 		}
 

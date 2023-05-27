@@ -86,6 +86,17 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 		return "", "", err
 	}
 
+	/*  Example:
+	https://ca-test.adyen.com/ca/ca/oauth/connect.shtml
+		?client_id=OACL4224X223225R5HPHMJ5DG72QWV
+		&code_challenge=u2SjlD_HjSkyOJE0XihKi0a_n1nED879osPq0SiXY90
+		&code_challenge_method=S256
+		&redirect_uri=https%3A%2F%2Fwww.marcgrolconsultancy.nl%2Foauth%2Fdone
+		&response_type=code
+		&scope=psp.onlinepayment%3Awrite+psp.accountsettings%3Awrite+psp.webhook%3Awrite+psp%3Apaybylink%3Awrite
+		&state=892f0b86-daca-4272-89e7-1a0d49a3ad71
+	*/
+
 	u.RawQuery = url.Values{
 		"client_id":             []string{provider.ClientID},
 		"code_challenge":        []string{challenge},
