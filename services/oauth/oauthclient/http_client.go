@@ -11,7 +11,10 @@ import (
 	"time"
 )
 
-const httpClientTimeout = 5 * time.Second
+const (
+	httpClientTimeout = 5 * time.Second
+	debug             = false
+)
 
 type httpOAuthClient struct {
 	username string
@@ -35,12 +38,12 @@ func (c httpOAuthClient) Send(ctx context.Context, method string, url string, bo
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.SetBasicAuth(c.username, c.password)
 
-	reqDump, err := httputil.DumpRequestOut(httpReq, true)
-	if err == nil {
-		fmt.Printf("HTTP-req:\n%s", string(reqDump))
+	if debug {
+		reqDump, err := httputil.DumpRequestOut(httpReq, true)
+		if err == nil {
+			fmt.Printf("HTTP-req:\n%s", string(reqDump))
+		}
 	}
-
-	log.Printf("HTTP request: %s %s", method, url)
 
 	httpClient := &http.Client{
 		Timeout: httpClientTimeout,
@@ -51,17 +54,19 @@ func (c httpOAuthClient) Send(ctx context.Context, method string, url string, bo
 	}
 	defer httpResp.Body.Close()
 
-	respDump, err := httputil.DumpResponse(httpResp, true)
-	if err == nil {
-		fmt.Printf("HTTP-resp:\n%s", string(respDump))
+	log.Printf("HTTP call to oauth: %s %s -> %d", method, url, httpResp.StatusCode)
+
+	if debug {
+		respDump, err := httputil.DumpResponse(httpResp, true)
+		if err == nil {
+			fmt.Printf("HTTP-resp:\n%s", string(respDump))
+		}
 	}
 
 	respPayload, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return 0, []byte{}, fmt.Errorf("error reading response %s %s: %s", method, url, err)
 	}
-
-	log.Printf("HTTP resp: %d", httpResp.StatusCode)
 
 	return httpResp.StatusCode, respPayload, nil
 }

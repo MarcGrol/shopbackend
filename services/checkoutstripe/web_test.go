@@ -117,7 +117,9 @@ func TestCheckoutService(t *testing.T) {
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"stripe").Return(myvault.Token{
 			ProviderName: "stripe",
-			AccessToken:  "my_access_token"}, true, nil)
+			AccessToken:  "my_access_token",
+			SessionUID:   "my_oauth_session_uid",
+		}, true, nil)
 		payer.EXPECT().UseToken("my_access_token")
 		payer.EXPECT().CreateCheckoutSession(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
