@@ -25,6 +25,7 @@ import (
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient/challenge"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 	"github.com/MarcGrol/shopbackend/services/shop"
+	"github.com/MarcGrol/shopbackend/services/termsconditions"
 	"github.com/MarcGrol/shopbackend/services/warmup"
 )
 
@@ -76,6 +77,8 @@ func main() {
 	defer shopServiceCleanup()
 
 	createWarmupService(c, router, vault, uuider, eventPublisher)
+
+	createTermsConditionsService(c, router, eventPublisher)
 
 	startWebServerBlocking(router)
 }
@@ -175,6 +178,14 @@ func createStripeCheckoutService(c context.Context, router *mux.Router, checkout
 func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader, uuider myuuid.UUIDer, pub mypublisher.Publisher) {
 	warmupService := warmup.NewService(vault, uuider, pub)
 	err := warmupService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering warmup service: %s", err)
+	}
+}
+
+func createTermsConditionsService(c context.Context, router *mux.Router, pub mypublisher.Publisher) {
+	service := termsconditions.NewService(pub)
+	err := service.RegisterEndpoints(c, router)
 	if err != nil {
 		log.Fatalf("Error registering warmup service: %s", err)
 	}
