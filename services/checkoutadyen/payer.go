@@ -14,6 +14,7 @@ import (
 type Payer interface {
 	UseAPIKey(key string)
 	UseToken(accessToken string)
+	CreatePayByLink(ctx context.Context, req checkout.CreatePaymentLinkRequest) (checkout.PaymentLinkResponse, error)
 	Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error)
 	PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error)
 }
@@ -44,6 +45,14 @@ func (p *adyenPayer) UseToken(accessToken string) {
 	p.client.GetConfig().ApiKey = ""
 	// set header
 	p.client.GetConfig().DefaultHeader["Authorization"] = fmt.Sprintf("Bearer %s", accessToken)
+}
+
+func (p *adyenPayer) CreatePayByLink(ctx context.Context, req checkout.CreatePaymentLinkRequest) (checkout.PaymentLinkResponse, error) {
+	resp, _, err := p.client.Checkout.PaymentLinks(&req, ctx)
+	if err != nil {
+		return checkout.PaymentLinkResponse{}, err
+	}
+	return resp, err
 }
 
 func (p *adyenPayer) Sessions(ctx context.Context, req checkout.CreateCheckoutSessionRequest) (checkout.CreateCheckoutSessionResponse, error) {

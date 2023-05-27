@@ -18,6 +18,7 @@ type CheckoutContext struct {
 	OriginalReturnURL   string
 	ID                  string
 	SessionData         string `datastore:",noindex"`
+	PayByLink           bool
 	Status              string
 	PaymentMethod       string
 	WebhookEventName    string

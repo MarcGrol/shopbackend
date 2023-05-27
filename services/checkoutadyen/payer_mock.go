@@ -35,6 +35,21 @@ func (m *MockPayer) EXPECT() *MockPayerMockRecorder {
 	return m.recorder
 }
 
+// CreatePayByLink mocks base method.
+func (m *MockPayer) CreatePayByLink(ctx context.Context, req checkout.CreatePaymentLinkRequest) (checkout.PaymentLinkResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePayByLink", ctx, req)
+	ret0, _ := ret[0].(checkout.PaymentLinkResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreatePayByLink indicates an expected call of CreatePayByLink.
+func (mr *MockPayerMockRecorder) CreatePayByLink(ctx, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePayByLink", reflect.TypeOf((*MockPayer)(nil).CreatePayByLink), ctx, req)
+}
+
 // PaymentMethods mocks base method.
 func (m *MockPayer) PaymentMethods(ctx context.Context, req checkout.PaymentMethodsRequest) (checkout.PaymentMethodsResponse, error) {
 	m.ctrl.T.Helper()

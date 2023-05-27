@@ -58,6 +58,72 @@ func (s *service) CreateTopics(c context.Context) error {
 }
 
 // startCheckout starts a checkout session on the Adyen platform
+func (s *service) payByLink(c context.Context, basketUID string, req checkout.CreatePaymentLinkRequest, returnURL string) (string, error) {
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
+
+	req.MerchantAccount = s.merchantAccount
+	err := validatePayByLinkRequest(req)
+	if err != nil {
+		return "", myerrors.NewInvalidInputError(err)
+	}
+
+	now := s.nower.Now()
+
+	// Initiate a checkout session on the Adyen platform
+	s.setupAuthentication(c, basketUID)
+	resp, err := s.payer.CreatePayByLink(c, req)
+	if err != nil {
+		return "", myerrors.NewInternalError(fmt.Errorf("error creating pay-by-link for checkout %s: %s", basketUID, err))
+	}
+
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
+
+		// Store checkout context because we need it later again
+		err = s.checkoutStore.Put(c, basketUID, checkoutapi.CheckoutContext{
+			BasketUID:         basketUID,
+			CreatedAt:         now,
+			OriginalReturnURL: returnURL,
+			ID:                resp.Id,
+			PayByLink:         true,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing checkout: %s", err))
+		}
+
+		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.PayByLinkCreated{
+			ProviderName:  "adyen",
+			CheckoutUID:   basketUID,
+			AmountInCents: req.Amount.Value,
+			Currency:      req.Amount.Currency,
+			ShopperUID:    req.ShopperEmail,
+			MerchantUID:   req.MerchantAccount,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return resp.Url, nil
+}
+
+func validatePayByLinkRequest(req checkout.CreatePaymentLinkRequest) error {
+	if req.Amount.Currency == "" || req.Amount.Value == 0 ||
+		req.CountryCode == "" ||
+		req.ShopperLocale == "" || req.ReturnUrl == "" || req.MerchantOrderReference == "" ||
+		req.Reference == "" || req.MerchantAccount == "" {
+		return myerrors.NewInvalidInputError(fmt.Errorf("missing mandatory field"))
+	}
+
+	return nil
+}
+
+// startCheckout starts a checkout session on the Adyen platform
 func (s *service) startCheckout(c context.Context, basketUID string, req checkout.CreateCheckoutSessionRequest, returnURL string) (*CheckoutPageInfo, error) {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 

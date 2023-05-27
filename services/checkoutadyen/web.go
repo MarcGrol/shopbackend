@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
+
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
@@ -66,6 +67,7 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 	// Endpoints that compose the user-interface
 	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
 	router.HandleFunc("/checkout/{basketUID}", s.resumeCheckoutPage()).Methods("GET")
+	router.HandleFunc("/checkout-paybylink/{basketUID}", s.payByLinkPage()).Methods("POST")
 
 	// Adyen will redirect to this endpoint after checkout has finalized
 	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.finalizeCheckoutPage()).Methods("GET")
@@ -87,6 +89,27 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 	}
 
 	return nil
+}
+
+func (s *webService) payByLinkPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := mycontext.ContextFromHTTPRequest(r)
+		errorWriter := myhttp.NewWriter(s.logger)
+
+		// Convert request-body into a CreatePaymentLinkRequest
+		payByLinkRequest, basketUID, returnURL, err := parsePaybylinkRequest(r)
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
+			return
+		}
+
+		link, err := s.service.payByLink(c, basketUID, payByLinkRequest, returnURL)
+		if err != nil {
+			errorWriter.WriteError(c, w, 2, err)
+			return
+		}
+		http.Redirect(w, r, link, http.StatusFound)
+	}
 }
 
 // startCheckoutPage starts a checkout session on the Adyen platform
@@ -308,5 +331,96 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 		TelephoneNumber: co.Shopper.ContactInfo.PhoneNumber,
 		//ThreeDSAuthenticationOnly: false,
 		TrustedShopper: true,
+	}, basketUID, co.ReturnURL, nil
+}
+
+func parsePaybylinkRequest(r *http.Request) (checkout.CreatePaymentLinkRequest, string, string, error) {
+	basketUID := mux.Vars(r)["basketUID"]
+	if basketUID == "" {
+		return checkout.CreatePaymentLinkRequest{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("missing basketUID:%s", basketUID))
+	}
+
+	co, err := checkoutapi.NewFromRequest(r)
+	if err != nil {
+		return checkout.CreatePaymentLinkRequest{}, "", "", myerrors.NewInvalidInputError(fmt.Errorf("error parsing form: %s", err))
+	}
+
+	return checkout.CreatePaymentLinkRequest{
+		//AccountInfo:           nil,
+		//AdditionalAmount:      nil,
+		//AdditionalData:        nil,
+		AllowedPaymentMethods: []string{"ideal", "scheme"},
+		Amount: checkout.Amount{
+			Currency: co.TotalAmount.Currency,
+			Value:    int64(co.TotalAmount.Value),
+		},
+		//ApplicationInfo:    nil,
+		//AuthenticationData: nil,
+		BillingAddress: &checkout.Address{
+			City:              co.Shopper.Address.City,
+			Country:           co.Shopper.Address.Country,
+			HouseNumberOrName: co.Shopper.Address.AddressHouseNumber,
+			PostalCode:        co.Shopper.Address.PostalCode,
+			StateOrProvince:   co.Shopper.Address.State,
+			Street:            co.Shopper.Address.Street,
+		},
+		//BlockedPaymentMethods: []string{},
+		//CaptureDelayHours:     0,
+		CountryCode: co.Company.CountryCode,
+		//DateOfBirth: nil
+		//DeliverAt:   nil,
+		DeliveryAddress: &checkout.Address{
+			City:              co.Shopper.Address.City,
+			Country:           co.Shopper.Address.Country,
+			HouseNumberOrName: co.Shopper.Address.AddressHouseNumber,
+			PostalCode:        co.Shopper.Address.PostalCode,
+			StateOrProvince:   co.Shopper.Address.State,
+			Street:            co.Shopper.Address.Street,
+		},
+		//EnableOneClick:           false,
+		//EnablePayOut:             false,
+		//EnableRecurring:          false,
+		//ExpiresAt: &expiresAt,
+		LineItems: func() *[]checkout.LineItem {
+			products := []checkout.LineItem{}
+			for _, p := range co.Products {
+				products = append(products, checkout.LineItem{
+					Id:                 p.Name,
+					Description:        p.Description,
+					AmountIncludingTax: int64(p.ItemPrice),
+					Quantity:           int64(p.Quantity),
+				})
+			}
+			return &products
+		}(),
+		//Mandate:                  nil,
+		//Mcc:                      "",
+		//MerchantAccount:         "",
+		MerchantOrderReference: basketUID,
+		//Metadata:                 nil,
+		//MpiData:                  nil,
+		//RecurringExpiry:          "",
+		//RecurringFrequency:       "",
+		//RecurringProcessingModel: "",
+		//RedirectFromIssuerMethod: "",
+		//RedirectToIssuerMethod:   "",
+		Reference:    basketUID,
+		RiskData:     nil,
+		ReturnUrl:    fmt.Sprintf("%s/checkout/%s", myhttp.HostnameWithScheme(r), basketUID),
+		ShopperEmail: co.Shopper.ContactInfo.Email,
+		ShopperName: &checkout.Name{
+			FirstName: co.Shopper.FirstName,
+			LastName:  co.Shopper.LastName,
+		},
+		ShopperReference: co.Shopper.UID,
+		ShopperStatement: "Aankoop bij " + co.Company.Name,
+		ShopperLocale:    co.Shopper.Locale,
+		//SocialSecurityNumber:      "",
+		//SplitCardFundingSources:   false,
+		//Splits:                    nil,
+		//Store: shopName,
+		//StorePaymentMethod:        false,
+		TelephoneNumber: co.Shopper.ContactInfo.PhoneNumber,
+		//ThreeDSAuthenticationOnly: false,
 	}, basketUID, co.ReturnURL, nil
 }

@@ -14,6 +14,7 @@ const (
 	TopicName             = "checkout"
 	checkoutStartedName   = TopicName + ".started"
 	checkoutCompletedName = TopicName + ".completed"
+	checkoutPaybylinkName = TopicName + ".paybylinkCreated"
 )
 
 type CheckoutEventService interface {
@@ -82,5 +83,22 @@ func (e CheckoutCompleted) GetEventTypeName() string {
 }
 
 func (e CheckoutCompleted) GetAggregateName() string {
+	return e.CheckoutUID
+}
+
+type PayByLinkCreated struct {
+	ProviderName  string
+	CheckoutUID   string
+	AmountInCents int64
+	Currency      string
+	ShopperUID    string
+	MerchantUID   string
+}
+
+func (e PayByLinkCreated) GetEventTypeName() string {
+	return checkoutPaybylinkName
+}
+
+func (e PayByLinkCreated) GetAggregateName() string {
 	return e.CheckoutUID
 }

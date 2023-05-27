@@ -57,19 +57,29 @@
             </tbody>
         </table>
         {{if .Basket.IsNotPaid}}
-        <form action="/checkout/{{.Basket.UID}}" method="POST">
-            {{range $key, $value := .FormValues}}
-            <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
-            {{end}}
-            <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
-        </form>
+        <div class="row">
+            <form action="/checkout/{{.Basket.UID}}" method="POST">
+                {{range $key, $value := .FormValues}}
+                <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
+                {{end}}
+                <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
+            </form>
+            <form action="/checkout-paybylink/{{.Basket.UID}}" method="POST">
+                {{range $key, $value := .FormValues}}
+                <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
+                {{end}}
+                <button type="submit" class="btn btn-primary">Pay-by-link with Adyen</button>
+            </form>
+        </div>
 
-        <form action="/stripe/checkout/{{.Basket.UID}}" method="POST">
-            {{range $key, $value := .FormValues}}
-            <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
-            {{end}}
-            <button type="submit" class="btn btn-primary">Checkout with Stripe</button>
-        </form>
+        <div class="row">
+            <form action="/stripe/checkout/{{.Basket.UID}}" method="POST">
+                {{range $key, $value := .FormValues}}
+                <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
+                {{end}}
+                <button type="submit" class="btn btn-primary">Checkout with Stripe</button>
+            </form>
+        </div>
         {{end}}
 
     </div>
