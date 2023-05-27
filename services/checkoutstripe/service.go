@@ -160,7 +160,12 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
-	case "payment_intent.created", "payment_intent.succeeded", "payment_intent.canceled", "payment_intent.payment_failed":
+	case "payment_intent.created":
+		{
+			fmt.Printf("Ignore event of type: %v\n", event.Type)
+		}
+
+	case "payment_intent.succeeded", "payment_intent.canceled", "payment_intent.payment_failed":
 		{
 			var paymentIntent stripe.PaymentIntent
 			err := json.Unmarshal(event.Data.Raw, &paymentIntent)
@@ -220,7 +225,7 @@ func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, 
 			return paymentIntent.PaymentMethodTypes[0]
 		}()
 		checkoutContext.WebhookEventName = eventType
-		checkoutContext.WebhookEventSuccess = (eventType == "payment_intent.succeeded")
+		checkoutContext.WebhookEventSuccess = true
 		checkoutContext.LastModified = &now
 
 		err = s.checkoutStore.Put(c, checkoutContext.BasketUID, checkoutContext)
