@@ -131,6 +131,7 @@ func TestCheckoutService(t *testing.T) {
 		// given
 		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"adyen").Return(myvault.Token{
 			ProviderName: "adyen",
+			SessionUID:   "my_oauth_session_uid",
 			AccessToken:  "my_access_token",
 			RefreshToken: "my_refresh_token",
 		}, true, nil)

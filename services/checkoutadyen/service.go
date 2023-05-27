@@ -3,6 +3,7 @@ package checkoutadyen
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
@@ -233,13 +234,17 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 func (s *service) setupAuthentication(c context.Context, basketUID string) {
 	tokenUID := myvault.CurrentToken + "_" + "adyen"
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
-	if err != nil || !exist || accessToken.ProviderName != "adyen" {
+	log.Printf("*** access-token: %+v", accessToken)
+	if err != nil || !exist || accessToken.ProviderName != "adyen" ||
+		accessToken.SessionUID == "" ||
+		(accessToken.ExpiresIn != nil && accessToken.ExpiresIn.Before(s.nower.Now())) {
 		s.payer.UseAPIKey(s.apiKey)
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api-key")
-	} else {
-		s.payer.UseToken(accessToken.AccessToken)
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+		return
 	}
+
+	s.payer.UseToken(accessToken.AccessToken)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
 }
 
 // resumeCheckout is called when the shopper has finished the checkout process
