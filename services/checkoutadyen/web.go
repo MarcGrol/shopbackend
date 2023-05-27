@@ -65,15 +65,15 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 	// TODO: subscribe to receive access-token updates
 
 	// Endpoints that compose the user-interface
-	router.HandleFunc("/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
-	router.HandleFunc("/checkout/{basketUID}", s.resumeCheckoutPage()).Methods("GET")
-	router.HandleFunc("/checkout-paybylink/{basketUID}", s.payByLinkPage()).Methods("POST")
+	router.HandleFunc("/adyen/checkout-paybylink/{basketUID}", s.payByLinkPage()).Methods("POST")
+	router.HandleFunc("/adyen/checkout/{basketUID}", s.startCheckoutPage()).Methods("POST")
+	router.HandleFunc("/adyen/checkout/{basketUID}", s.resumeCheckoutPage()).Methods("GET")
 
 	// Adyen will redirect to this endpoint after checkout has finalized
-	router.HandleFunc("/checkout/{basketUID}/status/{status}", s.finalizeCheckoutPage()).Methods("GET")
+	router.HandleFunc("/adyen/checkout/{basketUID}/status/{status}", s.finalizeCheckoutPage()).Methods("GET")
 
 	// Final notification called by Adyen at a later time
-	router.HandleFunc("/checkout/webhook/event", s.webhookNotification()).Methods("POST")
+	router.HandleFunc("/adyen/checkout/webhook/event", s.webhookNotification()).Methods("POST")
 
 	err := s.service.CreateTopics(c)
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 	}
 
 	// Listen for token refresh
-	router.HandleFunc("/api/checkout/event", s.handleEventEnvelope()).Methods("POST")
+	router.HandleFunc("/api/adyen/checkout/event", s.handleEventEnvelope()).Methods("POST")
 
 	err = s.service.Subscribe(c)
 	if err != nil {
@@ -312,7 +312,7 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 		//RedirectToIssuerMethod:   "",
 		Reference:          basketUID,
 		RiskData:           nil,
-		ReturnUrl:          fmt.Sprintf("%s/checkout/%s", myhttp.HostnameWithScheme(r), basketUID),
+		ReturnUrl:          fmt.Sprintf("%s/adyen/checkout/%s", myhttp.HostnameWithScheme(r), basketUID),
 		ShopperEmail:       co.Shopper.ContactInfo.Email,
 		ShopperIP:          "",
 		ShopperInteraction: "",
@@ -406,7 +406,7 @@ func parsePaybylinkRequest(r *http.Request) (checkout.CreatePaymentLinkRequest, 
 		//RedirectToIssuerMethod:   "",
 		Reference:    basketUID,
 		RiskData:     nil,
-		ReturnUrl:    fmt.Sprintf("%s/checkout/%s/status/success", myhttp.HostnameWithScheme(r), basketUID),
+		ReturnUrl:    fmt.Sprintf("%s/adyen/checkout/%s/status/success", myhttp.HostnameWithScheme(r), basketUID),
 		ShopperEmail: co.Shopper.ContactInfo.Email,
 		ShopperName: &checkout.Name{
 			FirstName: co.Shopper.FirstName,

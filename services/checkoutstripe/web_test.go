@@ -254,7 +254,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 	// These are called by the following call to RegisterEndpoints
 	//publisher.EXPECT().CreateTopic(gomock.Any(), checkoutevents.TopicName).Return(nil)
 	// subscriber.EXPECT().CreateTopic(c, oauthevents.TopicName).Return(nil)
-	// subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/api/checkout/event").Return(nil)
+	// subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/api/adyen/checkout/event").Return(nil)
 
 	err = sut.RegisterEndpoints(c, router)
 	assert.NoError(t, err)

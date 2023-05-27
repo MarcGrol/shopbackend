@@ -99,7 +99,7 @@ func TestCheckoutService(t *testing.T) {
 		}).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol&returnUrl=http://a.b/c`))
+		request, err := http.NewRequest(http.MethodPost, "/adyen/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol&returnUrl=http://a.b/c`))
 		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		request.Host = "localhost:8888"
@@ -142,7 +142,7 @@ func TestCheckoutService(t *testing.T) {
 		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, gomock.Any()).Return(nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol&returnUrl=http://a.b/c`))
+		request, err := http.NewRequest(http.MethodPost, "/adyen/checkout/123", strings.NewReader(`totalAmount.value=12300&totalAmount.currency=EUR&company.countryCode=nl&shopper.locale=nl-nl&shopper.firstName=Marc&shopper.lastName=Grol&returnUrl=http://a.b/c`))
 		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		request.Host = "localhost:8888"
@@ -172,7 +172,7 @@ func TestCheckoutService(t *testing.T) {
 		})
 
 		// when
-		request, err := http.NewRequest(http.MethodGet, "/checkout/123", nil)
+		request, err := http.NewRequest(http.MethodGet, "/adyen/checkout/123", nil)
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
@@ -211,7 +211,7 @@ func TestCheckoutService(t *testing.T) {
 		})
 
 		// when
-		request, err := http.NewRequest(http.MethodGet, "/checkout/123/status/success", nil)
+		request, err := http.NewRequest(http.MethodGet, "/adyen/checkout/123/status/success", nil)
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
@@ -255,7 +255,7 @@ func TestCheckoutService(t *testing.T) {
 		})
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/checkout/webhook/event", strings.NewReader(`{
+		request, err := http.NewRequest(http.MethodPost, "/adyen/checkout/webhook/event", strings.NewReader(`{
    "live":"false",
    "notificationItems":[
       {
@@ -317,7 +317,7 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 	// These are called by the following call to RegisterEndpoints
 	publisher.EXPECT().CreateTopic(c, checkoutevents.TopicName).Return(nil)
 	subscriber.EXPECT().CreateTopic(c, oauthevents.TopicName).Return(nil)
-	subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/api/checkout/event").Return(nil)
+	subscriber.EXPECT().Subscribe(c, oauthevents.TopicName, "http://localhost:8080/api/adyen/checkout/event").Return(nil)
 
 	err = sut.RegisterEndpoints(c, router)
 	assert.NoError(t, err)

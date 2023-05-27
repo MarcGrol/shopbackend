@@ -15,7 +15,7 @@ func (s *service) Subscribe(c context.Context) error {
 		return fmt.Errorf("error creating topic %s: %s", oauthevents.TopicName, err)
 	}
 
-	err = s.subscriber.Subscribe(c, oauthevents.TopicName, myhttp.GuessHostnameWithScheme()+"/api/checkout/event")
+	err = s.subscriber.Subscribe(c, oauthevents.TopicName, myhttp.GuessHostnameWithScheme()+"/api/adyen/checkout/event")
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic %s: %s", checkoutevents.TopicName, err)
 	}

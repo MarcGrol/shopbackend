@@ -58,13 +58,13 @@
         </table>
         {{if .Basket.IsNotPaid}}
         <div class="row">
-            <form action="/checkout/{{.Basket.UID}}" method="POST">
+            <form action="/adyen/checkout/{{.Basket.UID}}" method="POST">
                 {{range $key, $value := .FormValues}}
                 <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
                 {{end}}
                 <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
             </form>
-            <form action="/checkout-paybylink/{{.Basket.UID}}" method="POST">
+            <form action="/adyen/checkout-paybylink/{{.Basket.UID}}" method="POST">
                 {{range $key, $value := .FormValues}}
                 <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
                 {{end}}
