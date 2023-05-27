@@ -92,7 +92,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 func (s *service) setupAuthentication(c context.Context, basketUID string) {
 	tokenUID := myvault.CurrentToken + "_" + ("stripe")
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
-	if err != nil || !exist || accessToken.ProviderName != "stripe" {
+	if err != nil || !exist || accessToken.ProviderName != "stripe" || accessToken.SessionUID == "" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
 		s.payer.UseAPIKey(s.apiKey)
 	} else {
