@@ -148,7 +148,7 @@ func parseRequest(r *http.Request) (stripe.CheckoutSessionParams, string, string
 			},
 		},
 		SuccessURL:        stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/success", basketUID)),
-		CancelURL:         stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/cancel", basketUID)),
+		CancelURL:         stripe.String(myhttp.HostnameWithScheme(r) + fmt.Sprintf("/stripe/checkout/%s/status/cancelled", basketUID)),
 		ClientReferenceID: stripe.String(basketUID),
 		LineItems: func() []*stripe.CheckoutSessionLineItemParams {
 			products := []*stripe.CheckoutSessionLineItemParams{}
