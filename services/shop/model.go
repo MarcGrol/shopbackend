@@ -98,7 +98,7 @@ func (b Basket) GetPaymentStatus() string {
 		return fmt.Sprintf("%s=%v", b.FinalPaymentEvent, b.FinalPaymentStatus)
 	}
 
-	return b.InitialPaymentStatus
+	return fmt.Sprintf("(%s)", b.InitialPaymentStatus)
 }
 
 func (b *Basket) Execute(event any) error {
