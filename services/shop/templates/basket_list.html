@@ -15,11 +15,6 @@
                 <button type="submit" class="btn btn-secondary">Oauth admin</button>
             </form>
         </div>
-        <div class="col">
-            <form action="/termsconditions" method="GET">
-                <button type="submit" class="btn btn-secondary">Terms and conditions</button>
-            </form>
-        </div>
     </div>
 
     <div class="row">
@@ -50,7 +45,6 @@
             <td>{{.PaymentMethod}} </td>
             <td>{{.InitialPaymentStatus}}</td>
             <td>{{.GetFinalPaymentStatus}}</td>
-            <td>{{.CheckoutStatus}} ({{.CheckoutStatusDetails}})</td>
         </tr>
     {{end}}
 </tbody>
