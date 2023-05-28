@@ -3,7 +3,6 @@ package checkoutadyen
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 
 	"github.com/MarcGrol/shopbackend/lib/myerrors"
@@ -234,7 +233,6 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 func (s *service) setupAuthentication(c context.Context, basketUID string) {
 	tokenUID := myvault.CurrentToken + "_" + "adyen"
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
-	log.Printf("*** access-token: %+v", accessToken)
 	if err != nil || !exist || accessToken.ProviderName != "adyen" ||
 		accessToken.SessionUID == "" ||
 		(accessToken.ExpiresIn != nil && accessToken.ExpiresIn.Before(s.nower.Now())) {
@@ -372,10 +370,16 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 		if !found {
 			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
 		}
+
+		eventStatus := classifyEventStatus(item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success == "true")
+		eventStatusDetails := fmt.Sprintf("%s=%s", item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success)
+
 		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
 		checkoutContext.WebhookEventName = item.NotificationRequestItem.EventCode
 		checkoutContext.WebhookEventSuccess = (item.NotificationRequestItem.Success == "true")
 		checkoutContext.LastModified = &now
+		checkoutContext.CheckoutStatus = eventStatus
+		checkoutContext.CheckoutDetails = eventStatusDetails
 
 		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
 		if err != nil {
@@ -383,11 +387,13 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 		}
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
-			ProviderName:  "adyen",
-			CheckoutUID:   basketUID,
-			Status:        item.NotificationRequestItem.EventCode,
-			Success:       item.NotificationRequestItem.Success == "true",
-			PaymentMethod: checkoutContext.PaymentMethod,
+			ProviderName:          "adyen",
+			CheckoutUID:           basketUID,
+			Status:                item.NotificationRequestItem.EventCode,
+			Success:               item.NotificationRequestItem.Success == "true",
+			PaymentMethod:         checkoutContext.PaymentMethod,
+			CheckoutStatus:        eventStatus,
+			CheckoutStatusDetails: eventStatusDetails,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
@@ -402,6 +408,29 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 	return nil
 }
 
+func classifyEventStatus(eventName string, status bool) checkoutevents.CheckoutStatus {
+	// https://docs.adyen.com/development-resources/webhooks/webhook-types#standard-webhook
+	switch eventName {
+	case "AUTHORISATION", "AUTHORISATION_ADJUSTMENT":
+		if status {
+			return checkoutevents.CheckoutStatusSuccess
+		} else {
+			return checkoutevents.CheckoutStatusFailed
+		}
+	case "PENDING":
+		return checkoutevents.CheckoutStatusPending
+	case "OFFER_CLOSED":
+		return checkoutevents.CheckoutStatusExpired
+	case "CANCELLATION":
+		return checkoutevents.CheckoutStatusCancelled
+	case "NOTIFICATION_OF_FRAUD":
+		return checkoutevents.CheckoutStatusFraud
+	default:
+		// "CANCEL_OR_REFUND", "CAPTURE","HANDLED_EXTERNALLY", "ORDER_OPENED", "ORDER_CLOSED", "REFUND", "REFUND_FAILED",
+		// "REFUNDED_REVERSED", "REFUND_WITH_DATA", "REPORT_AVAILABLE", "VOID_PENDING_REFUND":
+		return checkoutevents.CheckoutStatusUndefined
+	}
+}
 func checkoutToPaymentMethodsRequest(checkoutReq checkout.CreateCheckoutSessionRequest) checkout.PaymentMethodsRequest {
 	return checkout.PaymentMethodsRequest{
 		Channel:         "Web",

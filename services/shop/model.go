@@ -57,6 +57,8 @@ type Basket struct {
 	InitialPaymentStatus   string
 	FinalPaymentEvent      string
 	FinalPaymentStatus     bool
+	CheckoutStatus         string
+	CheckoutStatusDetails  string
 	PaymentMethod          string
 	Done                   bool
 	ReturnURL              string
@@ -88,6 +90,10 @@ func (b Basket) IsPaid() bool {
 }
 
 func (b Basket) GetFinalPaymentStatus() string {
+	if b.CheckoutStatus != "" {
+		return fmt.Sprintf("%s (%s)", b.CheckoutStatus, b.CheckoutStatusDetails)
+	}
+
 	if b.FinalPaymentEvent == "" {
 		return ""
 	}

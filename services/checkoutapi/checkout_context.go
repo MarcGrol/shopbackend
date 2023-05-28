@@ -2,6 +2,8 @@ package checkoutapi
 
 import (
 	"time"
+
+	"github.com/MarcGrol/shopbackend/services/checkoutevents"
 )
 
 func NewCheckoutContext() CheckoutContext {
@@ -23,4 +25,6 @@ type CheckoutContext struct {
 	PaymentMethod       string
 	WebhookEventName    string
 	WebhookEventSuccess bool
+	CheckoutStatus      checkoutevents.CheckoutStatus
+	CheckoutDetails     string
 }

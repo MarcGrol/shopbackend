@@ -70,12 +70,28 @@ func (e CheckoutStarted) GetAggregateName() string {
 	return e.CheckoutUID
 }
 
+type CheckoutStatus string
+
+const (
+	CheckoutStatusUndefined CheckoutStatus = ""
+	CheckoutStatusSuccess   CheckoutStatus = "success"
+	CheckoutStatusCancelled CheckoutStatus = "cancelled"
+	CheckoutStatusPending   CheckoutStatus = "pending"
+	CheckoutStatusExpired   CheckoutStatus = "expired"
+	CheckoutStatusFailed    CheckoutStatus = "failed"
+	CheckoutStatusError     CheckoutStatus = "error"
+	CheckoutStatusFraud     CheckoutStatus = "fraud"
+	CheckoutStatusOther     CheckoutStatus = "other"
+)
+
 type CheckoutCompleted struct {
-	ProviderName  string
-	CheckoutUID   string
-	PaymentMethod string
-	Status        string
-	Success       bool
+	ProviderName          string
+	CheckoutUID           string
+	PaymentMethod         string
+	Status                string
+	Success               bool
+	CheckoutStatus        CheckoutStatus
+	CheckoutStatusDetails string
 }
 
 func (e CheckoutCompleted) GetEventTypeName() string {

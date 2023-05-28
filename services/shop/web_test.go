@@ -167,10 +167,12 @@ func TestBasketService(t *testing.T) {
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(createPubsubMessage(
 			checkoutevents.CheckoutCompleted{
-				CheckoutUID:   "123",
-				PaymentMethod: "ideal",
-				Status:        "AUTHORIZED",
-				Success:       true,
+				CheckoutUID:           "123",
+				PaymentMethod:         "ideal",
+				Status:                "AUTHORIZED",
+				Success:               true,
+				CheckoutStatus:        checkoutevents.CheckoutStatusSuccess,
+				CheckoutStatusDetails: "AUTHORIZED=true",
 			})))
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
@@ -179,6 +181,13 @@ func TestBasketService(t *testing.T) {
 
 		// then
 		assert.Equal(t, 200, response.Code)
+		basket, exists, err := storer.Get(ctx, basket1.UID)
+		assert.NoError(t, err)
+		assert.True(t, exists)
+		assert.Equal(t, "123", basket.UID)
+		assert.Equal(t, "success", basket.CheckoutStatus)
+		assert.Equal(t, "AUTHORIZED=true", basket.CheckoutStatusDetails)
+
 	})
 }
 

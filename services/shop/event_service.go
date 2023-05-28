@@ -55,6 +55,8 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 		basket.LastModified = &now
 		basket.PaymentMethod = event.PaymentMethod
 		basket.Done = true
+		basket.CheckoutStatus = string(event.CheckoutStatus)
+		basket.CheckoutStatusDetails = event.CheckoutStatusDetails
 
 		err = s.basketStore.Put(c, event.CheckoutUID, basket)
 		if err != nil {
