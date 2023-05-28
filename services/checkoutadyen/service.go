@@ -379,7 +379,7 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 		checkoutContext.WebhookEventSuccess = (item.NotificationRequestItem.Success == "true")
 		checkoutContext.LastModified = &now
 		checkoutContext.CheckoutStatus = eventStatus
-		checkoutContext.CheckoutDetails = eventStatusDetails
+		checkoutContext.CheckoutStatusDetails = eventStatusDetails
 
 		err = s.checkoutStore.Put(c, basketUID, checkoutContext)
 		if err != nil {

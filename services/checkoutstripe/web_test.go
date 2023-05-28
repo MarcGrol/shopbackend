@@ -192,11 +192,13 @@ func TestCheckoutService(t *testing.T) {
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime.Add(time.Hour))
 		publisher.EXPECT().Publish(gomock.Any(), checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
-			ProviderName:  "stripe",
-			CheckoutUID:   "123",
-			PaymentMethod: "ideal",
-			Status:        "payment_intent.succeeded",
-			Success:       true,
+			ProviderName:          "stripe",
+			CheckoutUID:           "123",
+			PaymentMethod:         "ideal",
+			Status:                "payment_intent.succeeded",
+			Success:               true,
+			CheckoutStatus:        checkoutevents.CheckoutStatusSuccess,
+			CheckoutStatusDetails: "payment_intent.succeeded",
 		}).Return(nil)
 
 		_ = storer.Put(ctx, "123", checkoutapi.CheckoutContext{
@@ -237,6 +239,8 @@ func TestCheckoutService(t *testing.T) {
 		assert.Equal(t, "123", checkout.BasketUID)
 		assert.Equal(t, "payment_intent.succeeded", checkout.WebhookEventName)
 		assert.True(t, checkout.WebhookEventSuccess)
+		assert.Equal(t, checkoutevents.CheckoutStatusSuccess, checkout.CheckoutStatus)
+		assert.Equal(t, "payment_intent.succeeded", checkout.CheckoutStatusDetails)
 	})
 }
 

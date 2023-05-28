@@ -160,12 +160,13 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
-	case "payment_intent.created":
-		{
-			fmt.Printf("Ignore event of type: %v\n", event.Type)
-		}
-
+	// https://stripe.com/docs/api/events/types
 	case "payment_intent.succeeded", "payment_intent.canceled", "payment_intent.payment_failed":
+		// IGNORE ghe folowing events for now:
+		// "payment_intent.created", "payment_intent.processing",
+		// "payment_intent.partially_funded", "payment_intent.processing",
+		// "payment_intent.requires_action", "payment_intent.requires_capture",
+		// "payment_intent.amount_capturable_updated",
 		{
 			var paymentIntent stripe.PaymentIntent
 			err := json.Unmarshal(event.Data.Raw, &paymentIntent)
@@ -185,14 +186,25 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 			return s.handlePaymentMethodEvent(c, event.Type, paymentMethod)
 		}
 
-		// TODO "payment_intent.partially_funded", "payment_intent.processing",
-		//  "payment_intent.requires_action", "payment_intent.requires_capture",
 	default:
 		{
 			fmt.Printf("unhandled event type: %v\n", event.Type)
 		}
 	}
 	return nil
+}
+
+func classifyEventStatus(eventName string) checkoutevents.CheckoutStatus {
+	switch eventName {
+	case "payment_intent.succeeded":
+		return checkoutevents.CheckoutStatusSuccess
+	case "payment_intent.canceled":
+		return checkoutevents.CheckoutStatusCancelled
+	case "payment_intent.payment_failed":
+		return checkoutevents.CheckoutStatusFailed
+	default:
+		return checkoutevents.CheckoutStatusOther
+	}
 }
 
 func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, paymentIntent stripe.PaymentIntent) error {
@@ -224,9 +236,13 @@ func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, 
 			}
 			return paymentIntent.PaymentMethodTypes[0]
 		}()
+		eventStatus := classifyEventStatus(eventType)
+
 		checkoutContext.WebhookEventName = eventType
 		checkoutContext.WebhookEventSuccess = true
 		checkoutContext.LastModified = &now
+		checkoutContext.CheckoutStatus = eventStatus
+		checkoutContext.CheckoutStatusDetails = eventType
 
 		err = s.checkoutStore.Put(c, checkoutContext.BasketUID, checkoutContext)
 		if err != nil {
@@ -234,11 +250,13 @@ func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, 
 		}
 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
-			ProviderName:  "stripe",
-			CheckoutUID:   checkoutContext.BasketUID,
-			Status:        eventType,
-			Success:       checkoutContext.WebhookEventSuccess,
-			PaymentMethod: checkoutContext.PaymentMethod,
+			ProviderName:          "stripe",
+			CheckoutUID:           checkoutContext.BasketUID,
+			Status:                eventType,
+			Success:               checkoutContext.WebhookEventSuccess,
+			PaymentMethod:         checkoutContext.PaymentMethod,
+			CheckoutStatus:        eventStatus,
+			CheckoutStatusDetails: eventType,
 		})
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
