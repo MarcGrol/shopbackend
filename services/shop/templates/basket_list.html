@@ -31,8 +31,7 @@
         <th scope="col">TotalPrice</th>
         <th scope="col">Payment provider</th>
         <th scope="col">Payment method</th>
-        <th scope="col">Initial status</th>
-        <th scope="col">Final status</th>
+        <th scope="col">Payment status</th>
     </tr>
     </thead>
     <tbody>
@@ -42,9 +41,8 @@
             <td><a href="/basket/{{.UID}}">{{.GetProductSummary}}</a></td>
             <td>{{.GetPriceInCurrency}}</td>
             <td>{{.PaymentServiceProvider}}</td>
-            <td>{{.PaymentMethod}} </td>
-            <td>{{.InitialPaymentStatus}}</td>
-            <td>{{.GetFinalPaymentStatus}}</td>
+            <td>{{.PaymentMethod}}</td>
+            <td>{{.GetPaymentStatus}}</td>
         </tr>
     {{end}}
 </tbody>

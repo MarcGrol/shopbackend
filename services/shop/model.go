@@ -75,7 +75,7 @@ func (b Basket) GetPriceInCurrency() string {
 func (b Basket) GetProductSummary() string {
 	lines := []string{}
 	for _, p := range b.SelectedProducts {
-		lines = append(lines, fmt.Sprintf("%d x	 %s,", p.Quantity, p.Description))
+		lines = append(lines, fmt.Sprintf("%d x	 %s", p.Quantity, p.Description))
 	}
 
 	return strings.Join(lines, ", ")
@@ -89,16 +89,16 @@ func (b Basket) IsPaid() bool {
 	return b.InitialPaymentStatus == "success" || (b.FinalPaymentEvent == "AUTHORISATION" && b.FinalPaymentStatus)
 }
 
-func (b Basket) GetFinalPaymentStatus() string {
+func (b Basket) GetPaymentStatus() string {
 	if b.CheckoutStatus != "" {
 		return fmt.Sprintf("%s (%s)", b.CheckoutStatus, b.CheckoutStatusDetails)
 	}
 
-	if b.FinalPaymentEvent == "" {
-		return ""
+	if b.FinalPaymentEvent != "" {
+		return fmt.Sprintf("%s=%v", b.FinalPaymentEvent, b.FinalPaymentStatus)
 	}
 
-	return fmt.Sprintf("%s=%v", b.FinalPaymentEvent, b.FinalPaymentStatus)
+	return b.InitialPaymentStatus
 }
 
 func (b *Basket) Execute(event any) error {

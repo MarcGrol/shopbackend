@@ -22,7 +22,7 @@ func createBasket(uid string, createdAt time.Time, returnURL string) Basket {
 		Currency:             "EUR",
 		SelectedProducts:     []SelectedProduct{},
 		ReturnURL:            returnURL,
-		InitialPaymentStatus: "not paid yet",
+		InitialPaymentStatus: "",
 	}
 	basket.SelectedProducts = append(basket.SelectedProducts, getRandomProduct())
 	basket.SelectedProducts = append(basket.SelectedProducts, getRandomProduct())

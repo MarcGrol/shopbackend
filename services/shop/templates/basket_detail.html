@@ -39,28 +39,16 @@
                     <td>{{.Basket.GetPriceInCurrency}}</td>
                 </tr>
                 <tr>
-                    <td>PSP</td>
+                    <td>Payment service provider</td>
                     <td>{{.Basket.PaymentServiceProvider}}</td>
-                </tr>
-                <tr>
-                    <td>Initial status</td>
-                    <td>{{.Basket.InitialPaymentStatus}}</td>
-                </tr>
-                <tr>
-                    <td>Final status</td>
-                    <td>{{.Basket.GetFinalPaymentStatus}}</td>
-                </tr>
-                <tr>
-                    <td>Final status</td>
-                    <td>{{.Basket.CheckoutStatus}}</td>
-                </tr>
-                <tr>
-                    <td>Final status details</td>
-                    <td>{{.Basket.CheckoutStatusDetails}}</td>
                 </tr>
                 <tr>
                     <td>Payment method</td>
                     <td>{{.Basket.PaymentMethod}}</td>
+                </tr>
+                <tr>
+                    <td>Payment status</td>
+                    <td>{{.Basket.GetPaymentStatus}}</td>
                 </tr>
             </tbody>
         </table>
