@@ -165,6 +165,9 @@
             case "Refused":
                 window.location.href = "/adyen/checkout/{{.BasketUID}}/status/failed";
                 break;
+            case "Cancelled":
+                window.location.href = "/adyen/checkout/{{.BasketUID}}/status/cancelled";
+                break;
             default:
                 window.location.href = "/adyen/checkout/{{.BasketUID}}/status/error";
                 break;
