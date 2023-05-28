@@ -238,8 +238,6 @@ func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, 
 		}()
 		eventStatus := classifyEventStatus(eventType)
 
-		checkoutContext.WebhookEventName = eventType
-		checkoutContext.WebhookEventSuccess = true
 		checkoutContext.LastModified = &now
 		checkoutContext.CheckoutStatus = eventStatus
 		checkoutContext.CheckoutStatusDetails = eventType
@@ -252,8 +250,6 @@ func (s *service) handlePaymentIntentEvent(c context.Context, eventType string, 
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
 			ProviderName:          "stripe",
 			CheckoutUID:           checkoutContext.BasketUID,
-			Status:                eventType,
-			Success:               checkoutContext.WebhookEventSuccess,
 			PaymentMethod:         checkoutContext.PaymentMethod,
 			CheckoutStatus:        eventStatus,
 			CheckoutStatusDetails: eventType,

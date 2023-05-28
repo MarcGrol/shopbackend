@@ -8,8 +8,7 @@ import (
 
 func NewCheckoutContext() CheckoutContext {
 	return CheckoutContext{
-		WebhookEventName:    "unknown",
-		WebhookEventSuccess: false,
+		CheckoutStatus: checkoutevents.CheckoutStatusUndefined,
 	}
 }
 
@@ -23,8 +22,6 @@ type CheckoutContext struct {
 	PayByLink             bool
 	Status                string
 	PaymentMethod         string
-	WebhookEventName      string
-	WebhookEventSuccess   bool
 	CheckoutStatus        checkoutevents.CheckoutStatus
 	CheckoutStatusDetails string
 }

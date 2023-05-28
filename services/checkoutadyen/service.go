@@ -375,8 +375,6 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 		eventStatusDetails := fmt.Sprintf("%s=%s", item.NotificationRequestItem.EventCode, item.NotificationRequestItem.Success)
 
 		checkoutContext.PaymentMethod = item.NotificationRequestItem.PaymentMethod
-		checkoutContext.WebhookEventName = item.NotificationRequestItem.EventCode
-		checkoutContext.WebhookEventSuccess = (item.NotificationRequestItem.Success == "true")
 		checkoutContext.LastModified = &now
 		checkoutContext.CheckoutStatus = eventStatus
 		checkoutContext.CheckoutStatusDetails = eventStatusDetails
@@ -389,8 +387,6 @@ func (s *service) processNotificationItem(c context.Context, item NotificationIt
 		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
 			ProviderName:          "adyen",
 			CheckoutUID:           basketUID,
-			Status:                item.NotificationRequestItem.EventCode,
-			Success:               item.NotificationRequestItem.Success == "true",
 			PaymentMethod:         checkoutContext.PaymentMethod,
 			CheckoutStatus:        eventStatus,
 			CheckoutStatusDetails: eventStatusDetails,

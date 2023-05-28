@@ -195,8 +195,6 @@ func TestCheckoutService(t *testing.T) {
 			ProviderName:          "stripe",
 			CheckoutUID:           "123",
 			PaymentMethod:         "ideal",
-			Status:                "payment_intent.succeeded",
-			Success:               true,
 			CheckoutStatus:        checkoutevents.CheckoutStatusSuccess,
 			CheckoutStatusDetails: "payment_intent.succeeded",
 		}).Return(nil)
@@ -237,8 +235,6 @@ func TestCheckoutService(t *testing.T) {
 		checkout, exists, _ := storer.Get(ctx, "123")
 		assert.True(t, exists)
 		assert.Equal(t, "123", checkout.BasketUID)
-		assert.Equal(t, "payment_intent.succeeded", checkout.WebhookEventName)
-		assert.True(t, checkout.WebhookEventSuccess)
 		assert.Equal(t, checkoutevents.CheckoutStatusSuccess, checkout.CheckoutStatus)
 		assert.Equal(t, "payment_intent.succeeded", checkout.CheckoutStatusDetails)
 	})

@@ -60,7 +60,7 @@ func (s *service) OnCheckoutStarted(c context.Context, topic string, event check
 }
 
 func (s *service) OnCheckoutCompleted(c context.Context, topic string, event checkoutevents.CheckoutCompleted) error {
-	s.logger.Log(c, event.CheckoutUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s (%s) -> %v", event.CheckoutUID, event.Status, event.Status)
+	s.logger.Log(c, event.CheckoutUID, mylog.SeverityInfo, "Webhook: Checkout status update on basket %s: %v (%s)", event.CheckoutUID, event.CheckoutStatus, event.CheckoutStatusDetails)
 
 	now := s.nower.Now()
 
@@ -79,8 +79,6 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 		}
 
 		basket.PaymentServiceProvider = event.ProviderName
-		basket.FinalPaymentEvent = event.Status
-		basket.FinalPaymentStatus = event.Success
 		basket.LastModified = &now
 		basket.PaymentMethod = event.PaymentMethod
 		basket.Done = true

@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	basket1 = Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: ""}
-	basket2 = Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", FinalPaymentEvent: "AUTHORISATION", FinalPaymentStatus: true}
+	basket1 = Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success"}
+	basket2 = Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", CheckoutStatus: string(checkoutevents.CheckoutStatusSuccess), CheckoutStatusDetails: "AUTHORIZED=true"}
 )
 
 func TestBasketService(t *testing.T) {
@@ -169,8 +169,6 @@ func TestBasketService(t *testing.T) {
 			checkoutevents.CheckoutCompleted{
 				CheckoutUID:           "123",
 				PaymentMethod:         "ideal",
-				Status:                "AUTHORIZED",
-				Success:               true,
 				CheckoutStatus:        checkoutevents.CheckoutStatusSuccess,
 				CheckoutStatusDetails: "AUTHORIZED=true",
 			})))

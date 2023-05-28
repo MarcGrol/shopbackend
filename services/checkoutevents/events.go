@@ -54,8 +54,8 @@ func DispatchEvent(c context.Context, reader io.Reader, service CheckoutEventSer
 }
 
 type CheckoutStarted struct {
-	ProviderName  string
 	CheckoutUID   string
+	ProviderName  string
 	AmountInCents int64
 	Currency      string
 	ShopperUID    string
@@ -85,11 +85,9 @@ const (
 )
 
 type CheckoutCompleted struct {
-	ProviderName          string
 	CheckoutUID           string
+	ProviderName          string
 	PaymentMethod         string
-	Status                string
-	Success               bool
 	CheckoutStatus        CheckoutStatus
 	CheckoutStatusDetails string
 }
