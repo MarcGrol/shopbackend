@@ -55,13 +55,15 @@ type Basket struct {
 	SelectedProducts       []SelectedProduct
 	PaymentServiceProvider string
 	InitialPaymentStatus   string
-	FinalPaymentEvent      string
-	FinalPaymentStatus     bool
-	CheckoutStatus         string
-	CheckoutStatusDetails  string
-	PaymentMethod          string
-	Done                   bool
-	ReturnURL              string
+	// Deprecated: FinalPaymentEvent is superseded by CheckoutStatus and CheckoutStatusDetails
+	FinalPaymentEvent string
+	// Deprecated: FinalPaymentStatus is superseded by CheckoutStatus and CheckoutStatusDetails
+	FinalPaymentStatus    bool
+	CheckoutStatus        string
+	CheckoutStatusDetails string
+	PaymentMethod         string
+	Done                  bool
+	ReturnURL             string
 }
 
 func (b Basket) Timestamp() string {
@@ -86,7 +88,7 @@ func (b Basket) IsNotPaid() bool {
 }
 
 func (b Basket) IsPaid() bool {
-	return b.InitialPaymentStatus == "success" || (b.FinalPaymentEvent == "AUTHORISATION" && b.FinalPaymentStatus)
+	return strings.Contains(b.GetPaymentStatus(), "success")
 }
 
 func (b Basket) GetPaymentStatus() string {
@@ -98,14 +100,7 @@ func (b Basket) GetPaymentStatus() string {
 		return fmt.Sprintf("%s=%v", b.FinalPaymentEvent, b.FinalPaymentStatus)
 	}
 
-	return fmt.Sprintf("(%s)", b.InitialPaymentStatus)
-}
-
-func (b *Basket) Execute(event any) error {
-	switch b.State {
-
-	}
-	return nil
+	return b.InitialPaymentStatus
 }
 
 type SelectedProduct struct {

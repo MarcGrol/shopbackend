@@ -27,6 +27,35 @@ func (s *service) Subscribe(c context.Context) error {
 }
 
 func (s *service) OnCheckoutStarted(c context.Context, topic string, event checkoutevents.CheckoutStarted) error {
+	s.logger.Log(c, event.CheckoutUID, mylog.SeverityInfo, "Webhook: Checkout started for basket %s using psp %s", event.CheckoutUID, event.ProviderName)
+
+	err := s.basketStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
+		basket, found, err := s.basketStore.Get(c, event.CheckoutUID)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+		if !found {
+			return myerrors.NewNotFoundError(fmt.Errorf("basket with uid %s not found", event.CheckoutUID))
+		}
+
+		if basket.Done {
+			return nil
+		}
+
+		basket.PaymentServiceProvider = event.ProviderName
+
+		err = s.basketStore.Put(c, event.CheckoutUID, basket)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
