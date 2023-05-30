@@ -45,7 +45,7 @@ func New(c context.Context, pubsub mypubsub.PubSub, queue myqueue.TaskQueuer, no
 }
 
 func (p *transactionalPublisher) RegisterEndpoints(c context.Context, router *mux.Router) {
-	router.HandleFunc("/pubsub/{topic}/{uid}", p.processTriggerPage()).Methods("PUT")
+	router.HandleFunc("/pubsub/{topic}/{uid}", p.processTriggerToReadOutboxWebhook()).Methods("PUT")
 }
 
 func (p *transactionalPublisher) CreateTopic(c context.Context, topicName string) error {
@@ -76,7 +76,7 @@ func (p *transactionalPublisher) Publish(c context.Context, topic string, event 
 	return nil
 }
 
-func (p *transactionalPublisher) processTriggerPage() http.HandlerFunc {
+func (p *transactionalPublisher) processTriggerToReadOutboxWebhook() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(mylog.New("transactionalPublisher"))
