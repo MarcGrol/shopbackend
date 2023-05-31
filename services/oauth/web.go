@@ -117,7 +117,8 @@ func (s *webService) donePage() http.HandlerFunc {
 
 		error := r.URL.Query().Get("error")
 		if error != "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf(error)))
+			errorDescription := r.URL.Query().Get("error_description")
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("%s (%s)", error, errorDescription )))
 			return
 		}
 
