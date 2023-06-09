@@ -77,9 +77,9 @@ func NewProviders() *OAuthProviders {
 					Hostname: "https://api.mollie.com",
 					Path:     "/oauth2/tokens",
 				},
-				DefaultScopes: "read_write",
+				DefaultScopes: "organizations.read profiles.read payments.read payments.write",
 				GetCredentials: func(p OauthParty) (string, string) {
-					return p.Secret, "" // secret is used as basic auth username with empty password
+					return p.ClientID, p.Secret
 				},
 			},
 		},

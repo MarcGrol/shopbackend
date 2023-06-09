@@ -123,6 +123,12 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 		providers.Set("stripe", clientID, clientSecret, "", "")
 	}
 
+	{
+		clientID := getenvOrAbort("MOLLIE_OAUTH_CLIENT_ID")
+		clientSecret := getenvOrAbort("MOLLIE_OAUTH_CLIENT_SECRET")
+		providers.Set("mollie", clientID, clientSecret, "", "")
+	}
+
 	oauthClient := oauthclient.NewOAuthClient(providers, challenge.NewRandomStringer())
 	oauthService := oauth.NewService(sessionStore, vault, nower, uuider, oauthClient, pub, providers)
 
