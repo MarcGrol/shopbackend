@@ -163,8 +163,64 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 		return myerrors.NewInternalError(fmt.Errorf("error getting payment %s on id: %s", id, err))
 	}
 
-	// paid, expired, failed, canceled
 	fmt.Printf("Payment: %v", payment)
 
+	now := s.nower.Now()
+
+	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
+		// must be idempotent
+
+		checkoutContext, found, err := s.checkoutStore.Get(c, basketUID)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+		if !found {
+			return myerrors.NewNotFoundError(fmt.Errorf("checkout with uid %s not found", basketUID))
+		}
+
+		checkoutContext.PaymentMethod = string(payment.Method)
+		eventStatus := classifyEventStatus(payment.Status)
+		checkoutContext.LastModified = &now
+		checkoutContext.CheckoutStatus = eventStatus
+		checkoutContext.CheckoutStatusDetails = payment.Status
+
+		err = s.checkoutStore.Put(c, checkoutContext.BasketUID, checkoutContext)
+		if err != nil {
+			return myerrors.NewInternalError(err)
+		}
+
+		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
+			ProviderName:          "mollie",
+			CheckoutUID:           checkoutContext.BasketUID,
+			PaymentMethod:         checkoutContext.PaymentMethod,
+			CheckoutStatus:        eventStatus,
+			CheckoutStatusDetails: payment.Status,
+		})
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func classifyEventStatus(mollieStatus string) checkoutevents.CheckoutStatus {
+	switch mollieStatus {
+	case "paid":
+		return checkoutevents.CheckoutStatusSuccess
+	case "canceled":
+		return checkoutevents.CheckoutStatusCancelled
+	case "failed":
+		return checkoutevents.CheckoutStatusFailed
+	case "expired":
+		return checkoutevents.CheckoutStatusExpired
+
+	default:
+		return checkoutevents.CheckoutStatusOther
+	}
 }
