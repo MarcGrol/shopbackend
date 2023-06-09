@@ -53,6 +53,8 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 		return "", myerrors.NewInvalidInputError(err)
 	}
 
+	fmt.Printf("Payment created: %v", paymentResp)
+
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
