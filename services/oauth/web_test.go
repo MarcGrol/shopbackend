@@ -47,7 +47,19 @@ func TestOauth(t *testing.T) {
 		}, true, nil)
 		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("stripe")).Return(myvault.Token{
 			ProviderName: "stripe",
-			ClientID:     "adyen_client_id",
+			ClientID:     "stripe_client_id",
+			SessionUID:   "",
+			Scopes:       "",
+			CreatedAt:    mytime.ExampleTime,
+			LastModified: &mytime.ExampleTime,
+			AccessToken:  "",
+			RefreshToken: "",
+			ExpiresIn:    nil,
+		}, true, nil)
+
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("mollie")).Return(myvault.Token{
+			ProviderName: "mollie",
+			ClientID:     "mollie_client_id",
 			SessionUID:   "",
 			Scopes:       "",
 			CreatedAt:    mytime.ExampleTime,

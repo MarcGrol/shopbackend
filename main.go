@@ -236,7 +236,7 @@ func startWebServerBlocking(router *mux.Router) {
 func getenvOrAbort(name string) string {
 	value := os.Getenv(name)
 	if value == "" {
-		log.Fatalf("missing env-var %s", name)
+		log.Fatalf("terminatiing because of missing mandatoty env-var %s.", name)
 	}
 	return value
 }
