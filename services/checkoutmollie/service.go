@@ -47,7 +47,10 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
 	// Iniitialize payment to the stripe platform
-	s.setupAuthentication(c, basketUID)
+	profileID := s.setupAuthentication(c, basketUID)
+	if profileID != "" {
+		request.ProfileID = profileID
+	}
 	paymentResp, err := s.payer.CreatePayment(c, request)
 	if err != nil {
 		return "", myerrors.NewInvalidInputError(err)
@@ -94,16 +97,20 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 	return paymentResp.Links.Checkout.Href, nil
 }
 
-func (s *service) setupAuthentication(c context.Context, basketUID string) {
+func (s *service) setupAuthentication(c context.Context, basketUID string) string {
 	tokenUID := myvault.CurrentToken + "_" + ("mollie")
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "mollie" || accessToken.SessionUID == "" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")
 		s.payer.UseAPIKey(s.apiKey)
-	} else {
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
-		s.payer.UseToken(accessToken.AccessToken)
+		return ""
 	}
+
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
+	s.payer.UseToken(accessToken.AccessToken)
+	profileID := "pfl_Ns8niaVZaw" // TODO
+
+	return profileID
 }
 
 func (s *service) finalizeCheckout(c context.Context, basketUID string, status string) (string, error) {
