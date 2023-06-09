@@ -39,7 +39,6 @@ func (p *molliePayer) UseAPIKey(apiKey string) {
 
 func (p *molliePayer) UseToken(accessToken string) {
 	p.client.WithAuthenticationValue(accessToken)
-	p.client.SetAccessToken(accessToken)
 }
 
 func (p *molliePayer) CreatePayment(ctx context.Context, request mollie.Payment) (mollie.Payment, error) {
