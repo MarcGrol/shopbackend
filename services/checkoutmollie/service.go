@@ -191,7 +191,6 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: persisted event '%+v'", checkoutContext)
 
 		event := checkoutevents.CheckoutCompleted{
 			ProviderName:          "mollie",
@@ -204,8 +203,6 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
 		}
-
-		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: published event '%+v'", event)
 
 		return nil
 	})
