@@ -58,6 +58,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 		// Store checkout context on basketUID because we need it for the success/cancel callback and the webhook
 		err = s.checkoutStore.Put(c, basketUID, checkoutapi.CheckoutContext{
+			PaymentProvider:   "stripe",
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,

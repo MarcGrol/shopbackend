@@ -60,6 +60,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 		// Store checkout context on basketUID because we need it for the success/cancel callback and the webhook
 		err = s.checkoutStore.Put(c, basketUID, checkoutapi.CheckoutContext{
+			PaymentProvider:   "mollie",
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,
@@ -165,7 +166,7 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 		return myerrors.NewInternalError(fmt.Errorf("error getting payment %s on id: %s", id, err))
 	}
 
-	fmt.Printf("Payment: %v", payment)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update on payment '%+v'", payment)
 
 	now := s.nower.Now()
 
@@ -190,17 +191,21 @@ func (s *service) webhookNotification(c context.Context, username, password stri
 		if err != nil {
 			return myerrors.NewInternalError(err)
 		}
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: persisted event '%+v'", checkoutContext)
 
-		err = s.publisher.Publish(c, checkoutevents.TopicName, checkoutevents.CheckoutCompleted{
+		event := checkoutevents.CheckoutCompleted{
 			ProviderName:          "mollie",
 			CheckoutUID:           checkoutContext.BasketUID,
 			PaymentMethod:         checkoutContext.PaymentMethod,
 			CheckoutStatus:        eventStatus,
 			CheckoutStatusDetails: payment.Status,
-		})
+		}
+		err = s.publisher.Publish(c, checkoutevents.TopicName, event)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error publishing event: %s", err))
 		}
+
+		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: published event '%+v'", event)
 
 		return nil
 	})

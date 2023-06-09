@@ -21,6 +21,7 @@ type CheckoutContext struct {
 	SessionData           string `datastore:",noindex"`
 	PayByLink             bool
 	Status                string
+	PaymentProvider       string
 	PaymentMethod         string
 	CheckoutStatus        checkoutevents.CheckoutStatus
 	CheckoutStatusDetails string

@@ -81,6 +81,7 @@ func (s *service) payByLink(c context.Context, basketUID string, req checkout.Cr
 
 		// Store checkout context because we need it later again
 		err = s.checkoutStore.Put(c, basketUID, checkoutapi.CheckoutContext{
+			PaymentProvider:   "adyen",
 			BasketUID:         basketUID,
 			CreatedAt:         now,
 			OriginalReturnURL: returnURL,
