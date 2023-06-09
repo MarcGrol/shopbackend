@@ -99,6 +99,7 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 		errorWriter := myhttp.NewWriter(s.logger)
 
 		username, password, _ := r.BasicAuth()
+		basketUID := mux.Vars(r)["basketUID"]
 
 		respString, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -106,7 +107,7 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 			return
 		}
 
-		err = s.service.webhookNotification(c, username, password, string(respString))
+		err = s.service.webhookNotification(c, username, password, basketUID, string(respString))
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return

@@ -155,8 +155,8 @@ func addStatusQueryParam(orgURL string, status string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *service) webhookNotification(c context.Context, username, password string, eventAsString string) error {
-	s.logger.Log(c, "", mylog.SeverityInfo, "Webhook: status update event '%s'", eventAsString)
+func (s *service) webhookNotification(c context.Context, username, password string, basketUID string, eventAsString string) error {
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event '%s'", eventAsString)
 
 	return nil
 }
