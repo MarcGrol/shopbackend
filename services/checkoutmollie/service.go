@@ -155,8 +155,16 @@ func addStatusQueryParam(orgURL string, status string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *service) webhookNotification(c context.Context, username, password string, basketUID string, eventAsString string) error {
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event '%s'", eventAsString)
+func (s *service) webhookNotification(c context.Context, username, password string, basketUID string, id string) error {
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event '%s'", id)
+
+	payment, err := s.payer.GetPaymentOnID(c, id)
+	if err != nil {
+		return myerrors.NewInternalError(fmt.Errorf("error getting payment %s on id: %s", id, err))
+	}
+
+	// paid, expired, failed, canceled
+	fmt.Printf("Payment: %v", payment)
 
 	return nil
 }

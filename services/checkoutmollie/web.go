@@ -3,7 +3,6 @@ package checkoutmollie
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 
@@ -101,15 +100,21 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 		username, password, _ := r.BasicAuth()
 		basketUID := mux.Vars(r)["basketUID"]
 
-		respString, err := io.ReadAll(r.Body)
+		err := r.ParseForm()
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
 		}
 
-		err = s.service.webhookNotification(c, username, password, basketUID, string(respString))
+		id := r.FormValue("id")
+		if id == "" {
+			errorWriter.WriteError(c, w, 2, fmt.Errorf("missing id"))
+			return
+		}
+
+		err = s.service.webhookNotification(c, username, password, basketUID, id)
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			errorWriter.WriteError(c, w, 4, err)
 			return
 		}
 

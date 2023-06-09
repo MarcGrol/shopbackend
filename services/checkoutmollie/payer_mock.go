@@ -50,6 +50,21 @@ func (mr *MockPayerMockRecorder) CreatePayment(ctx, request interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePayment", reflect.TypeOf((*MockPayer)(nil).CreatePayment), ctx, request)
 }
 
+// GetPaymentOnID mocks base method.
+func (m *MockPayer) GetPaymentOnID(ctx context.Context, paymentID string) (mollie.Payment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPaymentOnID", ctx, paymentID)
+	ret0, _ := ret[0].(mollie.Payment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPaymentOnID indicates an expected call of GetPaymentOnID.
+func (mr *MockPayerMockRecorder) GetPaymentOnID(ctx, paymentID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPaymentOnID", reflect.TypeOf((*MockPayer)(nil).GetPaymentOnID), ctx, paymentID)
+}
+
 // UseAPIKey mocks base method.
 func (m *MockPayer) UseAPIKey(key string) {
 	m.ctrl.T.Helper()

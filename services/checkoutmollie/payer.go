@@ -13,6 +13,7 @@ type Payer interface {
 	UseAPIKey(key string)
 	UseToken(accessToken string)
 	CreatePayment(ctx context.Context, request mollie.Payment) (mollie.Payment, error)
+	GetPaymentOnID(ctx context.Context, paymentID string) (mollie.Payment, error)
 }
 
 type molliePayer struct {
@@ -44,6 +45,15 @@ func (p *molliePayer) CreatePayment(ctx context.Context, request mollie.Payment)
 	_, payment, err := p.client.Payments.Create(ctx, request, nil)
 	if err != nil {
 		return mollie.Payment{}, myerrors.NewInvalidInputError(fmt.Errorf("error creating mollie payment: %s", err))
+	}
+
+	return *payment, nil
+}
+
+func (p *molliePayer) GetPaymentOnID(ctx context.Context, id string) (mollie.Payment, error) {
+	_, payment, err := p.client.Payments.Get(ctx, id, nil)
+	if err != nil {
+		return mollie.Payment{}, myerrors.NewInvalidInputError(fmt.Errorf("error getting mollie payment: %s", err))
 	}
 
 	return *payment, nil
