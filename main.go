@@ -19,6 +19,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
+	"github.com/MarcGrol/shopbackend/services/checkoutmollie"
 	"github.com/MarcGrol/shopbackend/services/checkoutstripe"
 	"github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
@@ -72,6 +73,8 @@ func main() {
 	createAdyenCheckoutService(c, router, checkoutStore, vault, nower, subscriber, eventPublisher)
 
 	createStripeCheckoutService(c, router, checkoutStore, vault, nower, subscriber, eventPublisher)
+
+	createMollieCheckoutService(c, router, checkoutStore, vault, nower, subscriber, eventPublisher)
 
 	shopServiceCleanup := createShopService(c, router, nower, uuider, subscriber, eventPublisher)
 	defer shopServiceCleanup()
@@ -172,6 +175,26 @@ func createStripeCheckoutService(c context.Context, router *mux.Router, checkout
 	err = checkoutService.RegisterEndpoints(c, router)
 	if err != nil {
 		log.Fatalf("Error registering stripe checkout service: %s", err)
+	}
+}
+
+func createMollieCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
+
+	apiKey := getenvOrAbort("MOLLIE_API_KEY")
+
+	payer, err := checkoutmollie.NewPayer()
+	if err != nil {
+		log.Fatalf("Error creating mollie payer: %s", err)
+	}
+
+	checkoutService, err := checkoutmollie.NewWebService(apiKey, payer, nower, checkoutStore, vault, publisher)
+	if err != nil {
+		log.Fatalf("Error creating mollie checkoutService: %s", err)
+	}
+
+	err = checkoutService.RegisterEndpoints(c, router)
+	if err != nil {
+		log.Fatalf("Error registering mollie checkout service: %s", err)
 	}
 }
 

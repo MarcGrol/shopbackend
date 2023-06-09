@@ -105,7 +105,7 @@ func TestOauth(t *testing.T) {
 			SessionUID:   "abcdef",
 			Scopes:       "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write",
 		}).Return(nil)
-		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return("http://my_url.com", "mychallenge", nil)
+		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return("http://my_url.com", "mychallenge	", nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/oauth/start/adyen?returnURL=http://localhost:8888/basket&scopes=psp.onlinepayment:write psp.accountsettings:write psp.webhook:write", nil)

@@ -30,7 +30,6 @@ type service struct {
 
 // Use dependency injection to isolate the infrastructure and easy testing
 func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
-	stripe.Key = apiKey
 	return &service{
 		apiKey:        apiKey,
 		payer:         payer,

@@ -33,7 +33,7 @@ func (p *stripePayer) UseToken(accessToken string) {
 func (p *stripePayer) CreateCheckoutSession(ctx context.Context, params stripe.CheckoutSessionParams) (stripe.CheckoutSession, error) {
 	session, err := session.New(&params)
 	if err != nil {
-		return stripe.CheckoutSession{}, myerrors.NewInvalidInputError(fmt.Errorf("error creating stripe session: %s", err))
+		return stripe.CheckoutSession{}, myerrors.NewInvalidInputError(fmt.Errorf("error creating stripe payment: %s", err))
 	}
 
 	return *session, nil
