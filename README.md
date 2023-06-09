@@ -1,4 +1,4 @@
-# Example of doing payments with the Adyen and Stripe platform
+# Example of doing payments with the Adyen, Stripe and Mollie platform
 
 Example app that demonstrates how Adyen and Stripe checkout and OAuth work
 
