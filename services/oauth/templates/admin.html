@@ -8,14 +8,27 @@
 
 
 <div class="container">
-    <h1>OAuth admin</h1>
     <div class="row">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/basket">Back</a></li>
-            </ol>
-        </nav>
+        <h1>My webshop</h1> 
+        <p>Experiment with different payment service providers Adyen and Stipe. Find the source code <a href="https://github.com/MarcGrol/shopbackend">here</a></p>
     </div>
+
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+          <a class="nav-link" href="/basket">Baskets</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="/oauth/admin">Oauth</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/termsconditions">Terms</a>
+        </li>
+    </ul>
+
+    <div class="row">
+        <p>The page allows to manage OAuth for both Adyen and Stripe</p>
+    </div>
+    
     <div class="row">
 
         {{ range $name, $oauthStatus := . }}
