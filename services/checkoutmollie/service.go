@@ -48,13 +48,10 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	// Iniitialize payment to the stripe platform
 	request.ProfileID, request.TestMode = s.setupAuthentication(c, basketUID)
-
 	paymentResp, err := s.payer.CreatePayment(c, request)
 	if err != nil {
 		return "", myerrors.NewInvalidInputError(err)
 	}
-
-	fmt.Printf("Payment created: %v", paymentResp)
 
 	err = s.checkoutStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
@@ -106,9 +103,9 @@ func (s *service) setupAuthentication(c context.Context, basketUID string) (stri
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using access token")
 	s.payer.UseToken(accessToken.AccessToken)
-	profileID := "pfl_Ns8niaVZaw" // TODO
+	profileID := "pfl_Ns8niaVZaw" // TODO make env var out of this
 
-	return profileID, true
+	return profileID, false
 }
 
 func (s *service) finalizeCheckout(c context.Context, basketUID string, status string) (string, error) {
@@ -166,6 +163,7 @@ func addStatusQueryParam(orgURL string, status string) (string, error) {
 func (s *service) webhookNotification(c context.Context, username, password string, basketUID string, id string) error {
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Webhook: status update event '%s'", id)
 
+	s.payer.UseAPIKey(s.apiKey)
 	payment, err := s.payer.GetPaymentOnID(c, id)
 	if err != nil {
 		return myerrors.NewInternalError(fmt.Errorf("error getting payment %s on id: %s", id, err))

@@ -39,6 +39,7 @@ func (p *molliePayer) UseAPIKey(apiKey string) {
 
 func (p *molliePayer) UseToken(accessToken string) {
 	p.client.WithAuthenticationValue(accessToken)
+	p.client.SetAccessToken(accessToken)
 }
 
 func (p *molliePayer) CreatePayment(ctx context.Context, request mollie.Payment) (mollie.Payment, error) {
@@ -51,7 +52,7 @@ func (p *molliePayer) CreatePayment(ctx context.Context, request mollie.Payment)
 }
 
 func (p *molliePayer) GetPaymentOnID(ctx context.Context, id string) (mollie.Payment, error) {
-	_, payment, err := p.client.Payments.Get(ctx, id, nil)
+	_, payment, err := p.client.Payments.Get(ctx, id, &mollie.PaymentOptions{})
 	if err != nil {
 		return mollie.Payment{}, myerrors.NewInvalidInputError(fmt.Errorf("error getting mollie payment: %s", err))
 	}
