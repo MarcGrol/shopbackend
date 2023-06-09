@@ -19,7 +19,9 @@ env_variables:
   STRIPE_API_KEY: "..."
   STRIPE_OAUTH_CLIENT_ID: "..."
   STRIPE_OAUTH_CLIENT_SECRET: "..."
-
+  MOLLIE_API_KEY: "..."
+  MOLLIE_OAUTH_CLIENT_ID: "..."
+  MOLLIE_OAUTH_CLIENT_SECRET: "..."
 
 handlers:
   - url: /.*

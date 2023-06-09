@@ -66,6 +66,22 @@ func NewProviders() *OAuthProviders {
 					return p.Secret, "" // secret is used as basic auth username with empty password
 				},
 			},
+			"mollie": {
+				ClientID: "mollie_client_id",
+				Secret:   "mollie_secret",
+				AuthEndpoint: EndPoint{
+					Hostname: "https://www.mollie.com",
+					Path:     "/oauth2/authorize",
+				},
+				TokenEndpoint: EndPoint{
+					Hostname: "https://api.mollie.com",
+					Path:     "/oauth2/tokens",
+				},
+				DefaultScopes: "read_write",
+				GetCredentials: func(p OauthParty) (string, string) {
+					return p.Secret, "" // secret is used as basic auth username with empty password
+				},
+			},
 		},
 	}
 }
