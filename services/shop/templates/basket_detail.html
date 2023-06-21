@@ -8,7 +8,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
     <div class="container">
-        <a class="navbar-brand" href="#">
+        <a class="navbar-brand" href="/">
             <img src="https://placeholder.pics/svg/150x50/888888/EEE/Logo" alt="..." height="36">
         </a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -31,7 +31,7 @@
 
     <div class="row">
         <h1>Shopping basket details</h1>
-        <p>Play around with checkout of Adyen, Stripe and Mollie.</p>
+        <p>Play around with checkout of Adyen (2x), Stripe and Mollie.</p>
     </div>
 
     <div class="row">
@@ -80,19 +80,21 @@
         {{if .Basket.IsNotPaid}}
         <div class="row">
             <div class="col">
+                <div class="btn-group-vertical" role="group">
 
-            <form action="/adyen/checkout/{{.Basket.UID}}" method="POST">
-                {{range $key, $value := .FormValues}}
-                <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
-                {{end}}
-                <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
-            </form>
-            <form action="/adyen/checkout-paybylink/{{.Basket.UID}}" method="POST">
-                {{range $key, $value := .FormValues}}
-                <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
-                {{end}}
-                <button type="submit" class="btn btn-primary">Pay-by-link with Adyen</button>
-            </form>
+                    <form action="/adyen/checkout/{{.Basket.UID}}" method="POST">
+                        {{range $key, $value := .FormValues}}
+                        <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
+                        {{end}}
+                        <button type="submit" class="btn btn-primary">Checkout with Adyen</button>
+                    </form>
+                    <form action="/adyen/checkout-paybylink/{{.Basket.UID}}" method="POST">
+                        {{range $key, $value := .FormValues}}
+                        <input type="hidden" name="{{$key}}" value="{{ index $value 0}}"/>
+                        {{end}}
+                        <button type="submit" class="btn btn-primary">Pay-by-link with Adyen</button>
+                    </form>
+                </div>
             </div>
 
             <div class="col">
