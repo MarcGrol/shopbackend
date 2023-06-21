@@ -15,6 +15,26 @@
 </head>
 <body>
 
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <img src="https://placeholder.pics/svg/150x50/888888/EEE/Logo" alt="..." height="36">
+        </a>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/basket">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/oauth/admin">Oauth</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/termsconditions">Terms</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
 <div class="container">
 
@@ -36,7 +56,6 @@
     </div>
       
     <div class="row">
-        
         <div class="col">
             <div class="row"> 
                 <h5>{{.ShopperFullname}}</h5>
@@ -65,13 +84,14 @@
 
         <div class="col">
            
+            <!--
             <div class="row"> 
                 <div class="alert alert-secondary" role="alert">
                     <h5>To test Mastercard</h5>
                     <p>Use "4111 1111 4555 1142" or "4917 6100 0000 0000"</p>
                 </div>
             </div>
-
+            -->
             <div class="row"> 
                 <div class="payment-container">
                 <div id="payment" class="payment"></div>

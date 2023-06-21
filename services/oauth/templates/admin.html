@@ -7,26 +7,33 @@
 <body>
 
 
-<div class="container">
-    <div class="row">
-        <h1>My webshop</h1> 
-        <p>Experiment with different payment service providers Adyen and Stipe. Find the source code <a href="https://github.com/MarcGrol/shopbackend">here</a></p>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <img src="https://placeholder.pics/svg/150x50/888888/EEE/Logo" alt="..." height="36">
+        </a>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/basket">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/oauth/admin">Oauth</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/termsconditions">Terms</a>
+                </li>
+            </ul>
+        </div>
     </div>
+</nav>
 
-    <ul class="nav nav-tabs">
-        <li class="nav-item">
-          <a class="nav-link" href="/basket">Baskets</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="/oauth/admin">Oauth</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/termsconditions">Terms</a>
-        </li>
-    </ul>
-
+    
+<div class="container">
+ 
     <div class="row">
-        <p>The page allows to manage OAuth for both Adyen and Stripe</p>
+        <h1>OAuth setup</h1>
+        <p>The page allows to configure OAuth for both Adyen, Stripe and Mollie</p>
     </div>
     
     <div class="row">
@@ -69,7 +76,7 @@
             </table>
 
             <form action="/oauth/refresh/{{$name}}" method="POST">
-                <button type="submit" class="btn btn-secondary">Refresh {{$name}} token</button>
+                <button type="submit" class="btn btn-primary">Refresh {{$name}} token</button>
             </form>
 
             <form action="/oauth/cancel/{{$name}}" method="POST">
@@ -89,7 +96,7 @@
             <form action="/oauth/start/{{$name}}" method="GET">
                 <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
                 <input type="hidden" name="scopes" value="{{$oauthStatus.Scopes}}"/>
-                <button type="submit" class="btn btn-secondary">OAuth connect with {{$name}}</button>
+                <button type="submit" class="btn btn-primary">OAuth connect with {{$name}}</button>
             </form>
 
             {{end}}
