@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
-
 	"github.com/gorilla/mux"
 
 	"github.com/MarcGrol/shopbackend/lib/mycontext"
