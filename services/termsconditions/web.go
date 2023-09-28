@@ -31,7 +31,7 @@ func NewService(pub mypublisher.Publisher) *webService {
 	}
 }
 
-func (s webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
+func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/termsconditions", s.getTermsAndConditions()).Methods("GET")
 	router.HandleFunc("/termsconditions", s.acceptTermsAndConditions()).Methods("POST")
 
