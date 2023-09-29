@@ -26,4 +26,3 @@ Example app that demonstrates how Adyen, Stripe and Mollie checkout and OAuth wo
     # Perform the actual deployment
     gcloud app deploy app.yaml index.yaml cron.yaml --quiet
 
-
