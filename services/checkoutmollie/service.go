@@ -46,7 +46,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 
 	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
 
-	// Iniitialize payment to the stripe platform
+	// Iniitialize payment to the mollie platform
 	request.ProfileID, request.TestMode = s.setupAuthentication(c, basketUID)
 	paymentResp, err := s.payer.CreatePayment(c, request)
 	if err != nil {

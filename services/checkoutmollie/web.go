@@ -3,7 +3,6 @@ package checkoutmollie
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/VictorAvelar/mollie-api-go/v3/mollie"
@@ -102,13 +101,13 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 
 		err := r.ParseForm()
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
 			return
 		}
 
 		id := r.FormValue("id")
 		if id == "" {
-			errorWriter.WriteError(c, w, 2, fmt.Errorf("missing id"))
+			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputErrorf("missing id"))
 			return
 		}
 
@@ -206,8 +205,6 @@ func (s *webService) parseRequest(r *http.Request) (mollie.Payment, string, stri
 		//Links
 		// SequenceType
 	}
-
-	log.Printf("%+v", paymentRequest)
 
 	return paymentRequest, basketUID, co.ReturnURL, nil
 
