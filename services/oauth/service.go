@@ -18,26 +18,28 @@ import (
 )
 
 type service struct {
-	storer      mystore.Store[OAuthSessionSetup]
-	vault       myvault.VaultReadWriter
-	nower       mytime.Nower
-	uuider      myuuid.UUIDer
-	logger      mylog.Logger
-	oauthClient oauthclient.OauthClient
-	publisher   mypublisher.Publisher
-	providers   providers.OAuthProvider
+	partyStore   mystore.Store[providers.OauthParty]
+	sessionStore mystore.Store[OAuthSessionSetup]
+	vault        myvault.VaultReadWriter
+	nower        mytime.Nower
+	uuider       myuuid.UUIDer
+	logger       mylog.Logger
+	oauthClient  oauthclient.OauthClient
+	publisher    mypublisher.Publisher
+	providers    providers.OAuthProvider
 }
 
-func newService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
+func newService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
 	return &service{
-		storer:      storer,
-		vault:       vault,
-		nower:       nower,
-		uuider:      uuider,
-		oauthClient: oauthClient,
-		logger:      mylog.New("oauth"),
-		publisher:   pub,
-		providers:   providers,
+		partyStore:   partyStore,
+		sessionStore: sessionStore,
+		vault:        vault,
+		nower:        nower,
+		uuider:       uuider,
+		oauthClient:  oauthClient,
+		logger:       mylog.New("oauth"),
+		publisher:    pub,
+		providers:    providers,
 	}
 }
 
@@ -81,7 +83,7 @@ func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
 	}
 }
 
-func (s *service) start(c context.Context, providerName string, requestedScopes string, originalReturnURL string, currentHostname string) (string, error) {
+func (s *service) start(c context.Context, providerName string, clientID string, clientSecret string, requestedScopes string, originalReturnURL string, currentHostname string) (string, error) {
 	now := s.nower.Now()
 	sessionUID := s.uuider.Create()
 
@@ -97,6 +99,7 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 
 	authURL, codeVerifierValue, err := s.oauthClient.ComposeAuthURL(c, oauthclient.ComposeAuthURLRequest{
 		ProviderName:  providerName,
+		ClientID:      clientID,
 		CompletionURL: createCompletionURL(currentHostname), // Be called back here when authorisation has completed
 		Scope:         requestedScopes,
 		State:         sessionUID,
@@ -105,11 +108,16 @@ func (s *service) start(c context.Context, providerName string, requestedScopes 
 		return "", myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
 	}
 
-	err = s.storer.RunInTransaction(c, func(c context.Context) error {
+	err = s.partyStore.Put(c, providerName, provider)
+	if err != nil {
+		return "", myerrors.NewInternalError(fmt.Errorf("error storing party details: %s", err))
+	}
+
+	err = s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
 		// Create new session
-		err := s.storer.Put(c, sessionUID, OAuthSessionSetup{
+		err := s.sessionStore.Put(c, sessionUID, OAuthSessionSetup{
 			UID:          sessionUID,
 			ProviderName: providerName,
 			ClientID:     provider.ClientID,
@@ -151,10 +159,10 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 
 	returnURL := ""
 	tokenResp := oauthclient.GetTokenResponse{}
-	err := s.storer.RunInTransaction(c, func(c context.Context) error {
+	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
-		session, exist, err := s.storer.Get(c, sessionUID)
+		session, exist, err := s.sessionStore.Get(c, sessionUID)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error fetching session: %s", err))
 		}
@@ -180,7 +188,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		session.TokenData = &tokenResp
 		session.LastModified = &now
 		session.Done = true
-		err = s.storer.Put(c, sessionUID, session)
+		err = s.sessionStore.Put(c, sessionUID, session)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing session: %s", err))
 		}
@@ -232,7 +240,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 	s.logger.Log(c, "", mylog.SeverityInfo, "Start oauth token-refresh")
 
 	newToken := myvault.Token{}
-	err := s.storer.RunInTransaction(c, func(c context.Context) error {
+	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		tokenUID := CreateTokenUID(providerName)
 		currentToken, exists, err := s.vault.Get(c, tokenUID)
 		if err != nil {
@@ -307,7 +315,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 	s.logger.Log(c, "", mylog.SeverityInfo, "Start canceling token-refresh")
 
 	newToken := myvault.Token{}
-	err := s.storer.RunInTransaction(c, func(c context.Context) error {
+	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		tokenUID := CreateTokenUID(providerName)
 		currentToken, exists, err := s.vault.Get(c, tokenUID)
 		if err != nil {

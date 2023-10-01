@@ -27,9 +27,9 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-func NewService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *webService {
+func NewService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *webService {
 	return &webService{
-		service: newService(storer, vault, nower, uuider, oauthClient, pub, providers),
+		service: newService(partyStore, sessionStore, vault, nower, uuider, oauthClient, pub, providers),
 		logger:  mylog.New("oauth"),
 	}
 }
@@ -37,7 +37,7 @@ func NewService(storer mystore.Store[OAuthSessionSetup], vault myvault.VaultRead
 func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
 	router.HandleFunc("/oauth/admin", s.adminPage()).Methods("GET")
 
-	router.HandleFunc("/oauth/start/{providerName}", s.startPage()).Methods("GET")
+	router.HandleFunc("/oauth/start/{providerName}", s.startPage()).Methods("POST")
 	router.HandleFunc("/oauth/done", s.donePage()).Methods("GET")
 	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("GET")  // cron support onnly get
 	router.HandleFunc("/oauth/refresh/{providerName}", s.refreshTokenPage()).Methods("POST") // as used from screens
@@ -92,15 +92,32 @@ func (s *webService) startPage() http.HandlerFunc {
 			return
 		}
 
-		requestedScopes := r.URL.Query().Get("scopes")
+		err := r.ParseForm()
+		if err != nil {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
+			return
+		}
 
-		originalReturnURL := r.URL.Query().Get("returnURL")
+		requestedScopes := r.FormValue("scopes")
+
+		originalReturnURL := r.FormValue("returnURL")
 		if originalReturnURL == "" {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing returnURL")))
 			return
 		}
+		clientID := r.FormValue("clientID")
+		if clientID == "" {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientID")))
+			return
+		}
+		clientSecret := r.FormValue("clientSecret")
+		if clientSecret == "" {
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing cliuentSecret")))
+			return
+		}
 
-		authenticationURL, err := s.service.start(c, providerName, requestedScopes, originalReturnURL, myhttp.HostnameWithScheme(r))
+		authenticationURL, err := s.service.start(c, providerName, clientID, clientSecret,
+			requestedScopes, originalReturnURL, myhttp.HostnameWithScheme(r))
 		if err != nil {
 			errorWriter.WriteError(c, w, 2, err)
 			return
@@ -118,7 +135,7 @@ func (s *webService) donePage() http.HandlerFunc {
 		error := r.URL.Query().Get("error")
 		if error != "" {
 			errorDescription := r.URL.Query().Get("error_description")
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("%s (%s)", error, errorDescription )))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("%s (%s)", error, errorDescription)))
 			return
 		}
 

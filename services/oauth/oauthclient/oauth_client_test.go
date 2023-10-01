@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient/challenge"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"

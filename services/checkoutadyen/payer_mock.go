@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	checkout "github.com/adyen/adyen-go-api-library/v6/src/checkout"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPayer is a mock of Payer interface.

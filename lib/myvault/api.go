@@ -27,6 +27,6 @@ type VaultReader interface {
 
 //go:generate mockgen -source=api.go -package myvault -destination vault_read_writer_mock.go VaultReadWriter
 type VaultReadWriter interface {
-	Get(c context.Context, uid string) (Token, bool, error)
+	VaultReader
 	Put(c context.Context, uid string, value Token) error
 }

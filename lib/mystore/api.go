@@ -13,6 +13,7 @@ type Filter struct {
 	Value   any
 }
 
+//go:generate mockgen -source=api.go -package mystore -destination store_mock.go Store
 type Store[T any] interface {
 	RunInTransaction(c context.Context, f func(c context.Context) error) error
 	Put(c context.Context, uid string, value T) error

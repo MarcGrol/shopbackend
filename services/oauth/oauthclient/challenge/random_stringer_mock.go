@@ -7,7 +7,7 @@ package challenge
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRandomStringer is a mock of RandomStringer interface.

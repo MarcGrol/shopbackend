@@ -14,6 +14,7 @@ import (
 
 type ComposeAuthURLRequest struct {
 	ProviderName  string
+	ClientID      string
 	CompletionURL string
 	Scope         string
 	State         string
@@ -98,7 +99,7 @@ func (oc oauthClient) ComposeAuthURL(c context.Context, req ComposeAuthURLReques
 	*/
 
 	u.RawQuery = url.Values{
-		"client_id":             []string{provider.ClientID},
+		"client_id":             []string{provider.ClientID}, // this the hard-coded one
 		"code_challenge":        []string{challenge},
 		"code_challenge_method": []string{method},
 		"redirect_uri":          []string{req.CompletionURL},

@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	mollie "github.com/VictorAvelar/mollie-api-go/v3/mollie"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPayer is a mock of Payer interface.

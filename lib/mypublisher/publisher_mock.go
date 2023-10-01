@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	myevents "github.com/MarcGrol/shopbackend/lib/myevents"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPublisher is a mock of Publisher interface.

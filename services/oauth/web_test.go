@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
@@ -32,7 +33,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, _, _, _, _ := setup(t, ctrl)
+		ctx, router, _, sessionStorer, vault, _, _, _, _ := setup(t, ctrl)
 
 		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
 			ProviderName: "adyen",
@@ -69,7 +70,7 @@ func TestOauth(t *testing.T) {
 			ExpiresIn:    nil,
 		}, true, nil)
 
-		_ = storer.Put(ctx, "xyz", OAuthSessionSetup{
+		_ = sessionStorer.Put(ctx, "xyz", OAuthSessionSetup{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			UID:          "abcdef",
@@ -106,7 +107,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, nower, uuider, oauthClient, publisher := setup(t, ctrl)
+		ctx, router, _, sessionStorer, _, nower, uuider, oauthClient, publisher := setup(t, ctrl)
 
 		// given
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -117,10 +118,12 @@ func TestOauth(t *testing.T) {
 			SessionUID:   "abcdef",
 			Scopes:       "psp.onlinepayment:write psp.accountsettings:write psp.webhook:write",
 		}).Return(nil)
-		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return("http://my_url.com", "mychallenge	", nil)
+		oauthClient.EXPECT().ComposeAuthURL(gomock.Any(), gomock.Any()).Return("http://my_url.com", "mychallenge", nil)
 
 		// when
-		request, err := http.NewRequest(http.MethodGet, "/oauth/start/adyen?returnURL=http://localhost:8888/basket&scopes=psp.onlinepayment:write psp.accountsettings:write psp.webhook:write", nil)
+		request, err := http.NewRequest(http.MethodPost, "/oauth/start/adyen",
+			strings.NewReader(`clientID=abc&clientSecret=xyz&returnURL=http://localhost:8888/basket&scopes=psp.onlinepayment:write psp.accountsettings:write psp.webhook:write`))
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		assert.NoError(t, err)
 		request.Host = "localhost:8888"
 		response := httptest.NewRecorder()
@@ -131,7 +134,7 @@ func TestOauth(t *testing.T) {
 		redirectURL := response.Header().Get("Location")
 		assert.Equal(t, "http://my_url.com", redirectURL)
 
-		session, exists, err := storer.Get(ctx, "abcdef")
+		session, exists, err := sessionStorer.Get(ctx, "abcdef")
 		assert.NoError(t, err)
 		assert.True(t, exists)
 		assert.Equal(t, "abcdef", session.UID)
@@ -146,7 +149,7 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(t, ctrl)
+		ctx, router, _, sessionStorer, vault, nower, _, oauthClient, publisher := setup(t, ctrl)
 
 		exampleResp := oauthclient.GetTokenResponse{
 			TokenType:    "bearer",
@@ -157,7 +160,7 @@ func TestOauth(t *testing.T) {
 		}
 
 		// given
-		_ = storer.Put(ctx, "abcdef", OAuthSessionSetup{
+		_ = sessionStorer.Put(ctx, "abcdef", OAuthSessionSetup{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			UID:          "abcdef",
@@ -203,7 +206,7 @@ func TestOauth(t *testing.T) {
 		redirectURL := response.Header().Get("Location")
 		assert.Equal(t, "http://localhost:8888/basket", redirectURL)
 
-		session, exists, err := storer.Get(ctx, "abcdef")
+		session, exists, err := sessionStorer.Get(ctx, "abcdef")
 		assert.NoError(t, err)
 		assert.True(t, exists)
 		assert.Equal(t, "abcdef", session.UID)
@@ -217,10 +220,10 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, nower, uuider, oauthClient, publisher := setup(t, ctrl)
+		ctx, router, _, sessionStorer, vault, nower, uuider, oauthClient, publisher := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, "abcdef", OAuthSessionSetup{
+		_ = sessionStorer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:          "abcdef",
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
@@ -294,10 +297,10 @@ func TestOauth(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, vault, nower, _, oauthClient, publisher := setup(t, ctrl)
+		ctx, router, _, sessionStorer, vault, nower, _, oauthClient, publisher := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, "abcdef", OAuthSessionSetup{
+		_ = sessionStorer.Put(ctx, "abcdef", OAuthSessionSetup{
 			UID:          "abcdef",
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
@@ -359,21 +362,22 @@ func TestOauth(t *testing.T) {
 	})
 }
 
-func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[providers.OauthParty], mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	router := mux.NewRouter()
-	storer, _, _ := mystore.New[OAuthSessionSetup](c)
+	partyStore, _, _ := mystore.New[providers.OauthParty](c)
+	sessionStore, _, _ := mystore.New[OAuthSessionSetup](c)
 	vault := myvault.NewMockVaultReadWriter(ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := oauthclient.NewMockOauthClient(ctrl)
 	publisher := mypublisher.NewMockPublisher(ctrl)
-	sut := NewService(storer, vault, nower, uuider, oauthClient, publisher, providers.NewProviders())
+	sut := NewService(partyStore, sessionStore, vault, nower, uuider, oauthClient, publisher, providers.NewProviders())
 
 	publisher.EXPECT().CreateTopic(c, oauthevents.TopicName).Return(nil)
 
 	err := sut.RegisterEndpoints(c, router)
 	assert.NoError(t, err)
 
-	return c, router, storer, vault, nower, uuider, oauthClient, publisher
+	return c, router, partyStore, sessionStore, vault, nower, uuider, oauthClient, publisher
 }

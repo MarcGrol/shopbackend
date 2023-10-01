@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"

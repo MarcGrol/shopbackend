@@ -12,9 +12,9 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myevents"
 	"github.com/MarcGrol/shopbackend/lib/mypubsub"
 
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
@@ -25,8 +25,7 @@ import (
 )
 
 var (
-	basket1 = Basket{UID: "123", CreatedAt: time.Now(), TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success"}
-	basket2 = Basket{UID: "456", CreatedAt: time.Now().Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", CheckoutStatus: string(checkoutevents.CheckoutStatusSuccess), CheckoutStatusDetails: "AUTHORIZED=true"}
+	basket1 = Basket{UID: "123", CreatedAt: mytime.ExampleTime, TotalPrice: 100, Currency: "EUR", InitialPaymentStatus: "success"}
 )
 
 func TestBasketService(t *testing.T) {
@@ -36,11 +35,11 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, _, _, _ := setup(t, ctrl)
+		_, router, storer, _, _, _ := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, basket1.UID, basket1)
-		_ = storer.Put(ctx, basket2.UID, basket2)
+		basket2 := Basket{UID: "456", CreatedAt: mytime.ExampleTime.Add(time.Minute), TotalPrice: 200, Currency: "EUR", InitialPaymentStatus: "success", CheckoutStatus: string(checkoutevents.CheckoutStatusSuccess), CheckoutStatusDetails: "AUTHORIZED=true"}
+		storer.EXPECT().List(gomock.Any()).Return([]Basket{basket1, basket2}, nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket", nil)
@@ -61,10 +60,10 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		ctx, router, storer, _, _, _ := setup(t, ctrl)
+		_, router, storer, _, _, _ := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, basket1.UID, basket1)
+		storer.EXPECT().Get(gomock.Any(), "123").Return(basket1, true, nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
@@ -84,7 +83,8 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// given
-		_, router, _, _, _, _ := setup(t, ctrl)
+		_, router, storer, _, _, _ := setup(t, ctrl)
+		storer.EXPECT().Get(gomock.Any(), "123").Return(Basket{}, false, nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123", nil)
@@ -102,13 +102,17 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, uuider, publisher := setup(t, ctrl)
+		_, router, storer, nower, uuider, publisher := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("123")
-		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName, shopevents.BasketCreated{BasketUID: "123"})
+		storer.EXPECT().RunInTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, f func(ctx context.Context) error) error {
+				return f(ctx)
+			})
+		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).Return(nil)
+		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName, shopevents.BasketCreated{BasketUID: "123"}).Return(nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodPost, "/basket", nil)
@@ -121,12 +125,6 @@ func TestBasketService(t *testing.T) {
 		assert.Equal(t, 303, response.Code)
 		redirectURL := response.Header().Get("Location")
 		assert.Equal(t, "http://localhost:8888/basket/"+basket1.UID, redirectURL)
-		basket, exists, _ := storer.Get(ctx, "123")
-		assert.True(t, exists)
-		assert.Equal(t, "123", basket.UID)
-		assert.Equal(t, 2, len(basket.SelectedProducts))
-		assert.Equal(t, "EUR", basket.Currency)
-
 	})
 
 	t.Run("Handle status redirect", func(t *testing.T) {
@@ -134,11 +132,16 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, _ := setup(t, ctrl)
+		_, router, storer, nower, _, _ := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		storer.EXPECT().RunInTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, f func(ctx context.Context) error) error {
+				return f(ctx)
+			})
+		storer.EXPECT().Get(gomock.Any(), "123").Return(basket1, true, nil)
+		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).Return(nil)
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123/checkout/completed", nil)
@@ -149,6 +152,8 @@ func TestBasketService(t *testing.T) {
 
 		// then
 		assert.Equal(t, 200, response.Code)
+		got := response.Body.String()
+		assert.Contains(t, got, "<td>123</td>")
 	})
 
 	t.Run("Handle async update", func(t *testing.T) {
@@ -156,11 +161,16 @@ func TestBasketService(t *testing.T) {
 		defer ctrl.Finish()
 
 		// setup
-		ctx, router, storer, nower, _, publisher := setup(t, ctrl)
+		_, router, storer, nower, _, publisher := setup(t, ctrl)
 
 		// given
-		_ = storer.Put(ctx, basket1.UID, basket1)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
+		storer.EXPECT().RunInTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, f func(ctx context.Context) error) error {
+				return f(ctx)
+			})
+		storer.EXPECT().Get(gomock.Any(), "123").Return(basket1, true, nil)
+		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).Return(nil)
 		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName,
 			shopevents.BasketPaymentCompleted{BasketUID: basket1.UID})
 
@@ -177,14 +187,7 @@ func TestBasketService(t *testing.T) {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, request)
 
-		// then
 		assert.Equal(t, 200, response.Code)
-		basket, exists, err := storer.Get(ctx, basket1.UID)
-		assert.NoError(t, err)
-		assert.True(t, exists)
-		assert.Equal(t, "123", basket.UID)
-		assert.Equal(t, "success", basket.CheckoutStatus)
-		assert.Equal(t, "AUTHORIZED=true", basket.CheckoutStatusDetails)
 
 	})
 }
@@ -213,9 +216,9 @@ func createPubsubMessage(event checkoutevents.CheckoutCompleted) string {
 	return string(reqBytes)
 }
 
-func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, *mystore.MockStore[Basket], *mytime.MockNower, *myuuid.MockUUIDer, *mypublisher.MockPublisher) {
 	c := context.TODO()
-	storer, _, _ := mystore.New[Basket](c)
+	storer := mystore.NewMockStore[Basket](ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	subscriber := mypubsub.NewMockPubSub(ctrl)

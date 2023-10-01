@@ -84,17 +84,17 @@
 
             {{else}}
 
-              <table class="table">
-                <tbody>
-                    <tr>
-                        <td>Client ID</td>
-                        <td>{{$oauthStatus.ClientID}}</td>
-                    </tr>
-               </tbody>
-            </table>
-            <form action="/oauth/start/{{$name}}" method="GET">
+            <form role="form" action="/oauth/start/{{$name}}" method="POST">
                 <input type="hidden" name="returnURL" value="https://www.marcgrolconsultancy.nl/"/>
                 <input type="hidden" name="scopes" value="{{$oauthStatus.Scopes}}"/>
+                <div class="form-group-sm">
+                    <label for="clientID">Client ID (copy)</label>
+                    <input type="text" name="clientID" value="{{$oauthStatus.ClientID}}"/>
+                </div>
+                <div class="form-group-sm">
+                    <label for="clientSecret">Client secret</label>
+                    <input type="password" name="clientSecret" />
+                </div>
                 <button type="submit" class="btn btn-primary">OAuth connect with {{$name}}</button>
             </form>
 

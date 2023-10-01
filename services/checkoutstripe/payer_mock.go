@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	stripe "github.com/stripe/stripe-go/v74"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPayer is a mock of Payer interface.
