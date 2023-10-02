@@ -111,7 +111,13 @@ func TestBasketService(t *testing.T) {
 			func(ctx context.Context, f func(ctx context.Context) error) error {
 				return f(ctx)
 			})
-		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).Return(nil)
+		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).DoAndReturn(
+			func(ctx context.Context, uid string, basket Basket) error {
+				assert.Equal(t, "123", basket.UID)
+				assert.Equal(t, mytime.ExampleTime, basket.CreatedAt)
+				assert.Equal(t, "http://localhost:8888/basket/123/checkout/completed", basket.ReturnURL)
+				return nil
+			})
 		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName, shopevents.BasketCreated{BasketUID: "123"}).Return(nil)
 
 		// when
@@ -141,7 +147,15 @@ func TestBasketService(t *testing.T) {
 				return f(ctx)
 			})
 		storer.EXPECT().Get(gomock.Any(), "123").Return(basket1, true, nil)
-		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).Return(nil)
+		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).DoAndReturn(
+			func(ctx context.Context, uid string, basket Basket) error {
+
+				assert.Equal(t, "123", basket.UID)
+				assert.Equal(t, "completed", basket.InitialPaymentStatus)
+				assert.NotNil(t, basket.LastModified)
+
+				return nil
+			})
 
 		// when
 		request, err := http.NewRequest(http.MethodGet, "/basket/123/checkout/completed", nil)
@@ -170,7 +184,17 @@ func TestBasketService(t *testing.T) {
 				return f(ctx)
 			})
 		storer.EXPECT().Get(gomock.Any(), "123").Return(basket1, true, nil)
-		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).Return(nil)
+		storer.EXPECT().Put(gomock.Any(), "123", gomock.Any()).DoAndReturn(
+			func(ctx context.Context, uid string, basket Basket) error {
+
+				assert.Equal(t, "123", basket.UID)
+				assert.Equal(t, "ideal", basket.PaymentMethod)
+				assert.True(t, basket.Done)
+				assert.Equal(t, "success", basket.CheckoutStatus)
+				assert.Equal(t, "AUTHORIZED=true", basket.CheckoutStatusDetails)
+
+				return nil
+			})
 		publisher.EXPECT().Publish(gomock.Any(), shopevents.TopicName,
 			shopevents.BasketPaymentCompleted{BasketUID: basket1.UID})
 

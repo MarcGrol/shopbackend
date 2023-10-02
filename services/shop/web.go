@@ -143,9 +143,12 @@ func (s *webService) checkoutFinalized() http.HandlerFunc {
 		errorWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
-		status := r.URL.Query().Get("status")
+		if basketUID == "" {
+			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputErrorf("Missing query paramter 'basketUID'"))
+			return
+		}
 
-		basket, err := s.service.checkoutFinalized(c, basketUID, status)
+		basket, err := s.service.checkoutFinalized(c, basketUID, "completed")
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return
