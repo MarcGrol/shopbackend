@@ -105,7 +105,7 @@ func createShopService(c context.Context, router *mux.Router, nower mytime.Nower
 }
 
 func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
-	partyStore, partyStoreCleanup, err := mystore.New[providers.OauthParty](c)
+	partyVault, partyStoreCleanup, err := myvault.NewReaderWriter[providers.OauthParty](c)
 	if err != nil {
 		log.Fatalf("Error creating oauth-party store: %s", err)
 	}
@@ -136,7 +136,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	}
 
 	oauthClient := oauthclient.NewOAuthClient(providers, challenge.NewRandomStringer())
-	oauthService := oauth.NewService(partyStore, sessionStore, vault, nower, uuider, oauthClient, pub, providers)
+	oauthService := oauth.NewService(partyVault, sessionStore, vault, nower, uuider, oauthClient, pub, providers)
 
 	err = oauthService.RegisterEndpoints(c, router)
 	if err != nil {

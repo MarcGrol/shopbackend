@@ -19,7 +19,7 @@ import (
 )
 
 type service struct {
-	partyStore   mystore.Store[providers.OauthParty]
+	partyVault   myvault.VaultReadWriter[providers.OauthParty]
 	sessionStore mystore.Store[OAuthSessionSetup]
 	vault        myvault.VaultReadWriter[oauthvault.Token]
 	nower        mytime.Nower
@@ -30,9 +30,9 @@ type service struct {
 	providers    providers.OAuthProvider
 }
 
-func newService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
+func newService(partyVault myvault.VaultReadWriter[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
 	return &service{
-		partyStore:   partyStore,
+		partyVault:   partyVault,
 		sessionStore: sessionStore,
 		vault:        vault,
 		nower:        nower,
@@ -109,13 +109,13 @@ func (s *service) start(c context.Context, providerName string, clientID string,
 		return "", myerrors.NewInternalError(fmt.Errorf("error composing auth url: %s", err))
 	}
 
-	err = s.partyStore.Put(c, providerName, provider)
-	if err != nil {
-		return "", myerrors.NewInternalError(fmt.Errorf("error storing party details: %s", err))
-	}
-
 	err = s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
+
+		err = s.partyVault.Put(c, providerName, provider)
+		if err != nil {
+			return myerrors.NewInternalError(fmt.Errorf("error storing party details: %s", err))
+		}
 
 		// Create new session
 		err := s.sessionStore.Put(c, sessionUID, OAuthSessionSetup{
