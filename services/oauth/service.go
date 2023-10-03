@@ -21,7 +21,7 @@ import (
 type service struct {
 	partyVault   myvault.VaultReadWriter[providers.OauthParty]
 	sessionStore mystore.Store[OAuthSessionSetup]
-	vault        myvault.VaultReadWriter[oauthvault.Token]
+	tokenVault   myvault.VaultReadWriter[oauthvault.Token]
 	nower        mytime.Nower
 	uuider       myuuid.UUIDer
 	logger       mylog.Logger
@@ -30,11 +30,11 @@ type service struct {
 	providers    providers.OAuthProvider
 }
 
-func newService(partyVault myvault.VaultReadWriter[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
+func newService(partyVault myvault.VaultReadWriter[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], tokenVault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
 	return &service{
 		partyVault:   partyVault,
 		sessionStore: sessionStore,
-		vault:        vault,
+		tokenVault:   tokenVault,
 		nower:        nower,
 		uuider:       uuider,
 		oauthClient:  oauthClient,
@@ -60,7 +60,7 @@ func (s *service) getOauthStatus(c context.Context) (map[string]OAuthStatus, err
 	statuses := map[string]OAuthStatus{}
 	for name := range s.providers.All() {
 		tokenUID := CreateTokenUID(name)
-		token, exists, err := s.vault.Get(c, tokenUID)
+		token, exists, err := s.tokenVault.Get(c, tokenUID)
 		if err != nil {
 			return statuses, myerrors.NewInternalError(err)
 		}
@@ -160,6 +160,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 
 	returnURL := ""
 	tokenResp := oauthclient.GetTokenResponse{}
+
 	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		// must be idempotent
 
@@ -195,7 +196,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		}
 
 		// Store new token in vault
-		err = s.vault.Put(c, CreateTokenUID(session.ProviderName), oauthvault.Token{
+		err = s.tokenVault.Put(c, CreateTokenUID(session.ProviderName), oauthvault.Token{
 			ProviderName: session.ProviderName,
 			ClientID:     session.ClientID,
 			SessionUID:   session.UID,
@@ -243,7 +244,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (oauthvau
 	newToken := oauthvault.Token{}
 	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		tokenUID := CreateTokenUID(providerName)
-		currentToken, exists, err := s.vault.Get(c, tokenUID)
+		currentToken, exists, err := s.tokenVault.Get(c, tokenUID)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error fetching token %s:%s", tokenUID, err))
 		}
@@ -276,7 +277,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (oauthvau
 			ExpiresIn:    calculateExpriesIn(now, newTokenResp.ExpiresIn),
 		}
 		// Update token
-		err = s.vault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
+		err = s.tokenVault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}
@@ -318,7 +319,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 	newToken := oauthvault.Token{}
 	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		tokenUID := CreateTokenUID(providerName)
-		currentToken, exists, err := s.vault.Get(c, tokenUID)
+		currentToken, exists, err := s.tokenVault.Get(c, tokenUID)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error fetching token %s:%s", tokenUID, err))
 		}
@@ -349,7 +350,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 			ExpiresIn:    nil,
 		}
 		// Update token
-		err = s.vault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
+		err = s.tokenVault.Put(c, CreateTokenUID(currentToken.ProviderName), newToken)
 		if err != nil {
 			return myerrors.NewInternalError(fmt.Errorf("error storing token: %s", err))
 		}

@@ -106,14 +106,16 @@ func (s *webService) startPage() http.HandlerFunc {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing returnURL")))
 			return
 		}
+
 		clientID := r.FormValue("clientID")
 		if clientID == "" {
 			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientID")))
 			return
 		}
+
 		clientSecret := r.FormValue("clientSecret")
 		if clientSecret == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing cliuentSecret")))
+			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientSecret")))
 			return
 		}
 

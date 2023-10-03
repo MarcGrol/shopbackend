@@ -44,7 +44,6 @@ func NewProviders() *OAuthProviders {
 					Hostname: "https://oauth-test.adyen.com",
 					Path:     "/v1/token",
 				},
-				// NB: order matters
 				DefaultScopes: "psp.onlinepayment:write psp.onlinepayment.tokenization:write psp.paybylink:write psp.accountsettings:write psp.webhook:write",
 				GetCredentials: func(p OauthParty) (string, string) {
 					return p.ClientID, p.Secret
