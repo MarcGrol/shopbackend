@@ -17,7 +17,7 @@ type OauthParty struct {
 	AuthEndpoint   EndPoint
 	TokenEndpoint  EndPoint
 	DefaultScopes  string
-	GetCredentials func(p OauthParty) (string, string)
+	GetCredentials func(p OauthParty) (string, string) `datastore:"-"`
 }
 
 type OAuthProvider interface {
