@@ -19,6 +19,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
@@ -27,7 +28,7 @@ type webService struct {
 	logger  mylog.Logger
 }
 
-func NewService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *webService {
+func NewService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *webService {
 	return &webService{
 		service: newService(partyStore, sessionStore, vault, nower, uuider, oauthClient, pub, providers),
 		logger:  mylog.New("oauth"),

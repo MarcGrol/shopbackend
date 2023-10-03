@@ -16,6 +16,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 )
 
 type service struct {
@@ -24,12 +25,12 @@ type service struct {
 	logger        mylog.Logger
 	nower         mytime.Nower
 	checkoutStore mystore.Store[checkoutapi.CheckoutContext]
-	vault         myvault.VaultReader
+	vault         myvault.VaultReader[oauthvault.Token]
 	publisher     mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*service, error) {
+func newService(apiKey string, payer Payer, logger mylog.Logger, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader[oauthvault.Token], publisher mypublisher.Publisher) (*service, error) {
 	return &service{
 		apiKey:        apiKey,
 		payer:         payer,
@@ -90,7 +91,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 }
 
 func (s *service) setupAuthentication(c context.Context, basketUID string) {
-	tokenUID := myvault.CurrentToken + "_" + ("stripe")
+	tokenUID := oauthvault.CurrentToken + "_" + ("stripe")
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "stripe" || accessToken.SessionUID == "" {
 		s.logger.Log(c, basketUID, mylog.SeverityInfo, "Using api key")

@@ -24,6 +24,7 @@ import (
 	"github.com/MarcGrol/shopbackend/services/oauth"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient/challenge"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 	"github.com/MarcGrol/shopbackend/services/shop"
 	"github.com/MarcGrol/shopbackend/services/termsconditions"
@@ -55,7 +56,7 @@ func main() {
 	defer eventPublisherCleanup()
 	eventPublisher.RegisterEndpoints(c, router)
 
-	vault, vaultCleanup, err := myvault.New(c)
+	vault, vaultCleanup, err := myvault.NewReaderWriter[oauthvault.Token](c)
 	if err != nil {
 		log.Fatalf("Error creating vault: %s", err)
 	}
@@ -103,7 +104,7 @@ func createShopService(c context.Context, router *mux.Router, nower mytime.Nower
 	return basketstoreCleanup
 }
 
-func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
+func createOAuthService(c context.Context, router *mux.Router, vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, pub mypublisher.Publisher) func() {
 	partyStore, partyStoreCleanup, err := mystore.New[providers.OauthParty](c)
 	if err != nil {
 		log.Fatalf("Error creating oauth-party store: %s", err)
@@ -148,7 +149,7 @@ func createOAuthService(c context.Context, router *mux.Router, vault myvault.Vau
 	}
 }
 
-func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
+func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader[oauthvault.Token], nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
 	merchantAccount := getenvOrAbort("ADYEN_MERCHANT_ACCOUNT")
 	environment := getenvOrAbort("ADYEN_ENVIRONMENT")
@@ -175,7 +176,7 @@ func createAdyenCheckoutService(c context.Context, router *mux.Router, checkoutS
 	}
 }
 
-func createStripeCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
+func createStripeCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader[oauthvault.Token], nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
 	apiKey := getenvOrAbort("STRIPE_API_KEY")
 
@@ -192,7 +193,7 @@ func createStripeCheckoutService(c context.Context, router *mux.Router, checkout
 	}
 }
 
-func createMollieCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
+func createMollieCheckoutService(c context.Context, router *mux.Router, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader[oauthvault.Token], nower mytime.Nower, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) {
 
 	apiKey := getenvOrAbort("MOLLIE_API_KEY")
 
@@ -212,7 +213,7 @@ func createMollieCheckoutService(c context.Context, router *mux.Router, checkout
 	}
 }
 
-func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader, uuider myuuid.UUIDer, pub mypublisher.Publisher) {
+func createWarmupService(c context.Context, router *mux.Router, vault myvault.VaultReader[oauthvault.Token], uuider myuuid.UUIDer, pub mypublisher.Publisher) {
 	warmupService := warmup.NewService(vault, uuider, pub)
 	err := warmupService.RegisterEndpoints(c, router)
 	if err != nil {

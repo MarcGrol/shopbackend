@@ -21,6 +21,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 )
 
 var (
@@ -80,7 +81,7 @@ func TestCheckoutService(t *testing.T) {
 		_, router, _, vault, payer, nower, _, publisher := setup(t, ctrl)
 
 		// given
-		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"stripe").Return(myvault.Token{}, false, nil)
+		vault.EXPECT().Get(gomock.Any(), oauthvault.CurrentToken+"_"+"stripe").Return(oauthvault.Token{}, false, nil)
 		payer.EXPECT().UseAPIKey("my_api_key")
 		payer.EXPECT().CreateCheckoutSession(gomock.Any(), gomock.Any()).Return(sessionResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
@@ -115,7 +116,7 @@ func TestCheckoutService(t *testing.T) {
 		_, router, _, vault, payer, nower, _, publisher := setup(t, ctrl)
 
 		// given
-		vault.EXPECT().Get(gomock.Any(), myvault.CurrentToken+"_"+"stripe").Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), oauthvault.CurrentToken+"_"+"stripe").Return(oauthvault.Token{
 			ProviderName: "stripe",
 			AccessToken:  "my_access_token",
 			SessionUID:   "my_oauth_session_uid",
@@ -240,10 +241,10 @@ func TestCheckoutService(t *testing.T) {
 	})
 }
 
-func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutapi.CheckoutContext], *myvault.MockVaultReader, *MockPayer, *mytime.MockNower, *mypubsub.MockPubSub, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[checkoutapi.CheckoutContext], *myvault.MockVaultReader[oauthvault.Token], *MockPayer, *mytime.MockNower, *mypubsub.MockPubSub, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	storer, _, _ := mystore.New[checkoutapi.CheckoutContext](c)
-	vault := myvault.NewMockVaultReader(ctrl)
+	vault := myvault.NewMockVaultReader[oauthvault.Token](ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	payer := NewMockPayer(ctrl)
 	subscriber := mypubsub.NewMockPubSub(ctrl)

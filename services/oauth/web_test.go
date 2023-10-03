@@ -19,6 +19,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
@@ -35,7 +36,7 @@ func TestOauth(t *testing.T) {
 		// setup
 		ctx, router, _, sessionStorer, vault, _, _, _, _ := setup(t, ctrl)
 
-		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(oauthvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
@@ -46,7 +47,7 @@ func TestOauth(t *testing.T) {
 			RefreshToken: "rst456",
 			ExpiresIn:    func() *time.Time { t := mytime.ExampleTime.Add(24 * 60 * 60 * time.Second); return &t }(),
 		}, true, nil)
-		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("stripe")).Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("stripe")).Return(oauthvault.Token{
 			ProviderName: "stripe",
 			ClientID:     "stripe_client_id",
 			SessionUID:   "",
@@ -58,7 +59,7 @@ func TestOauth(t *testing.T) {
 			ExpiresIn:    nil,
 		}, true, nil)
 
-		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("mollie")).Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("mollie")).Return(oauthvault.Token{
 			ProviderName: "mollie",
 			ClientID:     "mollie_client_id",
 			SessionUID:   "",
@@ -177,7 +178,7 @@ func TestOauth(t *testing.T) {
 			CodeVerifier: "exampleHash",
 		}).Return(exampleResp, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), myvault.Token{
+		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), oauthvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "abcdef",
@@ -239,7 +240,7 @@ func TestOauth(t *testing.T) {
 				RefreshToken: "rst456",
 			},
 		})
-		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(oauthvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
@@ -262,7 +263,7 @@ func TestOauth(t *testing.T) {
 		}, nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
 		uuider.EXPECT().Create().Return("xyz")
-		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), myvault.Token{
+		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), oauthvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
@@ -316,7 +317,7 @@ func TestOauth(t *testing.T) {
 				RefreshToken: "rst456",
 			},
 		})
-		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(myvault.Token{
+		vault.EXPECT().Get(gomock.Any(), CreateTokenUID("adyen")).Return(oauthvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "xyz",
@@ -332,7 +333,7 @@ func TestOauth(t *testing.T) {
 			AccessToken:  "abc123",
 		}).Return(nil)
 		nower.EXPECT().Now().Return(mytime.ExampleTime)
-		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), myvault.Token{
+		vault.EXPECT().Put(gomock.Any(), CreateTokenUID("adyen"), oauthvault.Token{
 			ProviderName: "adyen",
 			ClientID:     "adyen_client_id",
 			SessionUID:   "",
@@ -362,12 +363,12 @@ func TestOauth(t *testing.T) {
 	})
 }
 
-func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[providers.OauthParty], mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter, *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {
+func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, mystore.Store[providers.OauthParty], mystore.Store[OAuthSessionSetup], *myvault.MockVaultReadWriter[oauthvault.Token], *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {
 	c := context.TODO()
 	router := mux.NewRouter()
 	partyStore, _, _ := mystore.New[providers.OauthParty](c)
 	sessionStore, _, _ := mystore.New[OAuthSessionSetup](c)
-	vault := myvault.NewMockVaultReadWriter(ctrl)
+	vault := myvault.NewMockVaultReadWriter[oauthvault.Token](ctrl)
 	nower := mytime.NewMockNower(ctrl)
 	uuider := myuuid.NewMockUUIDer(ctrl)
 	oauthClient := oauthclient.NewMockOauthClient(ctrl)

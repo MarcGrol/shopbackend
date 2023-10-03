@@ -14,6 +14,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/checkoutevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 	"github.com/adyen/adyen-go-api-library/v6/src/checkout"
 )
 
@@ -24,7 +25,7 @@ type service struct {
 	apiKey          string
 	payer           Payer
 	checkoutStore   mystore.Store[checkoutapi.CheckoutContext]
-	vault           myvault.VaultReader
+	vault           myvault.VaultReader[oauthvault.Token]
 	nower           mytime.Nower
 	logger          mylog.Logger
 	subscriber      mypubsub.PubSub
@@ -32,7 +33,7 @@ type service struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, nower mytime.Nower, logger mylog.Logger, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) (*service, error) {
+func newCommandService(cfg Config, payer Payer, checkoutStorer mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader[oauthvault.Token], nower mytime.Nower, logger mylog.Logger, subscriber mypubsub.PubSub, publisher mypublisher.Publisher) (*service, error) {
 	return &service{
 		merchantAccount: cfg.MerchantAccount,
 		environment:     cfg.Environment,
@@ -232,7 +233,7 @@ func validateRequest(req checkout.CreateCheckoutSessionRequest) error {
 }
 
 func (s *service) setupAuthentication(c context.Context, basketUID string) {
-	tokenUID := myvault.CurrentToken + "_" + "adyen"
+	tokenUID := oauthvault.CurrentToken + "_" + "adyen"
 	accessToken, exist, err := s.vault.Get(c, tokenUID)
 	if err != nil || !exist || accessToken.ProviderName != "adyen" ||
 		accessToken.SessionUID == "" ||

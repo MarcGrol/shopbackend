@@ -17,6 +17,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 )
 
 type webService struct {
@@ -26,7 +27,7 @@ type webService struct {
 }
 
 // Use dependency injection to isolate the infrastructure and easy testing
-func NewWebService(apiKey string, payer Payer, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader, publisher mypublisher.Publisher) (*webService, error) {
+func NewWebService(apiKey string, payer Payer, nower mytime.Nower, checkoutStore mystore.Store[checkoutapi.CheckoutContext], vault myvault.VaultReader[oauthvault.Token], publisher mypublisher.Publisher) (*webService, error) {
 	logger := mylog.New("checkoutmollie")
 	s, err := newService(apiKey, payer, logger, nower, checkoutStore, vault, publisher)
 	if err != nil {

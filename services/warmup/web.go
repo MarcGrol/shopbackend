@@ -8,6 +8,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mypublisher"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 
 	"github.com/gorilla/mux"
 
@@ -18,13 +19,13 @@ import (
 
 type webService struct {
 	logger    mylog.Logger
-	vault     myvault.VaultReader
+	vault     myvault.VaultReader[oauthvault.Token]
 	uider     myuuid.UUIDer
 	publisher mypublisher.Publisher
 }
 
 // Use dependency injection to isolate the infrastructure and ease testing
-func NewService(vault myvault.VaultReader, uider myuuid.UUIDer, pub mypublisher.Publisher) *webService {
+func NewService(vault myvault.VaultReader[oauthvault.Token], uider myuuid.UUIDer, pub mypublisher.Publisher) *webService {
 	logger := mylog.New("basket")
 
 	return &webService{
@@ -57,7 +58,7 @@ func (s *webService) warmupPage() http.HandlerFunc {
 		c := mycontext.ContextFromHTTPRequest(r)
 		errorWriter := myhttp.NewWriter(s.logger)
 
-		_, _, err := s.vault.Get(c, myvault.CurrentToken)
+		_, _, err := s.vault.Get(c, oauthvault.CurrentToken)
 		if err != nil {
 			errorWriter.WriteError(c, w, 1, err)
 			return

@@ -18,7 +18,7 @@ gen:
 	go generate ./...
 
 fmt:
-	find . -name '*.go' -exec goimports -l -w {} \;
+	find . -name "*.go" -exec goimports -l -w {} \;
 
 run:
 	go install && shopbackend && open http://localhost:8082/

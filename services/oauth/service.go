@@ -14,13 +14,14 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthclient"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
+	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
 	"github.com/MarcGrol/shopbackend/services/oauth/providers"
 )
 
 type service struct {
 	partyStore   mystore.Store[providers.OauthParty]
 	sessionStore mystore.Store[OAuthSessionSetup]
-	vault        myvault.VaultReadWriter
+	vault        myvault.VaultReadWriter[oauthvault.Token]
 	nower        mytime.Nower
 	uuider       myuuid.UUIDer
 	logger       mylog.Logger
@@ -29,7 +30,7 @@ type service struct {
 	providers    providers.OAuthProvider
 }
 
-func newService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter, nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
+func newService(partyStore mystore.Store[providers.OauthParty], sessionStore mystore.Store[OAuthSessionSetup], vault myvault.VaultReadWriter[oauthvault.Token], nower mytime.Nower, uuider myuuid.UUIDer, oauthClient oauthclient.OauthClient, pub mypublisher.Publisher, providers providers.OAuthProvider) *service {
 	return &service{
 		partyStore:   partyStore,
 		sessionStore: sessionStore,
@@ -70,7 +71,7 @@ func (s *service) getOauthStatus(c context.Context) (map[string]OAuthStatus, err
 	return statuses, nil
 }
 
-func tokenToStatus(token myvault.Token, exists bool) OAuthStatus {
+func tokenToStatus(token oauthvault.Token, exists bool) OAuthStatus {
 	return OAuthStatus{
 		ProviderName: token.ProviderName,
 		ClientID:     token.ClientID,
@@ -194,7 +195,7 @@ func (s *service) done(c context.Context, sessionUID string, code string, curren
 		}
 
 		// Store new token in vault
-		err = s.vault.Put(c, CreateTokenUID(session.ProviderName), myvault.Token{
+		err = s.vault.Put(c, CreateTokenUID(session.ProviderName), oauthvault.Token{
 			ProviderName: session.ProviderName,
 			ClientID:     session.ClientID,
 			SessionUID:   session.UID,
@@ -233,13 +234,13 @@ func createCompletionURL(hostname string) string {
 	return fmt.Sprintf("%s/oauth/done", hostname)
 }
 
-func (s *service) refreshToken(c context.Context, providerName string) (myvault.Token, error) {
+func (s *service) refreshToken(c context.Context, providerName string) (oauthvault.Token, error) {
 	now := s.nower.Now()
 	uid := s.uuider.Create()
 
 	s.logger.Log(c, "", mylog.SeverityInfo, "Start oauth token-refresh")
 
-	newToken := myvault.Token{}
+	newToken := oauthvault.Token{}
 	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		tokenUID := CreateTokenUID(providerName)
 		currentToken, exists, err := s.vault.Get(c, tokenUID)
@@ -263,7 +264,7 @@ func (s *service) refreshToken(c context.Context, providerName string) (myvault.
 
 		s.logger.Log(c, "", mylog.SeverityDebug, "refresh-token-resp: %+v", newTokenResp)
 
-		newToken = myvault.Token{
+		newToken = oauthvault.Token{
 			ProviderName: currentToken.ProviderName,
 			ClientID:     currentToken.ClientID,
 			SessionUID:   currentToken.SessionUID,
@@ -314,7 +315,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 
 	s.logger.Log(c, "", mylog.SeverityInfo, "Start canceling token-refresh")
 
-	newToken := myvault.Token{}
+	newToken := oauthvault.Token{}
 	err := s.sessionStore.RunInTransaction(c, func(c context.Context) error {
 		tokenUID := CreateTokenUID(providerName)
 		currentToken, exists, err := s.vault.Get(c, tokenUID)
@@ -336,7 +337,7 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 			return myerrors.NewInternalError(fmt.Errorf("error canceling token: %s", err))
 		}
 
-		newToken = myvault.Token{
+		newToken = oauthvault.Token{
 			ProviderName: currentToken.ProviderName,
 			ClientID:     currentToken.ClientID,
 			SessionUID:   "",
@@ -374,5 +375,5 @@ func (s *service) cancelToken(c context.Context, providerName string) error {
 }
 
 func CreateTokenUID(providerName string) string {
-	return myvault.CurrentToken + "_" + providerName
+	return oauthvault.CurrentToken + "_" + providerName
 }
