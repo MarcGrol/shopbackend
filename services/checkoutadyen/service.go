@@ -60,7 +60,7 @@ func (s *service) CreateTopics(c context.Context) error {
 
 // startCheckout starts a checkout session on the Adyen platform
 func (s *service) payByLink(c context.Context, basketUID string, req checkout.CreatePaymentLinkRequest, returnURL string) (string, error) {
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s", basketUID)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start pbl-checkout for basket %s", basketUID)
 
 	req.MerchantAccount = s.merchantAccount
 	err := validatePayByLinkRequest(req)

@@ -104,3 +104,9 @@ func (s *service) OnCheckoutCompleted(c context.Context, topic string, event che
 
 	return nil
 }
+
+func (s *service) OnPayByLinkCreated(c context.Context, topic string, event checkoutevents.PayByLinkCreated) error {
+	s.logger.Log(c, event.CheckoutUID, mylog.SeverityInfo, "Webhook: PaybyLink created on basket %s: %v", event.CheckoutUID, event)
+
+	return nil
+}

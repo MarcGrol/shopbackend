@@ -6,18 +6,18 @@ import (
 	"sync"
 )
 
-type inMemoryStore[T any] struct {
+type InMemoryStore[T any] struct {
 	sync.Mutex
 	Items map[string]T
 }
 
-func newInMemoryStore[T any](c context.Context) (*inMemoryStore[T], func(), error) {
-	return &inMemoryStore[T]{
+func NewInMemoryStore[T any](c context.Context) (*InMemoryStore[T], func(), error) {
+	return &InMemoryStore[T]{
 		Items: make(map[string]T),
 	}, func() {}, nil
 }
 
-func (s *inMemoryStore[T]) RunInTransaction(c context.Context, f func(c context.Context) error) error {
+func (s *InMemoryStore[T]) RunInTransaction(c context.Context, f func(c context.Context) error) error {
 	// Start transaction
 	s.Lock()
 
@@ -40,7 +40,7 @@ func (s *inMemoryStore[T]) RunInTransaction(c context.Context, f func(c context.
 	return nil
 }
 
-func (s *inMemoryStore[T]) Put(c context.Context, uid string, value T) error {
+func (s *InMemoryStore[T]) Put(c context.Context, uid string, value T) error {
 	nonTransactional := c.Value(ctxTransactionKey{}) == nil
 
 	if nonTransactional {
@@ -56,7 +56,7 @@ func (s *inMemoryStore[T]) Put(c context.Context, uid string, value T) error {
 	return nil
 }
 
-func (s *inMemoryStore[T]) Get(c context.Context, uid string) (T, bool, error) {
+func (s *InMemoryStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 	nonTransactional := c.Value(ctxTransactionKey{}) == nil
 
 	if nonTransactional {
@@ -71,7 +71,7 @@ func (s *inMemoryStore[T]) Get(c context.Context, uid string) (T, bool, error) {
 	return result, exists, nil
 }
 
-func (s *inMemoryStore[T]) List(c context.Context) ([]T, error) {
+func (s *InMemoryStore[T]) List(c context.Context) ([]T, error) {
 	nonTransactional := c.Value(ctxTransactionKey{}) == nil
 
 	if nonTransactional {
@@ -90,6 +90,6 @@ func (s *inMemoryStore[T]) List(c context.Context) ([]T, error) {
 	return result, nil
 }
 
-func (s *inMemoryStore[T]) Query(c context.Context, filters []Filter, orderByField string) ([]T, error) {
+func (s *InMemoryStore[T]) Query(c context.Context, filters []Filter, orderByField string) ([]T, error) {
 	return s.List(c)
 }

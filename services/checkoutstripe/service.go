@@ -85,7 +85,7 @@ func (s *service) startCheckout(c context.Context, basketUID string, returnURL s
 		return "", err
 	}
 
-	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s completed", basketUID)
+	s.logger.Log(c, basketUID, mylog.SeverityInfo, "Start checkout for basket %s done", basketUID)
 
 	return session.URL, nil
 }

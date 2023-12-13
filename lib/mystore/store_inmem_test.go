@@ -19,7 +19,7 @@ var (
 
 func TestStore(t *testing.T) {
 	c := context.TODO()
-	ps, cleanup, err := newInMemoryStore[Person](c)
+	ps, cleanup, err := NewInMemoryStore[Person](c)
 	assert.NoError(t, err)
 	defer cleanup()
 

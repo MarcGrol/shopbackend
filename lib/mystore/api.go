@@ -27,5 +27,5 @@ func New[T any](c context.Context) (Store[T], func(), error) {
 		return newGcloudStore[T](c)
 	}
 
-	return newInMemoryStore[T](c)
+	return NewInMemoryStore[T](c)
 }
