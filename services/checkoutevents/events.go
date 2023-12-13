@@ -21,6 +21,7 @@ type CheckoutEventService interface {
 	Subscribe(c context.Context) error
 	OnCheckoutStarted(c context.Context, topic string, event CheckoutStarted) error
 	OnCheckoutCompleted(c context.Context, topic string, event CheckoutCompleted) error
+	OnPayByLinkCreated(c context.Context, topic string, event PayByLinkCreated) error
 }
 
 func DispatchEvent(c context.Context, reader io.Reader, service CheckoutEventService) error {
@@ -47,6 +48,15 @@ func DispatchEvent(c context.Context, reader io.Reader, service CheckoutEventSer
 				return myerrors.NewInvalidInputError(err)
 			}
 			return service.OnCheckoutCompleted(c, envelope.Topic, event)
+		}
+	case checkoutPaybylinkName:
+		{
+			event := PayByLinkCreated{}
+			err := json.Unmarshal([]byte(envelope.EventPayload), &event)
+			if err != nil {
+				return myerrors.NewInvalidInputError(err)
+			}
+			return service.OnPayByLinkCreated(c, envelope.Topic, event)
 		}
 	default:
 		return myerrors.NewNotImplementedError(fmt.Errorf(envelope.EventTypeName))

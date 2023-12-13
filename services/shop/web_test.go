@@ -199,7 +199,8 @@ func TestBasketService(t *testing.T) {
 			shopevents.BasketPaymentCompleted{BasketUID: basket1.UID})
 
 		// when
-		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(createPubsubMessage(
+
+		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(createCheckoutCompletedPubsubMessage(
 			checkoutevents.CheckoutCompleted{
 				CheckoutUID:           "123",
 				PaymentMethod:         "ideal",
@@ -214,16 +215,56 @@ func TestBasketService(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 	})
+
+	t.Run("Handle pbl started", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// setup
+		_, router, _, _, _, _ := setup(t, ctrl)
+
+		// given
+
+		// when
+
+		request, err := http.NewRequest(http.MethodPost, "/api/basket/event", strings.NewReader(createPayByLinkCreatedPubsubMessage(
+			checkoutevents.PayByLinkCreated{
+				ProviderName:  "adyen",
+				CheckoutUID:   "123",
+				AmountInCents: 100,
+				Currency:      "EUR",
+				ShopperUID:    "shopper_123",
+				MerchantUID:   "merchant_abc",
+			})))
+		assert.NoError(t, err)
+		request.Host = "localhost:8888"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+
+		assert.Equal(t, 200, response.Code)
+
+	})
 }
 
-func createPubsubMessage(event checkoutevents.CheckoutCompleted) string {
+func createCheckoutCompletedPubsubMessage(event checkoutevents.CheckoutCompleted) string {
 	eventBytes, _ := json.Marshal(event)
+	return createPubsubMessage("checkout.completed", eventBytes)
+
+}
+
+func createPayByLinkCreatedPubsubMessage(event checkoutevents.PayByLinkCreated) string {
+	eventBytes, _ := json.Marshal(event)
+	return createPubsubMessage("checkout.paybylinkCreated", eventBytes)
+}
+
+func createPubsubMessage(name string, eventBytes []byte) string {
+
 	envelope := myevents.EventEnvelope{
 		UID:           "123",
 		CreatedAt:     mytime.ExampleTime,
 		Topic:         "checkout",
 		AggregateUID:  "111",
-		EventTypeName: "checkout.completed",
+		EventTypeName: name,
 		EventPayload:  string(eventBytes),
 	}
 	envelopeBytes, _ := json.Marshal(envelope)
