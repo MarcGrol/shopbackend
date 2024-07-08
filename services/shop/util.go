@@ -46,7 +46,7 @@ func getCurrentShop() Shop {
 		Name:     "Eva's shop",
 		Country:  "NL",
 		Currency: "EUR",
-		Hostname: "https://www.marcgrolconsultancy.nl/", // "http://localhost:8082"
+		Hostname: "https://marcsexperiment.ew.r.appspot.com", // "http://localhost:8082"
 	}
 }
 

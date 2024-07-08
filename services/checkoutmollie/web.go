@@ -148,7 +148,7 @@ func (s *webService) parseRequest(r *http.Request) (mollie.Payment, string, stri
 		CustomerReference: co.Shopper.UID,
 		ConsumerName:      co.Shopper.FirstName + " " + co.Shopper.LastName,
 		//ConsumerAccount
-		WebhookURL: fmt.Sprintf("%s/mollie/checkout/webhook/event/%s", myhttp.HostnameWithScheme(r), // "https://www.marcgrolconsultancy.nl", //
+		WebhookURL: fmt.Sprintf("%s/mollie/checkout/webhook/event/%s", myhttp.HostnameWithScheme(r),
 			co.BasketUID),
 		//Resource
 		//ID: co.BasketUID,

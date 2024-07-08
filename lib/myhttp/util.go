@@ -9,7 +9,7 @@ import (
 func GuessHostnameWithScheme() string {
 	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if project == "marcsexperiment" {
-		return "https://www.marcgrolconsultancy.nl"
+		return "https://marcsexperiment.ew.r.appspot.com"
 	}
 
 	return "http://localhost:8080"
@@ -18,7 +18,7 @@ func GuessHostnameWithScheme() string {
 func HostnameWithScheme(r *http.Request) string {
 	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if project == "marcsexperiment" {
-		return "https://www.marcgrolconsultancy.nl"
+		return "https://marcsexperiment.ew.r.appspot.com"
 	}
 
 	scheme := "https"

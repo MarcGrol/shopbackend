@@ -24,7 +24,7 @@ func TestDecode(t *testing.T) {
 		"totalAmount.currency":        []string{"EUR"},
 		"totalAmount.value":           []string{"46700"},
 		"company.countryCode":         []string{"NL"},
-		"company.homepage":            []string{"https://www.marcgrolconsultancy.nl/"},
+		"company.homepage":            []string{"https://marcsexperiment.ew.r.appspot.com"},
 		"company.name":                []string{"Evas shop"},
 		"company.shopName":            []string{"Evas shop"},
 		"shopper.locale":              []string{"nl"},
@@ -67,7 +67,7 @@ var checkout = Checkout{
 	},
 	Company: Company{
 		CountryCode: "NL",
-		Homepage:    "https://www.marcgrolconsultancy.nl/",
+		Homepage:    "https://marcsexperiment.ew.r.appspot.com",
 		Name:        "Evas shop",
 		ShopName:    "Evas shop",
 	},
