@@ -4,7 +4,7 @@ Example app that demonstrates how Adyen, Stripe and Mollie checkout and OAuth wo
 
 ## Play around with the app
 
-[https://www.marcgrolconsultancy.nl](https://www.marcgrolconsultancy.nl/)
+[[https://www.marcgrolconsultancy.nl](https://marcsexperiment.ew.r.appspot.com/)]([https://www.marcgrolconsultancy.nl/](https://marcsexperiment.ew.r.appspot.com/))
 
 ## Architecture
 
