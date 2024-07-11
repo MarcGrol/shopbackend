@@ -61,12 +61,12 @@ func (s *webService) getTermsAndConditions() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err := termsConditionsPageTemplate.Execute(w, nil)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -76,14 +76,14 @@ func (s *webService) acceptTermsAndConditions() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		err := s.publisher.Publish(c, TopicName, TermsConditionsAccepted{
 			EmailAddress: "lala",
 			Version:      "0.0.1",
 		})
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 		}
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)

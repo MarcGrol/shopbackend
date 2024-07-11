@@ -62,7 +62,6 @@ func NewWebService(cfg Config, payer Payer, checkoutStore mystore.Store[checkout
 }
 
 func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) error {
-	// TODO: subscribe to receive access-token updates
 
 	// Endpoints that compose the user-interface
 	router.HandleFunc("/adyen/checkout-paybylink/{basketUID}", s.payByLinkPage()).Methods("POST")
@@ -94,18 +93,18 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 func (s *webService) payByLinkPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		// Convert request-body into a CreatePaymentLinkRequest
 		payByLinkRequest, basketUID, returnURL, err := parsePaybylinkRequest(r)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
 
 		link, err := s.service.payByLink(c, basketUID, payByLinkRequest, returnURL)
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 			return
 		}
 		http.Redirect(w, r, link, http.StatusFound)
@@ -116,18 +115,18 @@ func (s *webService) payByLinkPage() http.HandlerFunc {
 func (s *webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		// Convert request-body into a CreateCheckoutSessionRequest
 		sessionRequest, basketUID, returnURL, err := parseRequest(r)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
 
 		resp, err := s.service.startCheckout(c, basketUID, sessionRequest, returnURL)
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 			return
 		}
 
@@ -135,7 +134,7 @@ func (s *webService) startCheckoutPage() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = checkoutPageTemplate.Execute(w, resp)
 		if err != nil {
-			errorWriter.WriteError(c, w, 5, myerrors.NewInternalError(fmt.Errorf("error executing template: %s", err)))
+			responseWriter.WriteError(c, w, 5, myerrors.NewInternalError(fmt.Errorf("error executing template: %s", err)))
 			return
 		}
 	}
@@ -145,13 +144,13 @@ func (s *webService) startCheckoutPage() http.HandlerFunc {
 func (s *webService) resumeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 
 		resp, err := s.service.resumeCheckout(c, basketUID)
 		if err != nil {
-			errorWriter.WriteError(c, w, 10, err)
+			responseWriter.WriteError(c, w, 10, err)
 			return
 		}
 
@@ -159,7 +158,7 @@ func (s *webService) resumeCheckoutPage() http.HandlerFunc {
 		// Second time, less data is needed
 		err = checkoutPageTemplate.Execute(w, resp)
 		if err != nil {
-			errorWriter.WriteError(c, w, 12, myerrors.NewInternalError(fmt.Errorf("error executing template: %s", err)))
+			responseWriter.WriteError(c, w, 12, myerrors.NewInternalError(fmt.Errorf("error executing template: %s", err)))
 			return
 		}
 	}
@@ -169,14 +168,14 @@ func (s *webService) resumeCheckoutPage() http.HandlerFunc {
 func (s webService) finalizeCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
 
 		redirectURL, err := s.service.finalizeCheckout(c, basketUID, status)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
@@ -189,26 +188,26 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		username, password, _ := r.BasicAuth()
 
 		event := WebhookNotification{}
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, fmt.Errorf("error parsing webhook notification event:%s", err))
+			responseWriter.WriteError(c, w, 1, fmt.Errorf("error parsing webhook notification event:%s", err))
 			return
 		}
 
 		err = s.service.webhookNotification(c, username, password, event)
 		if err != nil {
-			errorWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
+			responseWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
 				Status: err.Error(),
 			})
 			return
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
+		responseWriter.Write(c, w, http.StatusOK, WebhookNotificationResponse{
 			Status: "[accepted]", // Body containing "[accepted]" is the signal that message has been succesfully processed
 		})
 	}
@@ -217,15 +216,15 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 func (s *webService) handleEventEnvelope() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		err := oauthevents.DispatchEvent(c, r.Body, s.service)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, err)
+			responseWriter.WriteError(c, w, 4, err)
 			return
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+		responseWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Successfully processed event",
 		})
 	}

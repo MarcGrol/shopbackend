@@ -70,18 +70,18 @@ func init() {
 func (s *webService) basketListPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		baskets, err := s.service.listBaskets(c)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketListPageTemplate.Execute(w, baskets)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -90,11 +90,11 @@ func (s *webService) basketListPage() http.HandlerFunc {
 func (s *webService) createNewBasketPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basket, err := s.service.createNewBasket(c, myhttp.HostnameWithScheme(r))
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 
@@ -106,20 +106,20 @@ func (s *webService) createNewBasketPage() http.HandlerFunc {
 func (s *webService) basketDetailsPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 
 		basket, err := s.service.getBasket(c, basketUID)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
 		checkout := convertBasketToCheckout(basket)
 		values, err := checkout.ToFormValues()
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 			return
 		}
 
@@ -131,7 +131,7 @@ func (s *webService) basketDetailsPage() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketDetailPageTemplate.Execute(w, pageInfo)
 		if err != nil {
-			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
+			responseWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -140,24 +140,24 @@ func (s *webService) basketDetailsPage() http.HandlerFunc {
 func (s *webService) checkoutFinalized() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		if basketUID == "" {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputErrorf("Missing query paramter 'basketUID'"))
+			responseWriter.WriteError(c, w, 2, myerrors.NewInvalidInputErrorf("Missing query paramter 'basketUID'"))
 			return
 		}
 
 		basket, err := s.service.checkoutFinalized(c, basketUID, "completed")
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
 		checkout := convertBasketToCheckout(basket)
 		values, err := checkout.ToFormValues()
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 			return
 		}
 
@@ -169,7 +169,7 @@ func (s *webService) checkoutFinalized() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = basketDetailPageTemplate.Execute(w, pageInfo)
 		if err != nil {
-			errorWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
+			responseWriter.WriteError(c, w, 3, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -178,15 +178,15 @@ func (s *webService) checkoutFinalized() http.HandlerFunc {
 func (s *webService) handleEventEnvelope() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		err := checkoutevents.DispatchEvent(c, r.Body, s.service)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, err)
+			responseWriter.WriteError(c, w, 4, err)
 			return
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+		responseWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Successfully processed event",
 		})
 	}

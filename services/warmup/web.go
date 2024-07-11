@@ -56,11 +56,11 @@ func (s *webService) warmupPage() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		_, _, err := s.vault.Get(c, oauthvault.CurrentToken)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
@@ -68,10 +68,10 @@ func (s *webService) warmupPage() http.HandlerFunc {
 			UID: uid,
 		})
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
+		responseWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{
 			Message: "Successfully processed warmup request",
 		})
 	}

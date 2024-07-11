@@ -53,18 +53,18 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 func (s *webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		// Convert request-body into a CreateCheckoutSessionRequest
 		params, basketUID, returnURL, err := parseRequest(r)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
 
 		redirectURL, err := s.service.startCheckout(c, basketUID, returnURL, params)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
 			return
 		}
 
@@ -75,14 +75,14 @@ func (s *webService) startCheckoutPage() http.HandlerFunc {
 func (s *webService) checkoutCompletedPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
 
 		redirectURL, err := s.service.finalizeCheckout(c, basketUID, status)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
 			return
 		}
 
@@ -94,24 +94,24 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		username, password, _ := r.BasicAuth()
 
 		event := stripe.Event{}
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
 		err = s.service.webhookNotification(c, username, password, event)
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 			return
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{})
+		responseWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{})
 	}
 }
 

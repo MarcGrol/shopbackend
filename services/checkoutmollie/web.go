@@ -54,18 +54,18 @@ func (s *webService) RegisterEndpoints(c context.Context, router *mux.Router) er
 func (s *webService) startCheckoutPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		// Convert request-body into a CreateCheckoutSessionRequest
 		params, basketUID, returnURL, err := s.parseRequest(r)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error parsing request: %s", err)))
 			return
 		}
 
 		redirectURL, err := s.service.startCheckout(c, basketUID, returnURL, params)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
 			return
 		}
 
@@ -76,14 +76,14 @@ func (s *webService) startCheckoutPage() http.HandlerFunc {
 func (s *webService) checkoutCompletedPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		basketUID := mux.Vars(r)["basketUID"]
 		status := mux.Vars(r)["status"]
 
 		redirectURL, err := s.service.finalizeCheckout(c, basketUID, status)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("error starting checkout: %s", err)))
 			return
 		}
 
@@ -95,30 +95,30 @@ func (s *webService) webhookNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		username, password, _ := r.BasicAuth()
 		basketUID := mux.Vars(r)["basketUID"]
 
 		err := r.ParseForm()
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
 			return
 		}
 
 		id := r.FormValue("id")
 		if id == "" {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputErrorf("missing id"))
+			responseWriter.WriteError(c, w, 2, myerrors.NewInvalidInputErrorf("missing id"))
 			return
 		}
 
 		err = s.service.webhookNotification(c, username, password, basketUID, id)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, err)
+			responseWriter.WriteError(c, w, 4, err)
 			return
 		}
 
-		errorWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{})
+		responseWriter.Write(c, w, http.StatusOK, myhttp.SuccessResponse{})
 	}
 }
 

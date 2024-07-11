@@ -65,18 +65,18 @@ func init() {
 func (s *webService) adminPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		oauthStatuses, err := s.service.getOauthStatus(c)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, err)
+			responseWriter.WriteError(c, w, 1, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		err = adminPageTemplate.Execute(w, oauthStatuses)
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInternalError(err))
 			return
 		}
 	}
@@ -85,17 +85,17 @@ func (s *webService) adminPage() http.HandlerFunc {
 func (s *webService) startPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		providerName := mux.Vars(r)["providerName"]
 		if providerName == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
 			return
 		}
 
 		err := r.ParseForm()
 		if err != nil {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(err))
 			return
 		}
 
@@ -103,26 +103,26 @@ func (s *webService) startPage() http.HandlerFunc {
 
 		originalReturnURL := r.FormValue("returnURL")
 		if originalReturnURL == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing returnURL")))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing returnURL")))
 			return
 		}
 
 		clientID := r.FormValue("clientID")
 		if clientID == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientID")))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientID")))
 			return
 		}
 
 		clientSecret := r.FormValue("clientSecret")
 		if clientSecret == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientSecret")))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing clientSecret")))
 			return
 		}
 
 		authenticationURL, err := s.service.start(c, providerName, clientID, clientSecret,
 			requestedScopes, originalReturnURL, myhttp.HostnameWithScheme(r))
 		if err != nil {
-			errorWriter.WriteError(c, w, 2, err)
+			responseWriter.WriteError(c, w, 2, err)
 			return
 		}
 
@@ -133,30 +133,30 @@ func (s *webService) startPage() http.HandlerFunc {
 func (s *webService) donePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		error := r.URL.Query().Get("error")
 		if error != "" {
 			errorDescription := r.URL.Query().Get("error_description")
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("%s (%s)", error, errorDescription)))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("%s (%s)", error, errorDescription)))
 			return
 		}
 
 		sessionUID := r.URL.Query().Get("state")
 		if sessionUID == "" {
-			errorWriter.WriteError(c, w, 2, myerrors.NewInvalidInputError(fmt.Errorf("missing state")))
+			responseWriter.WriteError(c, w, 2, myerrors.NewInvalidInputError(fmt.Errorf("missing state")))
 			return
 		}
 
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			errorWriter.WriteError(c, w, 3, myerrors.NewInvalidInputError(fmt.Errorf("missing code")))
+			responseWriter.WriteError(c, w, 3, myerrors.NewInvalidInputError(fmt.Errorf("missing code")))
 			return
 		}
 
 		originalRedirectURL, err := s.service.done(c, sessionUID, code, myhttp.HostnameWithScheme(r))
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, err)
+			responseWriter.WriteError(c, w, 4, err)
 			return
 		}
 
@@ -167,17 +167,17 @@ func (s *webService) donePage() http.HandlerFunc {
 func (s *webService) refreshTokenPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		providerName := mux.Vars(r)["providerName"]
 		if providerName == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
 			return
 		}
 
 		_, err := s.service.refreshToken(c, providerName)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, err)
+			responseWriter.WriteError(c, w, 4, err)
 			return
 		}
 
@@ -188,17 +188,17 @@ func (s *webService) refreshTokenPage() http.HandlerFunc {
 func (s *webService) cancelTokenPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := mycontext.ContextFromHTTPRequest(r)
-		errorWriter := myhttp.NewWriter(s.logger)
+		responseWriter := myhttp.NewWriter(s.logger)
 
 		providerName := mux.Vars(r)["providerName"]
 		if providerName == "" {
-			errorWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
+			responseWriter.WriteError(c, w, 1, myerrors.NewInvalidInputError(fmt.Errorf("missing providerName")))
 			return
 		}
 
 		err := s.service.cancelToken(c, providerName)
 		if err != nil {
-			errorWriter.WriteError(c, w, 4, err)
+			responseWriter.WriteError(c, w, 4, err)
 			return
 		}
 

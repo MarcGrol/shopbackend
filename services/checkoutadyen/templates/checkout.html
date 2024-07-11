@@ -5,12 +5,14 @@
           media="screen">
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"></script>
 
-    <link rel="stylesheet"
-          href="https://checkoutshopper-{{.Environment}}.adyen.com/checkoutshopper/sdk/5.35.0/adyen.css"
-          crossorigin="anonymous">
-    <script src="https://checkoutshopper-{{.Environment}}.adyen.com/checkoutshopper/sdk/5.35.0/adyen.js"
+    <script src="https://checkoutshopper-{{.Environment}}.adyen.com/checkoutshopper/sdk/5.66.0/adyen.js"
+            integrity="sha384-KCKTZ7O5a2BAP0NaUFwlARS3BItlRNeUT4WtHuxdBBNoOXPRIZe4StOm6wzkdKbE"
             crossorigin="anonymous"></script>
 
+    <link rel="stylesheet"
+          href="https://checkoutshopper-{{.Environment}}.adyen.com/checkoutshopper/sdk/5.66.0/adyen.css"
+          integrity="sha384-gpOE6R0K50VgXe6u/pyjzkKl4Kr8hXu93KUCTmC4LqbO9mpoGUYsrmeVLcp2eejn"
+          crossorigin="anonymous">
 
 </head>
 <body>
@@ -174,6 +176,7 @@
     }
 
     function handleServerResponse(result) {
+        // TODO cater for 3ds
         switch (result.resultCode) {
             case "Authorised":
                 window.location.href = "/adyen/checkout/{{.BasketUID}}/status/success";
