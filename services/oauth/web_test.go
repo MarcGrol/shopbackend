@@ -344,7 +344,7 @@ func TestOauth(t *testing.T) {
 }
 
 func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router, *myvault.MockVaultReadWriter[providers.OauthParty], *mystore.MockStore[OAuthSessionSetup], *myvault.MockVaultReadWriter[oauthvault.Token], *mytime.MockNower, *myuuid.MockUUIDer, *oauthclient.MockOauthClient, *mypublisher.MockPublisher) {
-	c := context.TODO()
+	ctx := context.TODO()
 	router := mux.NewRouter()
 	partyVault := myvault.NewMockVaultReadWriter[providers.OauthParty](ctrl)
 	sessionStore := mystore.NewMockStore[OAuthSessionSetup](ctrl)
@@ -355,10 +355,10 @@ func setup(t *testing.T, ctrl *gomock.Controller) (context.Context, *mux.Router,
 	publisher := mypublisher.NewMockPublisher(ctrl)
 	sut := NewService(partyVault, sessionStore, tokenVault, nower, uuider, oauthClient, publisher, providers.NewProviders())
 
-	publisher.EXPECT().CreateTopic(c, oauthevents.TopicName).Return(nil)
+	publisher.EXPECT().CreateTopic(gomock.Any(), oauthevents.TopicName).Return(nil)
 
-	err := sut.RegisterEndpoints(c, router)
+	err := sut.RegisterEndpoints(ctx, router)
 	assert.NoError(t, err)
 
-	return c, router, partyVault, sessionStore, tokenVault, nower, uuider, oauthClient, publisher
+	return ctx, router, partyVault, sessionStore, tokenVault, nower, uuider, oauthClient, publisher
 }
