@@ -20,6 +20,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
+	"github.com/MarcGrol/shopbackend/lib/version"
 	"github.com/MarcGrol/shopbackend/services/checkoutapi"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthevents"
 	"github.com/MarcGrol/shopbackend/services/oauth/oauthvault"
@@ -29,6 +30,36 @@ import (
 var templateFolder embed.FS
 var (
 	checkoutPageTemplate *template.Template
+
+	applicationInfo = checkout.ApplicationInfo{
+		AdyenLibrary: &checkout.CommonField{
+			Name:    "adyen-go-api-library",
+			Version: "6.0.1",
+		},
+		AdyenPaymentSource: &checkout.CommonField{
+			Name:    "",
+			Version: "",
+		},
+		ExternalPlatform: &checkout.ExternalPlatform{
+			Integrator: "MarcGrol",
+			Name:       "ShopBackend",
+			Version:    version.Commit,
+		},
+		MerchantApplication: &checkout.CommonField{
+			Name:    "",
+			Version: "",
+		},
+		MerchantDevice: &checkout.MerchantDevice{
+			Os:        "",
+			OsVersion: "",
+			Reference: "",
+		},
+		ShopperInteractionDevice: &checkout.ShopperInteractionDevice{
+			Locale:    "",
+			Os:        "",
+			OsVersion: "",
+		},
+	}
 )
 
 func init() {
@@ -250,7 +281,7 @@ func parseRequest(r *http.Request) (checkout.CreateCheckoutSessionRequest, strin
 			Currency: co.TotalAmount.Currency,
 			Value:    int64(co.TotalAmount.Value),
 		},
-		//ApplicationInfo:    nil,
+		ApplicationInfo: &applicationInfo,
 		//AuthenticationData: nil,
 		BillingAddress: &checkout.Address{
 			City:              co.Shopper.Address.City,
@@ -353,7 +384,7 @@ func parsePaybylinkRequest(r *http.Request) (checkout.CreatePaymentLinkRequest, 
 			Currency: co.TotalAmount.Currency,
 			Value:    int64(co.TotalAmount.Value),
 		},
-		//ApplicationInfo:    nil,
+		ApplicationInfo: &applicationInfo,
 		//AuthenticationData: nil,
 		BillingAddress: &checkout.Address{
 			City:              co.Shopper.Address.City,

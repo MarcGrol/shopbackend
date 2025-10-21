@@ -5,6 +5,7 @@
 //
 //	mockgen -source=api.go -package myvault -destination vault_read_writer_mock.go VaultReadWriter
 //
+
 // Package myvault is a generated GoMock package.
 package myvault
 
@@ -19,6 +20,7 @@ import (
 type MockVaultReader[T any] struct {
 	ctrl     *gomock.Controller
 	recorder *MockVaultReaderMockRecorder[T]
+	isgomock struct{}
 }
 
 // MockVaultReaderMockRecorder is the mock recorder for MockVaultReader.
@@ -58,6 +60,7 @@ func (mr *MockVaultReaderMockRecorder[T]) Get(c, uid any) *gomock.Call {
 type MockVaultReadWriter[T any] struct {
 	ctrl     *gomock.Controller
 	recorder *MockVaultReadWriterMockRecorder[T]
+	isgomock struct{}
 }
 
 // MockVaultReadWriterMockRecorder is the mock recorder for MockVaultReadWriter.

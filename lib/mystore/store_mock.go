@@ -5,6 +5,7 @@
 //
 //	mockgen -source=api.go -package mystore -destination store_mock.go Store
 //
+
 // Package mystore is a generated GoMock package.
 package mystore
 
@@ -19,6 +20,7 @@ import (
 type MockStore[T any] struct {
 	ctrl     *gomock.Controller
 	recorder *MockStoreMockRecorder[T]
+	isgomock struct{}
 }
 
 // MockStoreMockRecorder is the mock recorder for MockStore.

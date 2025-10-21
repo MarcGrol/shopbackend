@@ -15,6 +15,7 @@ import (
 	"github.com/MarcGrol/shopbackend/lib/myqueue"
 	"github.com/MarcGrol/shopbackend/lib/mystore"
 	"github.com/MarcGrol/shopbackend/lib/mytime"
+	"github.com/MarcGrol/shopbackend/lib/version"
 	"github.com/MarcGrol/shopbackend/lib/myuuid"
 	"github.com/MarcGrol/shopbackend/lib/myvault"
 	"github.com/MarcGrol/shopbackend/services/checkoutadyen"
@@ -32,6 +33,7 @@ import (
 )
 
 func main() {
+	log.Printf("Version: %s", version.Commit)
 	c := context.Background()
 	router := mux.NewRouter()
 	nower := mytime.RealNower{}
