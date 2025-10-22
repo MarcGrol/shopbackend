@@ -59,7 +59,7 @@ func DispatchEvent(c context.Context, reader io.Reader, service CheckoutEventSer
 			return service.OnPayByLinkCreated(c, envelope.Topic, event)
 		}
 	default:
-		return myerrors.NewNotImplementedError(fmt.Errorf(envelope.EventTypeName))
+		return myerrors.NewNotImplementedError(fmt.Errorf("%s", envelope.EventTypeName))
 	}
 }
 

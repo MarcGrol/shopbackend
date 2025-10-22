@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cat << Done
-runtime: go120
+runtime: go125
 service: default
 
 inbound_services:

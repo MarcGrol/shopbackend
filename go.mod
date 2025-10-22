@@ -1,6 +1,6 @@
 module github.com/MarcGrol/shopbackend
 
-go 1.21
+go 1.25
 
 require (
 	cloud.google.com/go/cloudtasks v1.12.10
